@@ -1,0 +1,10 @@
+{
+  "Name": "Brownserve.PSBuildTools",
+  "Description": "TBD",
+  "GUID": "2752b94a-d020-4696-9e9e-b85de62dc3ca",
+  "Tags": [
+    "Brownserve-UK",
+    "CI",
+    "CD"
+  ]
+}

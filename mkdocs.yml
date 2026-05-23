@@ -1,0 +1,39 @@
+site_name: Brownserve.PSBuildTools
+site_url: https://docs.brownserve.co.uk/Brownserve.PSBuildTools/
+repo_url: https://github.com/Brownserve-UK/Brownserve.PSBuildTools
+repo_name: Brownserve-UK/Brownserve.PSBuildTools
+docs_dir: pages
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - content.code.copy
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - awesome-pages
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Module Reference:
+    - Overview: reference/Brownserve.PSBuildTools.md
+    - ...
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.snippets
+  - admonition
+  - toc:
+      permalink: true

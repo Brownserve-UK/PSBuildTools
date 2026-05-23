@@ -1,0 +1,17 @@
+# This file is managed by a tool, manual changes will be lost unless added to the designated section below
+source https://api.nuget.org/v3/index.json
+
+## Auto generated dependencies: ##
+# Brownserve.PSTools is our special PowerShell module that we use to aid us in our builds/workflows
+nuget Brownserve.PSTools
+
+# Invoke-Build is used to run our builds
+nuget Invoke-Build
+
+# Pester is used to perform testing on the PowerShell module
+nuget Pester
+
+# To push the module up to nuget.org we use the standalone version of Nuget.
+nuget NuGet.CommandLine
+
+## Manually defined dependencies: ##
