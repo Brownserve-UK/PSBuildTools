@@ -1,0 +1,40 @@
+<#
+###DESCRIPTION###
+.NOTES
+    !!! THIS FILE IS MAINTAINED BY A TOOL !!!
+    !!! MANUAL CHANGES WILL BE LOST UNLESS ADDED TO THE "user defined module steps" SECTION BELOW !!!
+#>
+###REQUIREMENTS###
+[CmdletBinding()]
+param()
+$ErrorActionPreference = 'Stop'
+###PUBLIC_CMDLET_ARRAY###
+
+# Dot source our private functions so they are available for our public functions to use (but only if we have some private functions!)
+$PrivatePath = Join-Path $PSScriptRoot -ChildPath 'Private'
+if (Test-Path $PrivatePath)
+{
+    $PrivatePath |
+        Resolve-Path |
+            Get-ChildItem -Filter *.ps1 -Recurse |
+                ForEach-Object {
+                    . $_.FullName
+                }
+}
+
+# We should always have public functions, so we'll dot source those and export them
+Join-Path $PSScriptRoot -ChildPath 'Public' |
+    Resolve-Path |
+        Get-ChildItem -Filter *.ps1 -Recurse |
+            ForEach-Object {
+                . $_.FullName
+###PUBLIC_CMDLET_HELP###
+            }
+###BROWNSERVE_CMDLETS###
+###BROWNSERVE_TEMP_LOCATION###
+
+# Place any custom code for your module ONLY in the space below
+# this will ensure it is preserved when the module is updated using Update-BrownservePowerShellModule
+### Start user defined module steps
+###CUSTOMISATIONS###
+### End user defined module steps

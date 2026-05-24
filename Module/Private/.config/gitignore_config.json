@@ -1,0 +1,25 @@
+{
+    "Defaults": [
+        {
+            "comment": "Paket is used to restore various dependencies (including the Brownserve.PSTools PowerShell module).`nWe deliberately ignore the 'paket.lock' file as our projects are usually not precious about taking the latest versions of packages.",
+            "item": [
+                "paket.lock",
+                "packages/",
+                "paket-files/"
+            ]
+        },
+        {
+            "comment": "The temporary directory is used to store build output, log files, redirected output etc. It is recreated by the _init.ps1 script.",
+            "item": ".tmp/"
+        },
+        {
+            "comment": "AI coding tool directories contain local/personal configuration and session data that should not be committed.",
+            "item": [
+                ".claude/",
+                ".cursor/",
+                ".aider*",
+                ".continue/"
+            ]
+        }
+    ]
+}

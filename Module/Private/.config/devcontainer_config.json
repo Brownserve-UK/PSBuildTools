@@ -1,0 +1,6 @@
+{
+    "PowerShellModule":
+    {
+        "Dockerfile": "Dockerfile_PowerShellModule"
+    }
+}

@@ -1,0 +1,186 @@
+<#
+.SYNOPSIS
+    Initializes this repository
+.NOTES
+    !!! THIS FILE IS MAINTAINED BY A TOOL !!!
+    !!! MANUAL CHANGES WILL BE LOST UNLESS IN THE "user defined _init steps" SECTION  BELOW !!!
+    !!! YOU CAN UPDATE THIS FILE BY RUNNING `Update-BrownserveRepository` IN THE ROOT OF THE REPOSITORY !!!
+
+    This script is responsible for setting up the repository for use, it will:
+        - Set up various well-known global variables to store important paths for the repository
+        - Ensure ephemeral paths are recreated on each run
+        - Install paket dependencies
+        - Install the Brownserve.PSTools module
+        - Install any external tooling
+        - Set up any package aliases
+        - Run any custom init steps
+        - Output a list of commands that are now available to the user along with their synopsis
+#>
+#Requires -Version 6.0
+[CmdletBinding()]
+param
+(
+    # If set will disable the cmdlet output at the end of the script
+    [Parameter(
+        Mandatory = $false
+    )]
+    [switch]
+    $SuppressOutput
+)
+# Stop on errors
+$ErrorActionPreference = 'Stop'
+
+Write-Host 'Initialising repository, please wait...'
+
+# We use this well-known global variable across a variety of projects for storing cmdlet names/summaries so we can output them if desired.
+$Global:BrownserveCmdlets = @()
+
+# If we're on Teamcity set the well-known $env:CI variable, this is set on most other CI/CD providers but not Teamcity :(
+if ($env:TEAMCITY_VERSION)
+{
+    Write-Verbose 'Running on Teamcity, setting $env:CI'
+    $env:CI = $true
+}
+
+# Suppress output on CI/CD - it's noisy
+if ($env:CI)
+{
+    $SuppressOutput = $true
+}
+
+# Set up our permanent paths
+# This directory is the root of the repo, it's handy to reference sometimes
+$Global:BrownserveRepoRootDirectory = (Resolve-Path (Get-Item $PSScriptRoot -Force).PSParentPath) | Convert-Path # -Force flag is needed to find dot folders on *.nix
+###PERMANENT_PATHS###
+$Global:BrownserveRepoDocsDirectory = Join-Path $global:BrownserveRepoRootDirectory -ChildPath 'pages' -AdditionalChildPath 'Cmdlet reference' | Convert-Path
+
+# Guess the name of the repo by it's name on disk
+$Global:BrownserveRepoName = Split-Path $Global:BrownserveRepoRootDirectory -Leaf
+
+# Set-up our ephemeral paths, that is those that will be destroyed and then recreated each time this script is called
+# EphemeralDirectories are destroyed and recreated by this script
+# EphemeralFiles are destroyed but are not recreated, we assume whatever created them in the first place will do so again (e.g. paket.lock)
+$EphemeralDirectories = @(
+###EPHEMERAL_DIRECTORIES###
+)
+$EphemeralFiles = @(
+###EPHEMERAL_FILES###
+)
+try
+{
+    if ($EphemeralDirectories.Count -gt 0)
+    {
+        Write-Verbose 'Destroying any preexisting ephemeral directories'
+        $EphemeralDirectories | ForEach-Object {
+            if ((Test-Path $_))
+            {
+                Remove-Item $_ -Recurse -Force | Out-Null
+            }
+            New-Item $_ -ItemType Directory -Force | Out-Null
+        }
+    }
+    if ($EphemeralFiles.Count -gt 0)
+    {
+        Write-Verbose 'Destroying any preexisting ephemeral files'
+        $EphemeralFiles | ForEach-Object {
+            if ((Test-Path $_))
+            {
+                Remove-Item $_ -Recurse -Force | Out-Null
+            }
+        }
+    }
+}
+catch
+{
+    throw "Failed to process ephemeral paths.`n$($_.Exception.Message)"
+}
+
+# Now that the ephemeral paths definitely exist we are free to set their global variables
+###EPHEMERAL_PATH_VARIABLES###
+
+# We use paket for managing our dependencies and we get that via dotnet
+Push-Location
+Set-Location $Global:BrownserveRepoRootDirectory
+Write-Verbose 'Restoring dotnet tools'
+$DotnetOutput = & dotnet tool restore
+if ($LASTEXITCODE -ne 0)
+{
+    Pop-Location
+    $DotnetOutput
+    throw 'dotnet tool restore failed'
+}
+
+Write-Verbose 'Installing paket dependencies'
+$PaketOutput = & dotnet paket install
+if ($LASTEXITCODE -ne 0)
+{
+    Pop-Location
+    $PaketOutput
+    throw 'Failed to install paket dependencies'
+}
+Pop-Location
+
+# If Brownserve.PSTools is already loaded in this session (e.g. it's installed globally) we need to unload it
+# This ensures only the expected version is available to us
+if ((Get-Module 'Brownserve.PSTools'))
+{
+    try
+    {
+        Write-Warning 'The Brownserve.PSTools module is already loaded in this PSSession, this will be unloaded to Ensure the correct version for this repository is used'
+        Write-Verbose 'Unloading Brownserve.PSTools'
+        Remove-Module 'Brownserve.PSTools' -Force -Confirm:$false -Verbose:$False
+    }
+    catch
+    {
+        throw "Failed to unload Brownserve.PSTools.`n$($_.Exception.Message)"
+    }
+}
+# Import the downloaded version of Brownserve.PSTools
+try
+{
+    Write-Verbose 'Importing Brownserve.PSTools module'
+    # Be clever with how we find the module, the location may be slightly different depending on various factors
+    $PSToolsPath = Get-ChildItem `
+        -Filter 'brownserve.pstools.psd1' `
+        -Recurse `
+        -Path (Join-Path $global:BrownserveRepoNugetPackagesDirectory 'Brownserve.PSTools') `
+        -ErrorAction 'Stop'
+    if ($PSToolsPath.Count -gt 1)
+    {
+        throw 'Found more than one instance of Brownserve.PSTools!'
+    }
+    if (!$PSToolsPath)
+    {
+        throw "Couldn't find Brownserve.PSTools"
+    }
+    # Convert the path so we can be OS agnostic
+    $PSToolsPath = $PSToolsPath | Convert-Path
+    Import-Module $PSToolsPath -Force -Verbose:$false
+}
+catch
+{
+    throw "Failed to import Brownserve.PSTools.`n$($_.Exception.Message)"
+}
+###MODULE_LOADER######EXTERNAL_TOOLING######PACKAGE_ALIASES###
+# Place any custom code below, this will be preserved whenever you update your _init script (DO NOT REMOVE THIS SECTION)
+### Start user defined _init steps
+###CUSTOM_INIT_STEPS###
+### End user defined _init steps
+
+# If we're not suppressing output then we'll pipe out a list of cmdlets that are now available to the user along with
+# Their synopsis.
+if (!$SuppressOutput)
+{
+    if ($Global:BrownserveCmdlets)
+    {
+        Write-Host "The following modules have been loaded and their functions are now available:`n"
+        $Global:BrownserveCmdlets | ForEach-Object {
+            Write-Host "$($_.Module):" -ForegroundColor Yellow
+            $_.Cmdlets | ForEach-Object {
+                Write-Host "    $($_.Name) " -ForegroundColor Magenta -NoNewline; Write-Host "|  $($_.Synopsis)" -ForegroundColor Blue
+            }
+            ''
+        }
+        Write-Host "For more information please use the 'Get-Help <command-name>' command`n"
+    }
+}
