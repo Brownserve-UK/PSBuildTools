@@ -27,7 +27,7 @@ jobs:
       - name: checkout-module
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          path: Brownserve.PSBuildTools
+          path: PSBuildTools
       # Step 3: Install Mono (required to run NuGet.exe on Linux)
       - name: install-mono
         run: sudo apt-get install -y mono-complete
@@ -41,7 +41,7 @@ jobs:
         run: |
             $Params = @{
               BranchName = $env:GITHUB_REF
-              GitHubRepoName = 'Brownserve.PSBuildTools'
+              GitHubRepoName = 'PSBuildTools'
               Build = 'Release'
               GitHubReleaseToken = $env:GitHubToken
               NugetFeedApiKey = $env:NugetFeedAPIKey
@@ -49,7 +49,7 @@ jobs:
               PublishTo = ${{ inputs.publish_to }}
               Verbose = $true
             }
-            ./Brownserve.PSBuildTools/.build/build.ps1 @Params
+            ./PSBuildTools/.build/build.ps1 @Params
       # Step 5: Push a notification to Slack
       - name: notify-slack
         shell: pwsh
@@ -58,7 +58,7 @@ jobs:
           BUILD_NOTIFICATION_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_BUILD }}
           BUILD_BRANCH: ${{ github.ref }}
         run: |
-            ./Brownserve.PSBuildTools/.build/_init.ps1
+            ./PSBuildTools/.build/_init.ps1
             Send-BuildNotification `
               -BuildName ${{ github.job }} `
               -BuildStatus ${{ job.status }} `

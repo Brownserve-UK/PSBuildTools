@@ -60,7 +60,7 @@ $Global:BrownserveModuleDirectory = Join-Path $global:BrownserveRepoRootDirector
 # Stores any tests that we pass to Pester
 $Global:BrownserveRepoTestsDirectory = Join-Path $global:BrownserveRepoRootDirectory -ChildPath '.build' -AdditionalChildPath 'tests' | Convert-Path
 
-$Global:BrownserveRepoDocsDirectory = Join-Path $global:BrownserveRepoRootDirectory -ChildPath 'pages' -AdditionalChildPath 'reference' | Convert-Path
+$Global:BrownserveRepoDocsDirectory = Join-Path $global:BrownserveRepoRootDirectory -ChildPath 'pages' -AdditionalChildPath 'Cmdlet reference' | Convert-Path
 
 # Guess the name of the repo by it's name on disk
 $Global:BrownserveRepoName = Split-Path $Global:BrownserveRepoRootDirectory -Leaf
