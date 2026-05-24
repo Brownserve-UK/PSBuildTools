@@ -20,12 +20,12 @@ Describe 'Documentation' {
             $CmdletNames = Get-Command -Module Brownserve.PSBuildTools | Select-Object -ExpandProperty Name
             $CmdletNames | ForEach-Object {
                 $CmdletName = $_
-                $CmdletPath = Join-Path -Path $Global:BrownserveRepoDocsDirectory -ChildPath "Brownserve.PSBuildTools" -AdditionalChildPath "$CmdletName.md"
+                $CmdletPath = Join-Path -Path $Global:BrownserveRepoDocsDirectory -ChildPath "$CmdletName.md"
                 Test-Path -Path $CmdletPath | Should -Be $true
             }
         }
         It 'should not have any incomplete sections in markdown files' {
-            $MarkdownFiles = Get-ChildItem -Path (Join-Path $Global:BrownserveRepoDocsDirectory -ChildPath "Brownserve.PSBuildTools") -Filter *.md -Recurse
+            $MarkdownFiles = Get-ChildItem -Path $Global:BrownserveRepoDocsDirectory -Filter *.md
             $MarkdownFiles | ForEach-Object {
                 $MarkdownFile = $_
                 $MarkdownFileContent = Get-Content -Path $MarkdownFile.FullName

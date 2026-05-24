@@ -89,7 +89,7 @@ param
     )]
     [ValidateNotNullOrEmpty()]
     [string]
-    $GitHubRepoName = $Global:BrownserveRepoName,
+    $GitHubRepoName,
 
     # GitHub token used during the StageRelease build, must have the following permissions:
     #   * Read/Write pull requests
@@ -156,12 +156,6 @@ if (!$ModuleInfo)
         throw 'Failed to load module information.'
     }
     Write-Verbose "Loaded module information from ModuleInfo.json:`n$($ModuleInfo | Out-String)"
-}
-
-# Just in case...
-if (!$GitHubRepoName)
-{
-    throw 'GitHubRepoName is required.'
 }
 
 # Run the init script

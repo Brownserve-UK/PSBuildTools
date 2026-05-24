@@ -1,0 +1,82 @@
+{
+    "Defaults": [
+        {
+            "ExtensionID": "streetsidesoftware.code-spell-checker",
+            "CustomSettings": {
+                "cSpell.language": "en,en-GB",
+                "cSpell.words": [
+                    "Brownserve",
+                    "paket",
+                    "Teamcity",
+                    "TMPDIR",
+                    "Choco",
+                    "CICD",
+                    "dedupe",
+                    "devcontainer",
+                    "mrkdwn",
+                    "nugetconfig",
+                    "nupkg",
+                    "yzhang"
+                ]
+            }
+        }
+    ],
+    "PowerShellModule": [
+        {
+            "ExtensionID": "ms-vscode.powershell",
+            "CustomSettings": {
+                "powershell.helpCompletion": "Disabled",
+                "powershell.codeFormatting.trimWhitespaceAroundPipe": true,
+                "powershell.codeFormatting.useConstantStrings": true,
+                "powershell.codeFormatting.autoCorrectAliases": true,
+                "powershell.codeFormatting.pipelineIndentationStyle": "IncreaseIndentationAfterEveryPipeline",
+                "powershell.codeFormatting.preset": "Allman",
+                "powershell.codeFormatting.useCorrectCasing": true
+            }
+        },
+        {
+            "ExtensionID": "streetsidesoftware.code-spell-checker",
+            "CustomSettings": {
+                "cSpell.words": [
+                    "Allman",
+                    "Cmdlets",
+                    "Dont",
+                    "hashtable",
+                    "hashtables",
+                    "imatch",
+                    "LASTEXITCODE",
+                    "MAML",
+                    "Mddhhmm",
+                    "notcontains",
+                    "notlike",
+                    "notmatch",
+                    "pscustomobject",
+                    "PSGALLERY",
+                    "PSMODULE",
+                    "psobject",
+                    "pstools",
+                    "pwsh"
+                ]
+            }
+        },
+        {
+            "ExtensionID": "yzhang.markdown-all-in-one",
+            "CustomSettings": {
+                "markdown.extension.toc.omittedFromToc": {
+                    "README.md": [
+                        "# Overview"
+                    ]
+                },
+                "markdown.extension.toc.updateOnSave": false
+            }
+        },
+        {
+          "ExtensionID": "EditorConfig.EditorConfig",
+          "CustomSettings": {}
+        },
+        {
+            "ExtensionID": "DavidAnson.vscode-markdownlint",
+            "CustomSettings": {}
+        }
+    ]
+}

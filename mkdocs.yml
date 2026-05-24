@@ -25,9 +25,7 @@ plugins:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-  - Module Reference:
-    - Overview: reference/Brownserve.PSBuildTools.md
-    - ...
+  - ...
 
 markdown_extensions:
   - pymdownx.highlight:

@@ -1,0 +1,36 @@
+{
+    "Defaults":
+    [
+        {
+            "comment": "Brownserve.PSTools is our special PowerShell module that we use to aid us in our builds/workflows",
+            "rule":{
+                "PackageName": "Brownserve.PSTools",
+                "source": "nuget"
+            }
+        },
+        {
+            "comment": "Invoke-Build is used to run our builds",
+            "rule": {
+                "source": "nuget",
+                "PackageName": "Invoke-Build"
+            }
+        }
+    ],
+    "PowerShellModule":
+    [
+        {
+            "comment": "Pester is used to perform testing on the PowerShell module",
+            "rule": {
+                "source": "nuget",
+                "PackageName": "Pester"
+            }
+        },
+        {
+            "comment": "To push the module up to nuget.org we use the standalone version of Nuget.",
+            "rule": {
+                "source": "nuget",
+                "PackageName": "NuGet.CommandLine"
+            }
+        }
+    ]
+}

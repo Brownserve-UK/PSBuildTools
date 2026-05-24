@@ -85,11 +85,11 @@ param
 
     # The GitHub repo to publish the release to and used to fill in release details for Nuget/PSGallery
     [Parameter(
-        Mandatory = $true
+        Mandatory = $false
     )]
     [ValidateNotNullOrEmpty()]
     [string]
-    $GitHubRepoName,
+    $GitHubRepoName = $Global:BrownserveRepoName,
 
     # GitHub token used during the StageRelease build, must have the following permissions:
     #   * Read/Write pull requests
@@ -128,6 +128,11 @@ param
     [hashtable[]]
     $CustomNugetFeeds
 )
+# Just in case...
+if (!$GitHubRepoName)
+{
+    throw 'GitHubRepoName not set'
+}
 # Set up a bunch of variables that we'll use through the build, some of these are global as they're used in our tests too
 $global:BrownserveBuiltModuleDirectory = Join-Path $global:BrownserveRepoBuildOutputDirectory $ModuleName
 # Depending on how we got the branch name we may need to remove the full ref
@@ -708,18 +713,47 @@ You may wish to run _init.ps1 again to reload the current stable version of this
 
 <#
 .SYNOPSIS
+    Removes stale documentation files that do not correspond to a cmdlet in this module
+.DESCRIPTION
+    When two modules share the same cmdlet names (e.g. Brownserve.PSTools also exports Add-GitChanges),
+    PlatyPS can pick up the wrong module from the docs directory and generate docs for all cmdlets in
+    that module, polluting the docs directory with files that belong to the other module.
+    This task removes any .md files in the docs directory that do not match a public cmdlet in this
+    module or the module landing page (Commands.md), preventing the self-perpetuating corruption loop.
+#>
+task CleanDocs ImportModule, {
+    Write-Build White 'Cleaning documentation directory'
+    $ExpectedCmdlets = Get-ChildItem -Path $Global:BrownserveModuleDirectory -Filter '*.ps1' -Recurse |
+        Select-Object -ExpandProperty BaseName
+    $ExpectedFiles = @('Commands.md') + ($ExpectedCmdlets | ForEach-Object { "$_.md" })
+    $Stale = Get-ChildItem -Path $Global:BrownserveRepoDocsDirectory -Filter '*.md' |
+        Where-Object { $_.Name -notin $ExpectedFiles }
+    if ($Stale)
+    {
+        Write-Build Yellow "Removing $($Stale.Count) stale documentation file(s): $($Stale.Name -join ', ')"
+        $Stale | Remove-Item -Force -Confirm:$false
+    }
+    else
+    {
+        Write-Build White 'Documentation directory is clean'
+    }
+}
+
+<#
+.SYNOPSIS
     Uses PlatyPS to generate the markdown documentation for the module
 .DESCRIPTION
     We store our modules help information in markdown files in the "Docs" directory of the repo.
     This task will generate those files using PlatyPS.
 #>
-task UpdateModuleDocumentation ImportModule, {
+task UpdateModuleDocumentation CleanDocs, {
     Write-Build White 'Updating markdown documentation'
     $DocsParams = @{
-        ModuleName        = $ModuleName
-        ModulePath        = $Script:BuiltModulePath
-        DocumentationPath = $Global:BrownserveRepoDocsDirectory
-        ModuleGUID        = $ModuleGUID
+        ModuleName           = $ModuleName
+        ModulePath           = $Script:BuiltModulePath
+        DocumentationPath    = $Global:BrownserveRepoDocsDirectory
+        ModuleGUID           = $ModuleGUID
+        NoModuleSubdirectory = $true
     }
     # When we're preparing to release a new version then we should update the help version in the module page
     if ($script:Stage -eq $true)
@@ -732,7 +766,7 @@ task UpdateModuleDocumentation ImportModule, {
         We do this _after_ we've generated the docs as the module page might not exist before which will cause
         Resolve-Path to fail.
     #>
-    $Script:ModulePagePath = Join-Path $Global:BrownserveRepoDocsDirectory "$ModuleName.md" | Resolve-Path
+    $Script:ModulePagePath = Join-Path $Global:BrownserveRepoDocsDirectory 'Commands.md' | Resolve-Path
     if ($script:Stage -eq $true)
     {
         $script:TrackedFiles += ($Script:ModulePagePath | Convert-Path)
@@ -752,7 +786,7 @@ task CreateModuleHelp UpdateModuleDocumentation, {
     New-Item (Join-Path $global:BrownserveBuiltModuleDirectory 'en-US') -ItemType Directory | Out-Null
     $HelpParams = @{
         ModuleDirectory   = $global:BrownserveBuiltModuleDirectory
-        DocumentationPath = (Join-Path $global:BrownserveRepoDocsDirectory $ModuleName)
+        DocumentationPath = $global:BrownserveRepoDocsDirectory
     }
     Add-ModuleHelp @HelpParams | Out-Null
 }

@@ -23,7 +23,7 @@ jobs:
           FILES=$(gh pr view ${{ github.event.pull_request.number }} \
             --repo ${{ github.repository }} \
             --json files --jq '.files[].path')
-          if echo "$FILES" | grep -iqE '^(module/|\.build/|\.config/|pages/reference/|nuget\.config$)'; then
+          if echo "$FILES" | grep -iqE '^(module/|\.build/|\.config/|pages/Cmdlet reference/|nuget\.config$)'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "No relevant files changed, skipping build"
@@ -42,13 +42,13 @@ jobs:
       - name: checkout-module
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          path: Brownserve.PSBuildTools
+          path: PSBuildTools
       # Step 2: Run the build script
       - name: run-build-script
         shell: pwsh
         run: |
-            ./Brownserve.PSBuildTools/.build/build.ps1 `
-              -GitHubRepoName 'Brownserve.PSBuildTools' `
+            ./PSBuildTools/.build/build.ps1 `
+              -GitHubRepoName 'PSBuildTools' `
               -BranchName $env:GITHUB_REF `
               -Build 'BuildTestAndCheck' `
               -Verbose

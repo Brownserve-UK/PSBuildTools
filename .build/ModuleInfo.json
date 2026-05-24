@@ -1,6 +1,6 @@
 {
   "Name": "Brownserve.PSBuildTools",
-  "Description": "TBD",
+  "Description": "Changelog, versioning, NuGet, PowerShell module scaffolding, and build notification helpers used across Brownserve projects.",
   "GUID": "2752b94a-d020-4696-9e9e-b85de62dc3ca",
   "Tags": [
     "Brownserve-UK",

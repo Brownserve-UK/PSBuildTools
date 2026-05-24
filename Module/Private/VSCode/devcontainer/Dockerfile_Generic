@@ -1,0 +1,13 @@
+# See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.194.0/containers/ubuntu/.devcontainer/base.Dockerfile
+
+# [Choice] Ubuntu version: bionic, focal
+ARG VARIANT="focal"
+FROM mcr.microsoft.com/vscode/devcontainers/base:0-${VARIANT}
+
+# Configure apt
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get -y install --no-install-recommends apt-utils 2>&1
+
+# Install git, process tools, lsb-release (common in install instructions for CLIs)
+RUN apt-get -y install git procps lsb-release
+

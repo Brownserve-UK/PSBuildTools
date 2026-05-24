@@ -1,0 +1,83 @@
+{
+    "Defaults": {
+        "PermanentPaths": [
+            {
+                "VariableName": "BrownserveRepoBuildDirectory",
+                "Path": ".build",
+                "Description": "Contains build configuration along with this _init.ps1 script",
+                "PathType": "Directory"
+            },
+            {
+                "VariableName": "BrownserveRepoBuildTasksDirectory",
+                "Path": ".build",
+                "ChildPaths": "tasks",
+                "Description": "Stores any tasks that we pass to Invoke-Build",
+                "PathType": "Directory"
+            }
+        ],
+        "EphemeralPaths": [
+            {
+                "VariableName": "BrownserveRepoTempDirectory",
+                "Path": ".tmp",
+                "Description": "Used to store temporary files created for builds/tests",
+                "PathType": "Directory"
+            },
+            {
+                "VariableName": "BrownserveRepoLogDirectory",
+                "Path": ".tmp",
+                "ChildPaths": "logs",
+                "Description": "Used to store build logs, output from Invoke-NativeCommand and the like",
+                "PathType": "Directory"
+            },
+            {
+                "VariableName": "BrownserveRepoBuildOutputDirectory",
+                "Path": ".tmp",
+                "ChildPaths": "output",
+                "Description": "Used to store any output from builds (e.g. Terraform plans, MSBuild artifacts etc)",
+                "PathType": "Directory"
+            },
+            {
+                "VariableName": "BrownserveRepoBinaryDirectory",
+                "Path": ".tmp",
+                "ChildPaths": "bin",
+                "Description": "Used to store any downloaded/copied binaries required for builds, cmdlets like Get-Vault make use of this variable",
+                "PathType": "Directory"
+            },
+            {
+                "VariableName": "BrownserveRepoNugetPackagesDirectory",
+                "Path": "packages",
+                "Description": "Paket/nuget will restore their dependencies to this directory, case sensitive on Linux",
+                "PathType": "Directory"
+            },
+            {
+                "VariableName": "BrownserveRepoPaketFilesDirectory",
+                "Path": "paket-files",
+                "Description": "Paket will restore certain types of dependencies to this directory, case sensitive on Linux",
+                "PathType": "Directory"
+            },
+            {
+                "VariableName": "BrownservePaketLockFile",
+                "Path": "paket.lock",
+                "Description": "We deliberately regenerate this every time because we live on the edge and always take the latest versions of our packages.",
+                "PathType": "File"
+            }
+        ]
+    },
+    "PowerShellModule": {
+        "PermanentPaths": [
+            {
+                "VariableName": "BrownserveModuleDirectory",
+                "Path": "Module",
+                "Description": "Stores the PowerShell module",
+                "PathType": "Directory"
+            },
+            {
+                "VariableName": "BrownserveRepoTestsDirectory",
+                "Path": ".build",
+                "ChildPaths": "tests",
+                "Description": "Stores any tests that we pass to Pester",
+                "PathType": "Directory"
+            }
+        ]
+    }
+}
