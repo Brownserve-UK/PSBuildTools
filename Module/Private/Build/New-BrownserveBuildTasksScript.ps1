@@ -39,7 +39,7 @@ function New-BrownserveBuildTasksScript
 .SYNOPSIS
     Loads the working copy of the module from the module directory
 .DESCRIPTION
-    By default we pull in the latest _stable_ copy of Brownserve.PSTools from NuGet via the _init.ps1 script to run this build,
+    By default we pull in the latest _stable_ copy of the build modules from NuGet via the _init.ps1 script to run this build,
     however if we make changes to any of the cmdlets used in this build we won't get the changes until a new release
     is pushed.
     This task allows us to unload the stable version and reload the working copy of this module from the local copy of the repo.
@@ -53,7 +53,7 @@ task UseWorkingCopy {
             Write-Warning "The current version of $ModuleName has been unloaded and replaced with the working copy from $Global:BrownserveModuleDirectory. `nFunctionality may be unstable"
             Remove-Module $ModuleName -Force -ErrorAction 'Stop' -Verbose:$false
         }
-        Import-Module (Join-Path $Global:BrownserveModuleDirectory 'Brownserve.PSTools.psm1') -Force -ErrorAction 'Stop' -Verbose:$false
+        Import-Module (Join-Path $Global:BrownserveModuleDirectory "$ModuleName.psm1") -Force -ErrorAction 'Stop' -Verbose:$false
     }
 }
 '@

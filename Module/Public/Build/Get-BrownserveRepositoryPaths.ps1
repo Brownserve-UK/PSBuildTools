@@ -11,7 +11,7 @@ function Get-BrownserveRepositoryPaths
         # The config file to use that stores our permanent/ephemeral path configuration
         [Parameter(Mandatory = $false, DontShow)]
         [string]
-        $RepositoryPathsConfigFile = (Join-Path $Script:BrownservePSToolsConfigDirectory 'repository_paths_config.json')
+        $RepositoryPathsConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'repository_paths_config.json')
     )
     begin
     {

@@ -674,6 +674,7 @@ class BrownservePowerShellModule
     [string]$Description
     [guid]$GUID
     [string[]]$Tags
+    [string[]]$RequiredModules
 
     BrownservePowerShellModule([hashtable]$Hashtable)
     {
@@ -686,6 +687,11 @@ class BrownservePowerShellModule
                 throw "Hashtable missing required key '$Key'"
             }
             $this.$Key = $Hashtable[$MatchingKey]
+        }
+        $RequiredModulesKey = $Hashtable.Keys | Where-Object { $_ -ieq 'RequiredModules' } | Select-Object -First 1
+        if ($RequiredModulesKey)
+        {
+            $this.RequiredModules = $Hashtable[$RequiredModulesKey]
         }
     }
 }

@@ -55,15 +55,6 @@ function Update-BrownservePowerShellModule
         {
             $ModuleParams.Add('RequirePowerShellVersion', $Matches[1])
         }
-        # Check to see if Brownserve.PSTools is required
-        if ($ModuleContent.ToString() -match '#Requires -Module Brownserve.PSTools')
-        {
-            $ModuleParams.Add('RequireBrownservePSTools', $true)
-        }
-        else
-        {
-            $ModuleParams.Add('RequireBrownservePSTools', $false)
-        }
         # Check to see if BrownserveCmdlets logic is included
         if ($ModuleContent.ToString() -match 'BrownserveCmdlets')
         {

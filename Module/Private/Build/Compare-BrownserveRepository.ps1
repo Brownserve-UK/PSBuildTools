@@ -53,42 +53,42 @@ function Compare-BrownserveRepository
         # The config file to use for setting our .gitignore content
         [Parameter(Mandatory = $false, DontShow)]
         [string]
-        $GitIgnoreConfigFile = (Join-Path $Script:BrownservePSToolsConfigDirectory 'gitignore_config.json'),
+        $GitIgnoreConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'gitignore_config.json'),
 
         # The config file to use for setting our .gitignore content
         [Parameter(Mandatory = $false, DontShow)]
         [string]
-        $PaketDependenciesConfigFile = (Join-Path $Script:BrownservePSToolsConfigDirectory 'paket_dependencies_config.json'),
+        $PaketDependenciesConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'paket_dependencies_config.json'),
 
         # The config file to use that stores our permanent/ephemeral path configuration
         [Parameter(Mandatory = $false, DontShow)]
         [string]
-        $RepositoryPathsConfigFile = (Join-Path $Script:BrownservePSToolsConfigDirectory 'repository_paths_config.json'),
+        $RepositoryPathsConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'repository_paths_config.json'),
 
         # The config file that stores devcontainer configurations
         [Parameter(Mandatory = $false, DontShow)]
         [string]
-        $DevcontainerConfigFile = (Join-Path $Script:BrownservePSToolsConfigDirectory 'devcontainer_config.json'),
+        $DevcontainerConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'devcontainer_config.json'),
 
         # The config file that stores VS Code extension configuration
         [Parameter(Mandatory = $false, DontShow)]
         [string]
-        $VSCodeExtensionsConfigFile = (Join-Path $Script:BrownservePSToolsConfigDirectory 'repository_vscode_extensions.json'),
+        $VSCodeExtensionsConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'repository_vscode_extensions.json'),
 
         # The config file that stores any package aliases we'd like to create
         [Parameter(Mandatory = $false, DontShow)]
         [string]
-        $PackageAliasConfigFile = (Join-Path $Script:BrownservePSToolsConfigDirectory 'package_aliases_config.json'),
+        $PackageAliasConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'package_aliases_config.json'),
 
         # The config file that stores any editorconfig settings we'd like to create
         [Parameter(Mandatory = $false, DontShow)]
         [string]
-        $EditorConfigConfigFile = (Join-Path $Script:BrownservePSToolsConfigDirectory 'editorconfig_config.json'),
+        $EditorConfigConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'editorconfig_config.json'),
 
         # The config file that stores markdownlint settings
         [Parameter(Mandatory = $false, DontShow)]
         [string]
-        $MarkdownlintConfigFile = (Join-Path $Script:BrownservePSToolsConfigDirectory 'markdownlint_config.json')
+        $MarkdownlintConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'markdownlint_config.json')
     )
     begin
     {
@@ -1344,12 +1344,17 @@ function Compare-BrownserveRepository
             $ModuleInfoPath = Join-Path $BuildDirectory 'ModuleInfo.json'
             try
             {
-                $NewModuleInfoContent = [ordered]@{
+                $ModuleInfoMap = [ordered]@{
                     Name        = $ModuleInfo.Name
                     Description = $ModuleInfo.Description
                     GUID        = $ModuleInfo.GUID
                     Tags        = $ModuleInfo.Tags
-                } | ConvertTo-Json -Depth 100 -ErrorAction 'Stop' | Format-BrownserveContent
+                }
+                if ($ModuleInfo.RequiredModules)
+                {
+                    $ModuleInfoMap.RequiredModules = $ModuleInfo.RequiredModules
+                }
+                $NewModuleInfoContent = $ModuleInfoMap | ConvertTo-Json -Depth 100 -ErrorAction 'Stop' | Format-BrownserveContent
                 if (Test-Path $ModuleInfoPath)
                 {
                     Write-Verbose 'Checking for changes to ModuleInfo.json'

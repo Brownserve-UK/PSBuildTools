@@ -15,9 +15,8 @@ Creates a new PowerShell module in the standard Brownserve format
 
 ```text
 New-BrownservePowerShellModule [-ModuleName] <String> [[-Path] <String>] [[-Description] <String>]
- [-Customisations <String>] [-RequirePowerShellVersion <String>] [-RequireBrownservePSTools <Boolean>]
- [-IncludeTemporaryLocationLogic <Boolean>] [-IncludeBrownserveCmdletsLogic <Boolean>] [-Force]
- [<CommonParameters>]
+ [-Customisations <String>] [-RequirePowerShellVersion <String>] [-IncludeTemporaryLocationLogic <Boolean>]
+ [-IncludeBrownserveCmdletsLogic <Boolean>] [-Force] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -147,22 +146,6 @@ Aliases:
 
 Required: False
 Position: 1
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -RequireBrownservePSTools
-
-If set to true this will add a requirement for the Brownserve.PSTools module.
-
-```yaml
-Type: Boolean
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: Named
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
