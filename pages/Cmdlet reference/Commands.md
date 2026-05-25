@@ -2,7 +2,7 @@
 Module Name: Brownserve.PSBuildTools
 Module Guid: 2752b94a-d020-4696-9e9e-b85de62dc3ca
 Download Help Link: https://docs.brownserve.co.uk/Brownserve.PSBuildTools/Cmdlet%20reference/Commands/
-Help Version: 0.1.1
+Help Version: 0.1.2
 Locale: en-US
 ---
 
