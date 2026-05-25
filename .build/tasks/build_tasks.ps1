@@ -685,6 +685,7 @@ task CreateModuleManifest SetVersion, FormatReleaseNotes, CopyModule, {
     if ($RequiredModules)
     {
         $ModuleManifest.add('RequiredModules', $RequiredModules)
+        $ModuleManifest.add('ExternalModuleDependencies', $RequiredModules)
     }
     # If this is not a production release then update the fields accordingly
     if ($PreRelease -eq $true)
