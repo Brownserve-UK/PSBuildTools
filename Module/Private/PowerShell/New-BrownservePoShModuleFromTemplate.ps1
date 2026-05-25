@@ -19,11 +19,6 @@ function New-BrownservePoShModuleFromTemplate
         [string]
         $RequirePowerShellVersion,
 
-        # If set will require the Brownserve.PSTools module to be installed
-        [Parameter(Mandatory = $false)]
-        [bool]
-        $RequireBrownservePSTools = $true,
-
         # If set will include the BrownserveCmdlets logic in the module
         [Parameter(Mandatory = $false)]
         [bool]
@@ -76,17 +71,6 @@ function New-BrownservePoShModuleFromTemplate
         if ($RequirePowerShellVersion)
         {
             $Requirements = "#Requires -Version $RequirePowerShellVersion`n"
-        }
-        if ($RequireBrownservePSTools)
-        {
-            if ($Requirements)
-            {
-                $Requirements += "#Requires -Module Brownserve.PSTools`n"
-            }
-            else
-            {
-                $Requirements = "#Requires -Module Brownserve.PSTools`n"
-            }
         }
         if ($Requirements)
         {
