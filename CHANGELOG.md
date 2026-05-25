@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Release
 
+## [v0.1.2](https://github.com/Brownserve-UK/PSBuildTools/tree/v0.1.2) (2026-05-25)
+
+### Fixed
+
+- fix(build): add ExternalModuleDependencies to ensure PSGallery modules can be published correctly in [#7](https://github.com/Brownserve-UK/PSBuildTools/pull/7) by [@shoddyguard](https://github.com/shoddyguard)
+
+
 ## [v0.1.1](https://github.com/Brownserve-UK/PSBuildTools/tree/v0.1.1) (2026-05-25)
 
 ### Added
