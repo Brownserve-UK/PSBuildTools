@@ -120,46 +120,49 @@ if ($LASTEXITCODE -ne 0)
 }
 Pop-Location
 
-# If Brownserve.PSTools is already loaded in this session (e.g. it's installed globally) we need to unload it
-# This ensures only the expected version is available to us
-if ((Get-Module 'Brownserve.PSTools'))
+# Import Brownserve.PSCommon, Brownserve.PSSourceControl, and Brownserve.PSBuildTools from the
+# downloaded packages. These provide all build tooling needed by this repository.
+# Load order matters: PSCommon first, then PSSourceControl, then PSBuildTools.
+foreach ($ModuleSpec in @(
+    @{ Name = 'Brownserve.PSCommon';        Filter = 'brownserve.pscommon.psd1' },
+    @{ Name = 'Brownserve.PSSourceControl'; Filter = 'brownserve.pssourcecontrol.psd1' },
+    @{ Name = 'Brownserve.PSBuildTools';    Filter = 'brownserve.psbuildtools.psd1' }
+))
 {
+    if ((Get-Module $ModuleSpec.Name))
+    {
+        try
+        {
+            Write-Warning "The $($ModuleSpec.Name) module is already loaded in this PSSession and will be unloaded to ensure the correct version for this repository is used"
+            Remove-Module $ModuleSpec.Name -Force -Confirm:$false -Verbose:$false
+        }
+        catch
+        {
+            throw "Failed to unload $($ModuleSpec.Name).`n$($_.Exception.Message)"
+        }
+    }
     try
     {
-        Write-Warning 'The Brownserve.PSTools module is already loaded in this PSSession, this will be unloaded to Ensure the correct version for this repository is used'
-        Write-Verbose 'Unloading Brownserve.PSTools'
-        Remove-Module 'Brownserve.PSTools' -Force -Confirm:$false -Verbose:$False
+        Write-Verbose "Importing $($ModuleSpec.Name) module"
+        $ModulePath = Get-ChildItem `
+            -Filter $ModuleSpec.Filter `
+            -Recurse `
+            -Path (Join-Path $global:BrownserveRepoNugetPackagesDirectory $ModuleSpec.Name) `
+            -ErrorAction 'Stop'
+        if ($ModulePath.Count -gt 1)
+        {
+            throw "Found more than one instance of $($ModuleSpec.Name)!"
+        }
+        if (!$ModulePath)
+        {
+            throw "Couldn't find $($ModuleSpec.Name)"
+        }
+        Import-Module ($ModulePath | Convert-Path) -Force -Verbose:$false
     }
     catch
     {
-        throw "Failed to unload Brownserve.PSTools.`n$($_.Exception.Message)"
+        throw "Failed to import $($ModuleSpec.Name).`n$($_.Exception.Message)"
     }
-}
-# Import the downloaded version of Brownserve.PSTools
-try
-{
-    Write-Verbose 'Importing Brownserve.PSTools module'
-    # Be clever with how we find the module, the location may be slightly different depending on various factors
-    $PSToolsPath = Get-ChildItem `
-        -Filter 'brownserve.pstools.psd1' `
-        -Recurse `
-        -Path (Join-Path $global:BrownserveRepoNugetPackagesDirectory 'Brownserve.PSTools') `
-        -ErrorAction 'Stop'
-    if ($PSToolsPath.Count -gt 1)
-    {
-        throw 'Found more than one instance of Brownserve.PSTools!'
-    }
-    if (!$PSToolsPath)
-    {
-        throw "Couldn't find Brownserve.PSTools"
-    }
-    # Convert the path so we can be OS agnostic
-    $PSToolsPath = $PSToolsPath | Convert-Path
-    Import-Module $PSToolsPath -Force -Verbose:$false
-}
-catch
-{
-    throw "Failed to import Brownserve.PSTools.`n$($_.Exception.Message)"
 }
 ###MODULE_LOADER######EXTERNAL_TOOLING######PACKAGE_ALIASES###
 # Place any custom code below, this will be preserved whenever you update your _init script (DO NOT REMOVE THIS SECTION)

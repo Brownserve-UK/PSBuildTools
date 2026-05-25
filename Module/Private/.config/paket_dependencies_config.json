@@ -2,11 +2,21 @@
     "Defaults":
     [
         {
-            "comment": "Brownserve.PSTools is our special PowerShell module that we use to aid us in our builds/workflows",
-            "rule":{
-                "PackageName": "Brownserve.PSTools",
-                "source": "nuget"
-            }
+            "comment": "Brownserve modules used to build and test this module",
+            "rule": [
+                {
+                    "PackageName": "Brownserve.PSCommon",
+                    "source": "nuget"
+                },
+                {
+                    "PackageName": "Brownserve.PSSourceControl",
+                    "source": "nuget"
+                },
+                {
+                    "PackageName": "Brownserve.PSBuildTools",
+                    "source": "nuget"
+                }
+            ]
         },
         {
             "comment": "Invoke-Build is used to run our builds",

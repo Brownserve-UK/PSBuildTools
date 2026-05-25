@@ -2,8 +2,10 @@
 source https://api.nuget.org/v3/index.json
 
 ## Auto generated dependencies: ##
-# Brownserve.PSTools is our special PowerShell module that we use to aid us in our builds/workflows
-nuget Brownserve.PSTools
+# Brownserve modules used to build and test this module
+nuget Brownserve.PSCommon
+nuget Brownserve.PSSourceControl
+nuget Brownserve.PSBuildTools
 
 # Invoke-Build is used to run our builds
 nuget Invoke-Build

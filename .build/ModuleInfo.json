@@ -6,5 +6,6 @@
     "Brownserve-UK",
     "CI",
     "CD"
-  ]
+  ],
+  "RequiredModules": ["Brownserve.PSCommon", "Brownserve.PSSourceControl"]
 }

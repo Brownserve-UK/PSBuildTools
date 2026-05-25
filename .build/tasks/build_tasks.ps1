@@ -121,6 +121,13 @@ param
     [string]
     $PSGalleryAPIKey,
 
+    # Any modules that this module requires
+    [Parameter(
+        Mandatory = $False
+    )]
+    [string[]]
+    $RequiredModules,
+
     # Any custom/private NuGet feeds to publish to
     [Parameter(
         Mandatory = $False
@@ -674,6 +681,10 @@ task CreateModuleManifest SetVersion, FormatReleaseNotes, CopyModule, {
     if ($ModuleTags)
     {
         $ModuleManifest.add('Tags', $ModuleTags)
+    }
+    if ($RequiredModules)
+    {
+        $ModuleManifest.add('RequiredModules', $RequiredModules)
     }
     # If this is not a production release then update the fields accordingly
     if ($PreRelease -eq $true)
