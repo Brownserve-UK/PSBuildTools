@@ -3,6 +3,8 @@
     Changelog, versioning, NuGet, module scaffolding and build notification helpers used across Brownserve projects.
 #>
 #Requires -Version 6.0
+#Requires -Module Brownserve.PSCommon
+#Requires -Module Brownserve.PSSourceControl
 [CmdletBinding()]
 param()
 $ErrorActionPreference = 'Stop'

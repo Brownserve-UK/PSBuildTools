@@ -212,10 +212,6 @@ try
     {
         $BuildParams.Add('GitHubReleaseToken', $GitHubReleaseToken)
     }
-    if ($ModuleInfo.RequiredModules)
-    {
-        $BuildParams.Add('RequiredModules', $ModuleInfo.RequiredModules)
-    }
     if ($CustomNugetFeeds)
     {
         $BuildParams.Add('CustomNugetFeeds', $CustomNugetFeeds)

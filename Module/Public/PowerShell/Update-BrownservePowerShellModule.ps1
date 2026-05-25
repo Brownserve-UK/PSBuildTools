@@ -55,6 +55,12 @@ function Update-BrownservePowerShellModule
         {
             $ModuleParams.Add('RequirePowerShellVersion', $Matches[1])
         }
+        # Check for any required modules and preserve them
+        $RequiredModuleMatches = [regex]::Matches($ModuleContent.ToString(), '#Requires -Module (\S+)')
+        if ($RequiredModuleMatches.Count -gt 0)
+        {
+            $ModuleParams.Add('RequiredModules', ($RequiredModuleMatches | ForEach-Object { $_.Groups[1].Value }))
+        }
         # Check to see if BrownserveCmdlets logic is included
         if ($ModuleContent.ToString() -match 'BrownserveCmdlets')
         {

@@ -27,7 +27,12 @@ function New-BrownservePoShModuleFromTemplate
         # If set will include the temporary location logic in the module
         [Parameter(Mandatory = $false)]
         [bool]
-        $IncludeTempLocationLogic = $true
+        $IncludeTempLocationLogic = $true,
+
+        # Any modules that this module requires (generates #Requires -Module lines)
+        [Parameter(Mandatory = $false)]
+        [string[]]
+        $RequiredModules
     )
     begin
     {
@@ -71,6 +76,13 @@ function New-BrownservePoShModuleFromTemplate
         if ($RequirePowerShellVersion)
         {
             $Requirements = "#Requires -Version $RequirePowerShellVersion`n"
+        }
+        if ($RequiredModules)
+        {
+            foreach ($Module in $RequiredModules)
+            {
+                $Requirements += "#Requires -Module $Module`n"
+            }
         }
         if ($Requirements)
         {

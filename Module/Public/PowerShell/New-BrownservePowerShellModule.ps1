@@ -49,6 +49,11 @@ function New-BrownservePowerShellModule
         [bool]
         $IncludeBrownserveCmdletsLogic = $true,
 
+        # Any modules that this module requires
+        [Parameter(Mandatory = $false)]
+        [string[]]
+        $RequiredModules,
+
         # Forces overwriting of files
         [Parameter(Mandatory = $false)]
         [switch]
@@ -106,6 +111,10 @@ function New-BrownservePowerShellModule
         if ($IncludeTemporaryLocationLogic)
         {
             $ModuleParams.Add('IncludeTempLocationLogic', $IncludeTemporaryLocationLogic)
+        }
+        if ($RequiredModules)
+        {
+            $ModuleParams.Add('RequiredModules', $RequiredModules)
         }
         try
         {
