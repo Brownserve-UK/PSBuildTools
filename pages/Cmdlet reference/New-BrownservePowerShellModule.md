@@ -16,7 +16,8 @@ Creates a new PowerShell module in the standard Brownserve format
 ```text
 New-BrownservePowerShellModule [-ModuleName] <String> [[-Path] <String>] [[-Description] <String>]
  [-Customisations <String>] [-RequirePowerShellVersion <String>] [-IncludeTemporaryLocationLogic <Boolean>]
- [-IncludeBrownserveCmdletsLogic <Boolean>] [-Force] [<CommonParameters>]
+ [-IncludeBrownserveCmdletsLogic <Boolean>] [-RequiredModules <String[]>] [-Force]
+ [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -146,6 +147,22 @@ Aliases:
 
 Required: False
 Position: 1
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -RequiredModules
+
+A list of module names that the new module requires. Each name generates a `#Requires -Module` statement at the top of the `.psm1` file.
+
+```yaml
+Type: String[]
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
