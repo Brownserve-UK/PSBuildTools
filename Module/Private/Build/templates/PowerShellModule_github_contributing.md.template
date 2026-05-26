@@ -1,0 +1,5 @@
+# Contributing
+
+Pull requests are welcome but please do bear in mind that these tools are designed specifically to work with Brownserve projects and are in use across various production CI/CD pipelines, therefore we may not be able to accommodate all requests.
+
+For style guidelines see the [PowerShell style guidelines](https://docs.brownserve.co.uk/powershell/style-guidelines/).
