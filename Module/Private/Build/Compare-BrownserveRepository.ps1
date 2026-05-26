@@ -153,6 +153,8 @@ function Compare-BrownserveRepository
         $IncludeMarkdownlint = $false
         $IncludeDependabot = $false
         $IncludeLabelPR = $false
+        $IncludeContributing = $false
+        $IncludePRTemplate = $false
         $IncludeBuildScripts = $false
         $IncludeHelpTests = $false
         $BuildScriptUseWorkingCopyOption = $false
@@ -368,6 +370,8 @@ function Compare-BrownserveRepository
             ManifestVersion = '1.0.0'
         }
 
+        $TemplatesDirectory = Join-Path $PSScriptRoot 'templates'
+
         switch ($ProjectType)
         {
             <#
@@ -401,6 +405,8 @@ function Compare-BrownserveRepository
                 $IncludeMarkdownlint = $true
                 $IncludeDependabot = $true
                 $IncludeLabelPR = $true
+                $IncludeContributing = $true
+                $IncludePRTemplate = $true
                 $IncludeBuildScripts = $true
                 $IncludeHelpTests = $true
                 $IncludeMkDocs = $true
@@ -409,6 +415,17 @@ function Compare-BrownserveRepository
                         @{ Ecosystem = 'github-actions'; Directory = '/';       Interval = 'weekly' },
                         @{ Ecosystem = 'nuget';          Directory = '/.config'; Interval = 'weekly' }
                     )
+                }
+                $ContributingParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'PowerShellModule_github_contributing.md.template'
+                }
+                $PRTemplateParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'PowerShellModule_github_pull_request_template.md.template'
+                    Substitutions     = @{
+                        MODULE_NAME = $ModuleInfo.Name
+                    }
                 }
             }
             <#
@@ -440,6 +457,8 @@ function Compare-BrownserveRepository
                 $IncludeMarkdownlint = $true
                 $IncludeDependabot = $true
                 $IncludeLabelPR = $true
+                $IncludeContributing = $true
+                $IncludePRTemplate = $true
                 $IncludeBuildScripts = $true
                 $IncludeHelpTests = $true
                 $IncludeMkDocs = $true
@@ -449,6 +468,17 @@ function Compare-BrownserveRepository
                         @{ Ecosystem = 'github-actions'; Directory = '/';       Interval = 'weekly' },
                         @{ Ecosystem = 'nuget';          Directory = '/.config'; Interval = 'weekly' }
                     )
+                }
+                $ContributingParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'PowerShellModule_github_contributing.md.template'
+                }
+                $PRTemplateParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'PowerShellModule_github_pull_request_template.md.template'
+                    Substitutions     = @{
+                        MODULE_NAME = $ModuleInfo.Name
+                    }
                 }
             }
             Default
@@ -1516,6 +1546,106 @@ function Compare-BrownserveRepository
             catch
             {
                 throw "Failed to process '$LabelPRWorkflowPath'.`n$($_.Exception.Message)"
+            }
+        }
+
+        if ($IncludeContributing)
+        {
+            $ContributingPath = Join-Path $GitHubDirectory 'CONTRIBUTING.md'
+
+            if (!(Test-Path $GitHubDirectory) -and ($MissingDirectories.Path -notcontains $GitHubDirectory))
+            {
+                $MissingDirectories += [pscustomobject]@{ Path = $GitHubDirectory }
+            }
+
+            try
+            {
+                $NewContributingContent = New-BrownserveContentFromTemplate @ContributingParams | Format-BrownserveContent
+                if (Test-Path $ContributingPath)
+                {
+                    Write-Verbose "Checking for changes to '$ContributingPath'"
+                    $CurrentContributingContent = Get-BrownserveContent -Path $ContributingPath -ErrorAction 'Stop'
+                    $ContributingCompare = Compare-Object `
+                        -ReferenceObject $CurrentContributingContent.Content `
+                        -DifferenceObject $NewContributingContent.Content `
+                        -SyncWindow 1 `
+                        -ErrorAction 'Stop'
+                    if ($ContributingCompare)
+                    {
+                        Write-Verbose "Changes detected in '$ContributingPath'"
+                        $ChangedFiles += [BrownserveContent]@{
+                            Path       = $ContributingPath
+                            Content    = $NewContributingContent.Content
+                            LineEnding = 'LF'
+                        }
+                    }
+                }
+                else
+                {
+                    Write-Verbose "No existing CONTRIBUTING.md found, will create a new one."
+                    $MissingFiles += [BrownserveContent]@{
+                        Path       = $ContributingPath
+                        Content    = $NewContributingContent.Content
+                        LineEnding = 'LF'
+                    }
+                }
+            }
+            catch
+            {
+                throw "Failed to process '$ContributingPath'.`n$($_.Exception.Message)"
+            }
+        }
+
+        if ($IncludePRTemplate)
+        {
+            if (-not $RepoName)
+            {
+                $RepoName = Split-Path $RepositoryPath -Leaf
+            }
+
+            $PRTemplatePath = Join-Path $GitHubDirectory 'pull_request_template.md'
+
+            if (!(Test-Path $GitHubDirectory) -and ($MissingDirectories.Path -notcontains $GitHubDirectory))
+            {
+                $MissingDirectories += [pscustomobject]@{ Path = $GitHubDirectory }
+            }
+
+            try
+            {
+                $PRTemplateParams.Substitutions['REPO_NAME'] = $RepoName
+                $NewPRTemplateContent = New-BrownserveContentFromTemplate @PRTemplateParams | Format-BrownserveContent
+                if (Test-Path $PRTemplatePath)
+                {
+                    Write-Verbose "Checking for changes to '$PRTemplatePath'"
+                    $CurrentPRTemplateContent = Get-BrownserveContent -Path $PRTemplatePath -ErrorAction 'Stop'
+                    $PRTemplateCompare = Compare-Object `
+                        -ReferenceObject $CurrentPRTemplateContent.Content `
+                        -DifferenceObject $NewPRTemplateContent.Content `
+                        -SyncWindow 1 `
+                        -ErrorAction 'Stop'
+                    if ($PRTemplateCompare)
+                    {
+                        Write-Verbose "Changes detected in '$PRTemplatePath'"
+                        $ChangedFiles += [BrownserveContent]@{
+                            Path       = $PRTemplatePath
+                            Content    = $NewPRTemplateContent.Content
+                            LineEnding = 'LF'
+                        }
+                    }
+                }
+                else
+                {
+                    Write-Verbose "No existing pull_request_template.md found, will create a new one."
+                    $MissingFiles += [BrownserveContent]@{
+                        Path       = $PRTemplatePath
+                        Content    = $NewPRTemplateContent.Content
+                        LineEnding = 'LF'
+                    }
+                }
+            }
+            catch
+            {
+                throw "Failed to process '$PRTemplatePath'.`n$($_.Exception.Message)"
             }
         }
 
