@@ -1,6 +1,6 @@
 # Brownserve.PSBuildTools
 
-[![release](https://github.com/Brownserve-UK/Brownserve.PSBuildTools/actions/workflows/release.yaml/badge.svg?branch=main)](https://github.com/Brownserve-UK/Brownserve.PSBuildTools/actions/workflows/release.yaml)
+[![release](https://github.com/Brownserve-UK/Brownserve.PSBuildTools/actions/workflows/release.yaml/badge.svg?branch=main)](https://github.com/Brownserve-UK/PSBuildTools/actions/workflows/release.yaml)
 
 Changelog, versioning, NuGet, PowerShell module scaffolding, and build notification helpers used across Brownserve projects.  
 The tools are packaged as both a NuGet package and PSGallery PowerShell module for easy consumption across a wide variety of projects.
