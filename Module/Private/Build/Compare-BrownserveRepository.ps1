@@ -1573,7 +1573,7 @@ function Compare-BrownserveRepository
                     if ($ContributingCompare)
                     {
                         Write-Verbose "Changes detected in '$ContributingPath'"
-                        $ChangedFiles += [BrownserveContent]@{
+                        $ChangedFiles += [pscustomobject]@{
                             Path       = $ContributingPath
                             Content    = $NewContributingContent.Content
                             LineEnding = 'LF'
@@ -1583,7 +1583,7 @@ function Compare-BrownserveRepository
                 else
                 {
                     Write-Verbose "No existing CONTRIBUTING.md found, will create a new one."
-                    $MissingFiles += [BrownserveContent]@{
+                    $MissingFiles += [pscustomobject]@{
                         Path       = $ContributingPath
                         Content    = $NewContributingContent.Content
                         LineEnding = 'LF'
@@ -1626,7 +1626,7 @@ function Compare-BrownserveRepository
                     if ($PRTemplateCompare)
                     {
                         Write-Verbose "Changes detected in '$PRTemplatePath'"
-                        $ChangedFiles += [BrownserveContent]@{
+                        $ChangedFiles += [pscustomobject]@{
                             Path       = $PRTemplatePath
                             Content    = $NewPRTemplateContent.Content
                             LineEnding = 'LF'
@@ -1636,7 +1636,7 @@ function Compare-BrownserveRepository
                 else
                 {
                     Write-Verbose "No existing pull_request_template.md found, will create a new one."
-                    $MissingFiles += [BrownserveContent]@{
+                    $MissingFiles += [pscustomobject]@{
                         Path       = $PRTemplatePath
                         Content    = $NewPRTemplateContent.Content
                         LineEnding = 'LF'

@@ -1,4 +1,4 @@
 {
-  "ManifestVersion": "1.0.0",
-  "RepositoryType": "PowerShellModule"
+  "RepositoryType": "PowerShellModule",
+  "ManifestVersion": "1.0.0"
 }
