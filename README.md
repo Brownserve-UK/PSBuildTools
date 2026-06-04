@@ -7,11 +7,11 @@ The tools are packaged as both a NuGet package and PSGallery PowerShell module f
 
 ## What's included?
 
-Please see the [module documentation](https://docs.brownserve.co.uk/Brownserve.PSBuildTools/) for a full list of cmdlets and their usage.
+Please see the [module documentation](https://docs.brownserve.co.uk/PSBuildTools/) for a full list of cmdlets and their usage.
 
 ## How to use
 
-See the [getting started guide](https://docs.brownserve.co.uk/Brownserve.PSBuildTools/getting-started/) for installation and setup instructions, or the [cmdlet reference](https://docs.brownserve.co.uk/Brownserve.PSBuildTools/Cmdlet%20reference/Commands/) for a full list of available cmdlets.
+See the [getting started guide](https://docs.brownserve.co.uk/PSBuildTools/getting-started/) for installation and setup instructions, or the [cmdlet reference](https://docs.brownserve.co.uk/PSBuildTools/Cmdlet%20reference/Commands/) for a full list of available cmdlets.
 
 ## Contributing
 
