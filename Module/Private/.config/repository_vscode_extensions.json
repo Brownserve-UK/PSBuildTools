@@ -21,6 +21,32 @@
             }
         }
     ],
+    "WebApp": [
+        {
+            "ExtensionID": "ms-azuretools.vscode-docker",
+            "CustomSettings": {}
+        },
+        {
+            "ExtensionID": "ms-vscode.powershell",
+            "CustomSettings": {
+                "powershell.helpCompletion": "Disabled",
+                "powershell.codeFormatting.trimWhitespaceAroundPipe": true,
+                "powershell.codeFormatting.useConstantStrings": true,
+                "powershell.codeFormatting.autoCorrectAliases": true,
+                "powershell.codeFormatting.pipelineIndentationStyle": "IncreaseIndentationAfterEveryPipeline",
+                "powershell.codeFormatting.preset": "Allman",
+                "powershell.codeFormatting.useCorrectCasing": true
+            }
+        },
+        {
+          "ExtensionID": "EditorConfig.EditorConfig",
+          "CustomSettings": {}
+        },
+        {
+            "ExtensionID": "DavidAnson.vscode-markdownlint",
+            "CustomSettings": {}
+        }
+    ],
     "PowerShellModule": [
         {
             "ExtensionID": "ms-vscode.powershell",

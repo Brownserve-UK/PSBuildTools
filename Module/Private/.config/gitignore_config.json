@@ -21,5 +21,18 @@
                 ".continue/"
             ]
         }
+    ],
+    "WebApp": [
+        {
+            "comment": "Environment files often contain secrets and should never be committed.",
+            "item": [
+                ".env",
+                ".env.*"
+            ]
+        },
+        {
+            "comment": "Docker build output and cache.",
+            "item": ".docker/"
+        }
     ]
 }

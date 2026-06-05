@@ -37,7 +37,7 @@ function Get-VSCodeWorkspaceSettings
         {
             # Don't raise a terminating error, it might be expected - let the calling command work out what to do
             Write-Error `
-                -Exception ([BrownserveFileNotFound]::New('Failed to find settings file',$RepoVSCodeSettingsPath))
+                -Exception ([System.IO.FileNotFoundException]::New('Failed to find settings file',$RepoVSCodeSettingsPath))
             $CurrentSettings = $null
         }
     }

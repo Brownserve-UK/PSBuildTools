@@ -91,7 +91,7 @@ The type of project that this repository holds
 Type: BrownserveRepoProjectType
 Parameter Sets: (All)
 Aliases:
-Accepted values: PowerShellModule, BrownservePSTools, Generic
+Accepted values: PowerShellModule, BrownservePSTools, WebApp, Generic
 
 Required: False
 Position: Named

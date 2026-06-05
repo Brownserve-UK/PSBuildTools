@@ -267,7 +267,7 @@ function Compare-BrownserveRepository
         {
             $VSCodeWorkspaceExtensionIDs += Get-VSCodeWorkspaceExtensions -WorkspacePath $RepositoryPath -ErrorAction 'Stop'
         }
-        catch [BrownserveFileNotFound]
+        catch [System.IO.FileNotFoundException]
         {
             <#
                 Repo probably doesn't have the extensions.json file yet
@@ -284,7 +284,7 @@ function Compare-BrownserveRepository
         {
             $VSCodeWorkspaceSettings = Get-VSCodeWorkspaceSettings -WorkspacePath $RepositoryPath -ErrorAction 'Stop'
         }
-        catch [BrownserveFileNotFound]
+        catch [System.IO.FileNotFoundException]
         {
             Write-Verbose 'No VS Code settings.json file found, using the empty dictionary'
             <#
@@ -481,6 +481,77 @@ function Compare-BrownserveRepository
                     }
                 }
             }
+            'WebApp'
+            {
+                Write-Debug 'WebApp selected'
+                $DockerfileName        = $DevcontainerConfig.WebApp.Dockerfile
+                $ExtraPermanentPaths   = $RepositoryPathsConfig.WebApp.PermanentPaths
+                $ExtraEphemeralPaths   = $RepositoryPathsConfig.WebApp.EphemeralPaths
+                $ExtraPaketDeps        = $PaketDependenciesConfig.WebApp
+                $ExtraGitIgnores       = $GitIgnoreConfig.WebApp
+                $ExtraVSCodeExtensions = $VSCodeExtensionsConfig.WebApp
+                $ExtraPackageAliases   = $PackageAliasConfig.WebApp
+                $ExtraEditorConfig     = $EditorConfigConfig.WebApp
+                $IncludeChangelog      = $true
+                $InitParams = @{
+                    IncludeModuleLoader   = $false
+                    IncludePowerShellYaml = $false
+                    IncludePlatyPS        = $false
+                    IncludeBuildTestTools = $true
+                }
+                $LicenseType         = 'MIT'
+                $IncludeWorkflows    = $true
+                $IncludeMarkdownlint = $true
+                $IncludeDependabot   = $true
+                $IncludeLabelPR      = $true
+                $IncludeContributing = $true
+                $IncludePRTemplate   = $true
+                $IncludeBuildScripts = $true
+                $DependabotParams = @{
+                    Updates = @(
+                        @{ Ecosystem = 'github-actions'; Directory = '/'; Interval = 'weekly' },
+                        @{ Ecosystem = 'docker';         Directory = '/'; Interval = 'weekly' }
+                    )
+                }
+                $ContributingParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'WebApp_github_contributing.md.template'
+                }
+                $PRTemplateParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'WebApp_github_pull_request_template.md.template'
+                    Substitutions     = @{ REPO_NAME = '' }
+                }
+                $WorkflowTemplateParams = @{
+                    Builds = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'webapp_github_builds.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                    StageRelease = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'webapp_github_stage-release.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                    Release = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'webapp_github_release.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                }
+                $BuildScriptTemplateParams = @{
+                    BuildScript = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'webapp_build_script.ps1.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                    BuildTasks = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'webapp_build_tasks.ps1.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                }
+            }
             Default
             {
                 Write-Debug 'Generic project type selected'
@@ -494,7 +565,7 @@ function Compare-BrownserveRepository
             }
         }
 
-        if ($IncludeWorkflows -and -not $ModuleInfo)
+        if ($IncludeWorkflows -and -not $ModuleInfo -and -not $WorkflowTemplateParams)
         {
             throw "A '-ModuleInfo' value is required for '$ProjectType' repositories."
         }
@@ -1431,13 +1502,27 @@ function Compare-BrownserveRepository
             $StageReleaseWorkflowPath = Join-Path $WorkflowDirectory 'stage-release.yaml'
             $ReleaseWorkflowPath = Join-Path $WorkflowDirectory 'release.yaml'
 
-            $WorkflowCommonParams = @{ ModuleName = $ModuleInfo.Name; RepoName = $RepoName }
-
             try
             {
-                $NewBuildsWorkflowContent = New-BrownserveGitHubBuildsWorkflow -ModuleName $ModuleInfo.Name -RepoName $RepoName | Format-BrownserveContent
-                $NewStageReleaseWorkflowContent = New-BrownserveGitHubStageReleaseWorkflow @WorkflowCommonParams | Format-BrownserveContent
-                $NewReleaseWorkflowContent = New-BrownserveGitHubReleaseWorkflow @WorkflowCommonParams | Format-BrownserveContent
+                if ($WorkflowTemplateParams)
+                {
+                    $WorkflowTemplateParams.Builds.Substitutions['REPO_NAME']       = $RepoName
+                    $WorkflowTemplateParams.StageRelease.Substitutions['REPO_NAME'] = $RepoName
+                    $WorkflowTemplateParams.Release.Substitutions['REPO_NAME']      = $RepoName
+                    $BuildsTemplateParams       = $WorkflowTemplateParams.Builds
+                    $StageReleaseTemplateParams = $WorkflowTemplateParams.StageRelease
+                    $ReleaseTemplateParams      = $WorkflowTemplateParams.Release
+                    $NewBuildsWorkflowContent       = New-BrownserveContentFromTemplate @BuildsTemplateParams | Format-BrownserveContent
+                    $NewStageReleaseWorkflowContent = New-BrownserveContentFromTemplate @StageReleaseTemplateParams | Format-BrownserveContent
+                    $NewReleaseWorkflowContent      = New-BrownserveContentFromTemplate @ReleaseTemplateParams | Format-BrownserveContent
+                }
+                else
+                {
+                    $WorkflowCommonParams = @{ ModuleName = $ModuleInfo.Name; RepoName = $RepoName }
+                    $NewBuildsWorkflowContent       = New-BrownserveGitHubBuildsWorkflow -ModuleName $ModuleInfo.Name -RepoName $RepoName | Format-BrownserveContent
+                    $NewStageReleaseWorkflowContent = New-BrownserveGitHubStageReleaseWorkflow @WorkflowCommonParams | Format-BrownserveContent
+                    $NewReleaseWorkflowContent      = New-BrownserveGitHubReleaseWorkflow @WorkflowCommonParams | Format-BrownserveContent
+                }
             }
             catch
             {
@@ -1654,16 +1739,25 @@ function Compare-BrownserveRepository
             $BuildScriptPath = Join-Path $BuildDirectory 'build.ps1'
             $BuildTasksScriptPath = Join-Path $BuildTasksDirectory 'build_tasks.ps1'
 
-            $BuildScriptParams = @{}
-            if ($BuildScriptUseWorkingCopyOption)
-            {
-                $BuildScriptParams['IncludeUseWorkingCopyOption'] = $true
-            }
-
             try
             {
-                $NewBuildScriptContent = New-BrownserveBuildScript @BuildScriptParams | Format-BrownserveContent
-                $NewBuildTasksScriptContent = New-BrownserveBuildTasksScript @BuildScriptParams | Format-BrownserveContent
+                if ($BuildScriptTemplateParams)
+                {
+                    $BuildScriptParams = $BuildScriptTemplateParams.BuildScript
+                    $BuildTasksParams  = $BuildScriptTemplateParams.BuildTasks
+                    $NewBuildScriptContent      = New-BrownserveContentFromTemplate @BuildScriptParams | Format-BrownserveContent
+                    $NewBuildTasksScriptContent = New-BrownserveContentFromTemplate @BuildTasksParams | Format-BrownserveContent
+                }
+                else
+                {
+                    $LegacyBuildScriptParams = @{}
+                    if ($BuildScriptUseWorkingCopyOption)
+                    {
+                        $LegacyBuildScriptParams['IncludeUseWorkingCopyOption'] = $true
+                    }
+                    $NewBuildScriptContent      = New-BrownserveBuildScript @LegacyBuildScriptParams | Format-BrownserveContent
+                    $NewBuildTasksScriptContent = New-BrownserveBuildTasksScript @LegacyBuildScriptParams | Format-BrownserveContent
+                }
             }
             catch
             {
