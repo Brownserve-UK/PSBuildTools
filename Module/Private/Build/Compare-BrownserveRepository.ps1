@@ -1743,6 +1743,12 @@ function Compare-BrownserveRepository
             {
                 if ($BuildScriptTemplateParams)
                 {
+                    if (-not $RepoName)
+                    {
+                        $RepoName = Split-Path $RepositoryPath -Leaf
+                    }
+                    $BuildScriptTemplateParams.BuildScript.Substitutions['REPO_NAME'] = $RepoName
+                    $BuildScriptTemplateParams.BuildTasks.Substitutions['REPO_NAME']  = $RepoName
                     $BuildScriptParams = $BuildScriptTemplateParams.BuildScript
                     $BuildTasksParams  = $BuildScriptTemplateParams.BuildTasks
                     $NewBuildScriptContent      = New-BrownserveContentFromTemplate @BuildScriptParams | Format-BrownserveContent
