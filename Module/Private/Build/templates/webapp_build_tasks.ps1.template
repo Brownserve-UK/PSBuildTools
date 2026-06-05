@@ -338,7 +338,7 @@ task Build {
     Write-Build White "Building Docker image '$ImageName'"
     try
     {
-        exec { docker build -t "${ImageName}:latest" . }
+        exec { docker build -t "${ImageName}:latest" $Global:BrownserveRepoRootDirectory }
     }
     catch
     {
