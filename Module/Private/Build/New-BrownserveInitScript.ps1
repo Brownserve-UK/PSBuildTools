@@ -100,6 +100,13 @@ function New-BrownserveInitScript
         }
         $InitTemplate = $InitTemplate.Replace('###PERMANENT_PATHS###', $PermanentPathText)
 
+        $DocsDirectoryText = ''
+        if ($IncludePlatyPS)
+        {
+            $DocsDirectoryText = '$Global:BrownserveRepoDocsDirectory = Join-Path $global:BrownserveRepoRootDirectory -ChildPath ''pages'' -AdditionalChildPath ''Cmdlet reference'' | Convert-Path'
+        }
+        $InitTemplate = $InitTemplate.Replace('###DOCS_DIRECTORY###', $DocsDirectoryText)
+
         # For our ephemeral paths we first need to define them as standalone variables, so we can create them
         # if they don't already exist
         $EphemeralDirectoriesText = ''

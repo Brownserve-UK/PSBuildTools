@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
+      contents: read   # needed for checkout
       packages: write  # needed for GITHUB_TOKEN to push to ghcr.io
     steps:
       # Step 1: Generate a short-lived token from the GitHub App
