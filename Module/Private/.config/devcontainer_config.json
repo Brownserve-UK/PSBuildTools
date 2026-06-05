@@ -2,5 +2,9 @@
     "PowerShellModule":
     {
         "Dockerfile": "Dockerfile_PowerShellModule"
+    },
+    "WebApp":
+    {
+        "Dockerfile": "Dockerfile_WebApp"
     }
 }

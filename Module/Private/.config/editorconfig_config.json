@@ -11,6 +11,20 @@
       "FilePath": "*"
     }
   ],
+  "WebApp": [
+    {
+      "Comment": [
+        "Now that PowerShell is cross-platform we'll just set the line endings to LF"
+      ],
+      "FilePath": "{*.ps1,*.psm1,*.psd1,*.ps1.template}",
+      "Properties": {
+        "end_of_line": "lf",
+        "charset": "utf-8",
+        "indent_style": "space",
+        "indent_size": 4
+      }
+    }
+  ],
   "PowerShellModule": [
     {
       "Comment": [

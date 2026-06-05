@@ -38,7 +38,7 @@ function Get-VSCodeWorkspaceExtensions
         {
             # It may be expected that the file doesn't exist yet so don't terminate and let the calling command deal with that.
             Write-Error `
-                -Exception ([BrownserveFileNotFound]::New('Could not find extensions file',$RepoVSCodeExtensionsPath))
+                -Exception ([System.IO.FileNotFoundException]::New('Could not find extensions file',$RepoVSCodeExtensionsPath))
             $CurrentExtensions = $null
         }
     }

@@ -42,5 +42,15 @@
                 "PackageName": "NuGet.CommandLine"
             }
         }
+    ],
+    "WebApp":
+    [
+        {
+            "comment": "Pester is used to perform testing on the build scripts",
+            "rule": {
+                "source": "nuget",
+                "PackageName": "Pester"
+            }
+        }
     ]
 }
