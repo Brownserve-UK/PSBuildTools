@@ -107,12 +107,18 @@ param
 # Docker requires image names to be lowercase
 $ImageName = $ImageName.ToLower()
 
+# Depending on how we got the branch name we may need to remove the full ref
+$BranchName = $BranchName -replace 'refs\/heads\/', ''
+$script:CurrentCommitHash = & git rev-parse HEAD
+
 # Script-scoped variables populated by tasks
 $script:Release = $false
 $script:Stage = $false
 $script:Changelog = $null
 $script:CurrentVersion = $null
 $script:NewVersion = $null
+$script:PrefixedVersion = $null
+$script:ReleaseVersion = $null
 $script:ReleaseNotes = $null
 $script:StagingBranchName = $null
 $script:PRLink = $null
@@ -219,8 +225,9 @@ task SetVersion GetReleaseHistory, {
         'minor' { [semver]::new($script:CurrentVersion.Major, $script:CurrentVersion.Minor + 1, 0) }
         'patch' { [semver]::new($script:CurrentVersion.Major, $script:CurrentVersion.Minor, $script:CurrentVersion.Patch + 1) }
     }
-    Write-Verbose "New version: $script:NewVersion"
-    $script:StagingBranchName = "release/$script:NewVersion"
+    $script:PrefixedVersion = "v$script:NewVersion"
+    Write-Verbose "New version: $script:PrefixedVersion"
+    $script:StagingBranchName = "release/$script:PrefixedVersion"
 }
 
 <#
@@ -280,22 +287,59 @@ task UpdateChangelog CreateChangelogEntry, {
 
 <#
 .SYNOPSIS
-    Checks out a new staging branch and commits any tracked file changes.
+    Creates a remote staging branch via the GitHub API.
 #>
-task CommitTrackedChanges {
+task CreateStagingBranch SetVersion, {
     Write-Build White "Creating staging branch '$script:StagingBranchName'"
     try
     {
-        New-GitBranch -BranchName $script:StagingBranchName -ErrorAction 'Stop'
-        $script:TrackedFiles | ForEach-Object {
-            Add-GitFileToIndex -Path $_ -ErrorAction 'Stop'
-        }
-        New-GitCommit -Message "Prepare for $script:NewVersion" -ErrorAction 'Stop'
-        Push-GitBranch -BranchName $script:StagingBranchName -ErrorAction 'Stop'
+        New-GitHubBranch `
+            -RepositoryOwner $GitHubRepoOwner `
+            -RepositoryName  $GitHubRepoName `
+            -BranchName      $script:StagingBranchName `
+            -SHA             $script:CurrentCommitHash `
+            -Token           $GitHubStageReleaseToken `
+            -ErrorAction 'Stop'
     }
     catch
     {
-        throw "Failed to commit tracked changes.`n$($_.Exception.Message)"
+        throw "Failed to create staging branch '$script:StagingBranchName'.`n$($_.Exception.Message)"
+    }
+}
+
+<#
+.SYNOPSIS
+    Commits tracked file changes to the staging branch via the GitHub API.
+#>
+task CommitTrackedChanges UpdateChangelog, CreateStagingBranch, {
+    if ($script:TrackedFiles.Count -gt 0)
+    {
+        Write-Build White 'Committing tracked changes'
+        try
+        {
+            $Files = $script:TrackedFiles | ForEach-Object {
+                @{
+                    Path    = [System.IO.Path]::GetRelativePath($Global:BrownserveRepoRootDirectory, $_).Replace('\', '/')
+                    Content = Get-Content -Path $_ -Raw
+                }
+            }
+            New-GitHubCommit `
+                -RepositoryOwner $GitHubRepoOwner `
+                -RepositoryName  $GitHubRepoName `
+                -BranchName      $script:StagingBranchName `
+                -CommitMessage   "docs: Prepare for $script:PrefixedVersion`n`nThis commit was automatically generated." `
+                -Files           $Files `
+                -Token           $GitHubStageReleaseToken `
+                -ErrorAction 'Stop'
+        }
+        catch
+        {
+            throw "Failed to commit tracked changes.`n$($_.Exception.Message)"
+        }
+    }
+    else
+    {
+        Write-Verbose 'No tracked files to commit.'
     }
 }
 
@@ -314,7 +358,7 @@ Please review the changes and merge if they look good.
         $PullRequestParams = @{
             BaseBranch      = $DefaultBranch
             HeadBranch      = $script:StagingBranchName
-            Title           = "Prepare for $script:NewVersion"
+            Title           = "Prepare for $script:PrefixedVersion"
             Body            = $Body
             GitHubToken     = $GitHubStageReleaseToken
             RepositoryName  = $GitHubRepoName
@@ -360,6 +404,7 @@ task BuildTestAndCheck Build, {}
 task PublishRelease GetReleaseHistory, Build, {
     Write-Build White 'Publishing release'
     $script:ReleaseVersion = $script:Changelog.LatestVersion.Version.ToString()
+    $script:PrefixedVersion = "v$script:ReleaseVersion"
     $script:ReleaseNotes = $script:Changelog.LatestVersion.ReleaseNotes -join "`n"
 
     if ('DockerHub' -in $PublishTo)
@@ -377,6 +422,10 @@ task PublishRelease GetReleaseHistory, Build, {
         {
             throw "Failed to publish to DockerHub.`n$($_.Exception.Message)"
         }
+    }
+    else
+    {
+        Write-Verbose 'DockerHub not targeted, skipping...'
     }
 
     if ('GHCR' -in $PublishTo)
@@ -407,9 +456,9 @@ task PublishRelease GetReleaseHistory, Build, {
         try
         {
             $GitHubReleaseParams = @{
-                TagName         = $script:ReleaseVersion
-                ReleaseName     = $script:ReleaseVersion
-                ReleaseNotes    = $script:ReleaseNotes
+                Tag             = $script:PrefixedVersion
+                Name            = $script:PrefixedVersion
+                Description     = $script:ReleaseNotes
                 GitHubToken     = $GitHubReleaseToken
                 RepositoryName  = $GitHubRepoName
                 RepositoryOwner = $GitHubRepoOwner
@@ -432,7 +481,7 @@ task PublishRelease GetReleaseHistory, Build, {
     Stages a release by updating the changelog and creating a pull request.
     This is the first step in a two-stage release process.
 #>
-task StageRelease CheckStagingParameters, SetStagingVariables, CreateChangelogEntry, UpdateChangelog, CreatePullRequest, {
+task StageRelease CheckStagingParameters, SetStagingVariables, CreatePullRequest, {
     $BuildMessage = @"
 The release has been successfully staged and a pull request has been created.
 Please review the changes at $script:PRLink and merge if they look good.
