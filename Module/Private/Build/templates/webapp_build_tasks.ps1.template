@@ -104,6 +104,9 @@ param
     $GHCRToken
 )
 
+# Docker requires image names to be lowercase
+$ImageName = $ImageName.ToLower()
+
 # Script-scoped variables populated by tasks
 $script:Release = $false
 $script:Stage = $false
