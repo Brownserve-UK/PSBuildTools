@@ -52,7 +52,7 @@ if ($env:CI)
 # This directory is the root of the repo, it's handy to reference sometimes
 $Global:BrownserveRepoRootDirectory = (Resolve-Path (Get-Item $PSScriptRoot -Force).PSParentPath) | Convert-Path # -Force flag is needed to find dot folders on *.nix
 ###PERMANENT_PATHS###
-$Global:BrownserveRepoDocsDirectory = Join-Path $global:BrownserveRepoRootDirectory -ChildPath 'pages' -AdditionalChildPath 'Cmdlet reference' | Convert-Path
+###DOCS_DIRECTORY###
 
 # Guess the name of the repo by it's name on disk
 $Global:BrownserveRepoName = Split-Path $Global:BrownserveRepoRootDirectory -Leaf
