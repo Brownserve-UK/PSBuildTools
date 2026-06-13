@@ -156,7 +156,7 @@ function Compare-BrownserveRepository
         $IncludeContributing = $false
         $IncludePRTemplate = $false
         $IncludeBuildScripts = $false
-        $IncludeHelpTests = $false
+        $IncludePesterTests = $false
         $BuildScriptUseWorkingCopyOption = $false
 
         <#
@@ -408,7 +408,15 @@ function Compare-BrownserveRepository
                 $IncludeContributing = $true
                 $IncludePRTemplate = $true
                 $IncludeBuildScripts = $true
-                $IncludeHelpTests = $true
+                $IncludePesterTests = $true
+                $PesterTestsParams = @(
+                    @{
+                        FileName          = 'Help.Tests.ps1'
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'help.tests.ps1.template'
+                        Substitutions     = @{ MODULE_NAME = $ModuleInfo.Name }
+                    }
+                )
                 $IncludeMkDocs = $true
                 $DependabotParams = @{
                     Updates = @(
@@ -460,7 +468,15 @@ function Compare-BrownserveRepository
                 $IncludeContributing = $true
                 $IncludePRTemplate = $true
                 $IncludeBuildScripts = $true
-                $IncludeHelpTests = $true
+                $IncludePesterTests = $true
+                $PesterTestsParams = @(
+                    @{
+                        FileName          = 'Help.Tests.ps1'
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'help.tests.ps1.template'
+                        Substitutions     = @{ MODULE_NAME = $ModuleInfo.Name }
+                    }
+                )
                 $IncludeMkDocs = $true
                 $BuildScriptUseWorkingCopyOption = $true
                 $DependabotParams = @{
@@ -507,6 +523,15 @@ function Compare-BrownserveRepository
                 $IncludeContributing = $true
                 $IncludePRTemplate   = $true
                 $IncludeBuildScripts = $true
+                $IncludePesterTests = $true
+                $PesterTestsParams  = @(
+                    @{
+                        FileName          = 'Basic.Container.Tests.ps1'
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'container_basic_tests.ps1.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                )
                 $DependabotParams = @{
                     Updates = @(
                         @{ Ecosystem = 'github-actions'; Directory = '/'; Interval = 'weekly' },
@@ -1823,18 +1848,13 @@ function Compare-BrownserveRepository
             }
         }
 
-        if ($IncludeHelpTests)
+        if ($IncludePesterTests)
         {
             $BuildTestsDirectory = Join-Path $BuildDirectory 'tests'
-            $HelpTestsPath = Join-Path $BuildTestsDirectory 'Help.Tests.ps1'
 
-            try
+            if (-not $RepoName)
             {
-                $NewHelpTestsContent = New-BrownserveHelpTestsScript -ModuleName $ModuleInfo.Name | Format-BrownserveContent
-            }
-            catch
-            {
-                throw "Failed to generate Help.Tests.ps1 content.`n$($_.Exception.Message)"
+                $RepoName = Split-Path $RepositoryPath -Leaf
             }
 
             if (!(Test-Path $BuildTestsDirectory) -and ($MissingDirectories.Path -notcontains $BuildTestsDirectory))
@@ -1842,40 +1862,64 @@ function Compare-BrownserveRepository
                 $MissingDirectories += [pscustomobject]@{ Path = $BuildTestsDirectory }
             }
 
-            try
+            foreach ($TestSpec in $PesterTestsParams)
             {
-                if (Test-Path $HelpTestsPath)
+                $PesterTestPath = Join-Path $BuildTestsDirectory $TestSpec.FileName
+
+                if ($TestSpec.Substitutions.ContainsKey('REPO_NAME'))
                 {
-                    Write-Verbose "Checking for changes to '$HelpTestsPath'"
-                    $CurrentHelpTestsContent = Get-BrownserveContent -Path $HelpTestsPath -ErrorAction 'Stop'
-                    $HelpTestsCompare = Compare-Object `
-                        -ReferenceObject $CurrentHelpTestsContent.Content `
-                        -DifferenceObject $NewHelpTestsContent.Content `
-                        -SyncWindow 1 `
-                        -ErrorAction 'Stop'
-                    if ($HelpTestsCompare)
+                    $TestSpec.Substitutions['REPO_NAME'] = $RepoName
+                }
+
+                try
+                {
+                    $TestSplatParams = @{
+                        TemplateDirectory = $TestSpec.TemplateDirectory
+                        TemplateName      = $TestSpec.TemplateName
+                        Substitutions     = $TestSpec.Substitutions
+                    }
+                    $NewPesterTestContent = New-BrownserveContentFromTemplate @TestSplatParams | Format-BrownserveContent
+                }
+                catch
+                {
+                    throw "Failed to generate '$($TestSpec.FileName)' content.`n$($_.Exception.Message)"
+                }
+
+                try
+                {
+                    if (Test-Path $PesterTestPath)
                     {
-                        Write-Verbose "Changes detected in '$HelpTestsPath'"
-                        $ChangedFiles += [pscustomobject]@{
-                            Path       = $HelpTestsPath
-                            Content    = $NewHelpTestsContent.Content
+                        Write-Verbose "Checking for changes to '$PesterTestPath'"
+                        $CurrentPesterTestContent = Get-BrownserveContent -Path $PesterTestPath -ErrorAction 'Stop'
+                        $PesterTestCompare = Compare-Object `
+                            -ReferenceObject $CurrentPesterTestContent.Content `
+                            -DifferenceObject $NewPesterTestContent.Content `
+                            -SyncWindow 1 `
+                            -ErrorAction 'Stop'
+                        if ($PesterTestCompare)
+                        {
+                            Write-Verbose "Changes detected in '$PesterTestPath'"
+                            $ChangedFiles += [pscustomobject]@{
+                                Path       = $PesterTestPath
+                                Content    = $NewPesterTestContent.Content
+                                LineEnding = 'LF'
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Write-Verbose "No existing '$($TestSpec.FileName)' found, will create a new one."
+                        $MissingFiles += [pscustomobject]@{
+                            Path       = $PesterTestPath
+                            Content    = $NewPesterTestContent.Content
                             LineEnding = 'LF'
                         }
                     }
                 }
-                else
+                catch
                 {
-                    Write-Verbose "No existing Help.Tests.ps1 found, will create a new one."
-                    $MissingFiles += [pscustomobject]@{
-                        Path       = $HelpTestsPath
-                        Content    = $NewHelpTestsContent.Content
-                        LineEnding = 'LF'
-                    }
+                    throw "Failed to process '$PesterTestPath'.`n$($_.Exception.Message)"
                 }
-            }
-            catch
-            {
-                throw "Failed to process '$HelpTestsPath'.`n$($_.Exception.Message)"
             }
         }
 
