@@ -392,10 +392,21 @@ task Build {
 
 <#
 .SYNOPSIS
-    Builds the Docker image and verifies it completes successfully.
+    Runs Pester tests for the repository.
+#>
+task Tests {
+    Write-Build White 'Running Pester tests'
+    $Global:BrownserveRepoDockerImageName = $ImageName
+    $Results = Invoke-Pester -Path $Global:BrownserveRepoTestsDirectory -PassThru
+    assert ($Results.FailedCount -eq 0) "$($Results.FailedCount) test(s) failed."
+}
+
+<#
+.SYNOPSIS
+    Builds the Docker image and runs Pester tests.
     Used by the CI pipeline on pull requests.
 #>
-task BuildTestAndCheck Build, {}
+task BuildTestAndCheck Build, Tests, {}
 
 <#
 .SYNOPSIS
