@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Release
 
+## [v0.2.0](https://github.com/Brownserve-UK/PSBuildTools/tree/v0.2.0) (2026-06-13)
+
+### Added
+
+- feat: add new repository type: `WebApp` in [#15](https://github.com/Brownserve-UK/PSBuildTools/pull/15) by [@shoddyguard](https://github.com/shoddyguard)
+- feat: add more GitHub templates in [#11](https://github.com/Brownserve-UK/PSBuildTools/pull/11) by [@shoddyguard](https://github.com/shoddyguard)
+
+### Fixed
+
+- fix: add webapp tests in [#18](https://github.com/Brownserve-UK/PSBuildTools/pull/18) by [@shoddyguard](https://github.com/shoddyguard)
+- fix(init): correct script generation for WebApp repos in [#16](https://github.com/Brownserve-UK/PSBuildTools/pull/16) by [@shoddyguard](https://github.com/shoddyguard)
+- docs: update README in [#14](https://github.com/Brownserve-UK/PSBuildTools/pull/14) by [@shoddyguard](https://github.com/shoddyguard)
+- docs: ensure README has correct label in [#13](https://github.com/Brownserve-UK/PSBuildTools/pull/13) by [@shoddyguard](https://github.com/shoddyguard)
+- fix: incorrect type in [#12](https://github.com/Brownserve-UK/PSBuildTools/pull/12) by [@shoddyguard](https://github.com/shoddyguard)
+- docs: add PR template and refactor contributing guide in [#10](https://github.com/Brownserve-UK/PSBuildTools/pull/10) by [@shoddyguard](https://github.com/shoddyguard)
+
+
 ## [v0.1.2](https://github.com/Brownserve-UK/PSBuildTools/tree/v0.1.2) (2026-05-25)
 
 ### Fixed
