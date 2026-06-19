@@ -34,5 +34,15 @@
             "comment": "Docker build output and cache.",
             "item": ".docker/"
         }
+    ],
+    "RustApp": [
+        {
+            "comment": "Cargo build output. Note: Cargo.lock is intentionally NOT ignored for binary applications.",
+            "item": "target/"
+        },
+        {
+            "comment": "Rust backup files created by certain editors.",
+            "item": "**/*.rs.bk"
+        }
     ]
 }

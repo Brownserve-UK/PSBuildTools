@@ -577,6 +577,93 @@ function Compare-BrownserveRepository
                     }
                 }
             }
+            <#
+                For a repo that builds and ships a Rust application we want to include:
+                    - Invoke-Build/Pester for building and testing
+                    - GitHub Actions workflows with a matrix build (linux/mac/windows) for the Release
+                    - A GitHub release that uploads compiled binaries as assets
+                    - Cargo version kept in sync with CHANGELOG.md via [workspace.package]
+            #>
+            'RustApp'
+            {
+                Write-Debug 'RustApp selected'
+                $DockerfileName        = $DevcontainerConfig.RustApp.Dockerfile
+                $ExtraPermanentPaths   = $RepositoryPathsConfig.RustApp.PermanentPaths
+                $ExtraEphemeralPaths   = $RepositoryPathsConfig.RustApp.EphemeralPaths
+                $ExtraPaketDeps        = $PaketDependenciesConfig.RustApp
+                $ExtraGitIgnores       = $GitIgnoreConfig.RustApp
+                $ExtraVSCodeExtensions = $VSCodeExtensionsConfig.RustApp
+                $ExtraPackageAliases   = $PackageAliasConfig.RustApp
+                $ExtraEditorConfig     = $EditorConfigConfig.RustApp
+                $IncludeChangelog      = $true
+                $InitParams = @{
+                    IncludeModuleLoader   = $false
+                    IncludePowerShellYaml = $false
+                    IncludePlatyPS        = $false
+                    IncludeBuildTestTools = $true
+                }
+                $LicenseType         = 'MIT'
+                $IncludeWorkflows    = $true
+                $IncludeMarkdownlint = $true
+                $IncludeDependabot   = $true
+                $IncludeLabelPR      = $true
+                $IncludeContributing = $true
+                $IncludePRTemplate   = $true
+                $IncludeBuildScripts = $true
+                $IncludePesterTests  = $true
+                $PesterTestsParams   = @(
+                    @{
+                        FileName          = 'Basic.Binary.Tests.ps1'
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_binary_tests.ps1.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                )
+                $DependabotParams = @{
+                    Updates = @(
+                        @{ Ecosystem = 'github-actions'; Directory = '/'; Interval = 'weekly' },
+                        @{ Ecosystem = 'cargo';          Directory = '/'; Interval = 'weekly' }
+                    )
+                }
+                $ContributingParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'RustApp_github_contributing.md.template'
+                }
+                $PRTemplateParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'RustApp_github_pull_request_template.md.template'
+                    Substitutions     = @{ REPO_NAME = '' }
+                }
+                $WorkflowTemplateParams = @{
+                    Builds = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_github_builds.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                    StageRelease = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_github_stage-release.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                    Release = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_github_release.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                }
+                $BuildScriptTemplateParams = @{
+                    BuildScript = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_build_script.ps1.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                    BuildTasks = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_build_tasks.ps1.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                }
+            }
             Default
             {
                 Write-Debug 'Generic project type selected'

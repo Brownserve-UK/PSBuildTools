@@ -25,6 +25,44 @@
       }
     }
   ],
+  "RustApp": [
+    {
+      "Comment": [
+        "Now that PowerShell is cross-platform we'll just set the line endings to LF"
+      ],
+      "FilePath": "{*.ps1,*.psm1,*.psd1,*.ps1.template}",
+      "Properties": {
+        "end_of_line": "lf",
+        "charset": "utf-8",
+        "indent_style": "space",
+        "indent_size": 4
+      }
+    },
+    {
+      "Comment": [
+        "Rust source files follow the rustfmt convention of 4-space indentation"
+      ],
+      "FilePath": "*.rs",
+      "Properties": {
+        "end_of_line": "lf",
+        "charset": "utf-8",
+        "indent_style": "space",
+        "indent_size": 4
+      }
+    },
+    {
+      "Comment": [
+        "TOML files (Cargo.toml etc) use 2-space indentation"
+      ],
+      "FilePath": "*.toml",
+      "Properties": {
+        "end_of_line": "lf",
+        "charset": "utf-8",
+        "indent_style": "space",
+        "indent_size": 2
+      }
+    }
+  ],
   "PowerShellModule": [
     {
       "Comment": [

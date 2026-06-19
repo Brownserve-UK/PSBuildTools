@@ -6,5 +6,9 @@
     "WebApp":
     {
         "Dockerfile": "Dockerfile_WebApp"
+    },
+    "RustApp":
+    {
+        "Dockerfile": "Dockerfile_RustApp"
     }
 }
