@@ -97,6 +97,7 @@ function Initialize-BrownserveRepository
                 -RepositoryPath $RepositoryPath `
                 -ProjectType $ProjectType `
                 -Force:$Force `
+                -Owner $Owner `
                 -GitIgnoreConfigFile $GitIgnoreConfigFile `
                 -PaketDependenciesConfigFile $PaketDependenciesConfigFile `
                 -RepositoryPathsConfigFile $RepositoryPathsConfigFile `

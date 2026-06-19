@@ -433,6 +433,7 @@ function Compare-BrownserveRepository
                     TemplateName      = 'PowerShellModule_github_pull_request_template.md.template'
                     Substitutions     = @{
                         MODULE_NAME = $ModuleInfo.Name
+                        OWNER       = ''
                     }
                 }
             }
@@ -494,6 +495,7 @@ function Compare-BrownserveRepository
                     TemplateName      = 'PowerShellModule_github_pull_request_template.md.template'
                     Substitutions     = @{
                         MODULE_NAME = $ModuleInfo.Name
+                        OWNER       = ''
                     }
                 }
             }
@@ -545,7 +547,7 @@ function Compare-BrownserveRepository
                 $PRTemplateParams = @{
                     TemplateDirectory = $TemplatesDirectory
                     TemplateName      = 'WebApp_github_pull_request_template.md.template'
-                    Substitutions     = @{ REPO_NAME = '' }
+                    Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
                 }
                 $WorkflowTemplateParams = @{
                     Builds = @{
@@ -632,7 +634,7 @@ function Compare-BrownserveRepository
                 $PRTemplateParams = @{
                     TemplateDirectory = $TemplatesDirectory
                     TemplateName      = 'RustApp_github_pull_request_template.md.template'
-                    Substitutions     = @{ REPO_NAME = '' }
+                    Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
                 }
                 $WorkflowTemplateParams = @{
                     Builds = @{
@@ -1810,6 +1812,10 @@ function Compare-BrownserveRepository
             try
             {
                 $PRTemplateParams.Substitutions['REPO_NAME'] = $RepoName
+                if ($PRTemplateParams.Substitutions.ContainsKey('OWNER'))
+                {
+                    $PRTemplateParams.Substitutions['OWNER'] = $Owner
+                }
                 $NewPRTemplateContent = New-BrownserveContentFromTemplate @PRTemplateParams | Format-BrownserveContent
                 if (Test-Path $PRTemplatePath)
                 {

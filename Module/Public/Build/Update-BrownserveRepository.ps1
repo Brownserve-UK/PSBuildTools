@@ -119,6 +119,7 @@ function Update-BrownserveRepository
             $CompareParams = @{
                 RepositoryPath             = $RepositoryPath
                 ProjectType                = $RepositoryType
+                Owner                      = $Owner
                 GitIgnoreConfigFile        = $GitIgnoreConfigFile
                 PaketDependenciesConfigFile = $PaketDependenciesConfigFile
                 RepositoryPathsConfigFile  = $RepositoryPathsConfigFile
