@@ -65,12 +65,13 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           path: ###REPO_NAME###
-      # Step 3: Download all platform archives into the build output directory
+      # Step 3: Download all platform archives into a staging directory outside the repo tree.
+      # They are copied into .tmp/output by build.ps1 after _init.ps1 recreates ephemeral directories.
       - name: download-artifacts
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4
         with:
           pattern: binary-*
-          path: ###REPO_NAME###/.tmp/output/
+          path: ${{ runner.temp }}/release-archives
           merge-multiple: true
       # Step 4: Run the release script
       - name: run-build-script
@@ -79,12 +80,13 @@ jobs:
           GitHubToken: ${{ steps.app-token.outputs.token }}
         run: |
             $Params = @{
-              BranchName         = $env:GITHUB_REF
-              GitHubRepoName     = '###REPO_NAME###'
-              Build              = 'Release'
-              PublishTo          = @('GitHub')
-              GitHubReleaseToken = $env:GitHubToken
-              Verbose            = $true
+              BranchName              = $env:GITHUB_REF
+              GitHubRepoName          = '###REPO_NAME###'
+              Build                   = 'Release'
+              PublishTo               = @('GitHub')
+              GitHubReleaseToken      = $env:GitHubToken
+              ArchiveSourceDirectory  = '${{ runner.temp }}/release-archives'
+              Verbose                 = $true
             }
             ./###REPO_NAME###/.build/build.ps1 @Params
       # Step 5: Push a notification to Slack
