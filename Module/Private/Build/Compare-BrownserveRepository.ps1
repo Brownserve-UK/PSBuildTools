@@ -26,7 +26,7 @@ function Compare-BrownserveRepository
         # The owner of the repository
         [Parameter(Mandatory = $false)]
         [string]
-        $Owner = 'Brownserve',
+        $Owner = 'Brownserve-UK',
 
         # The type of build that should be installed in this repo
         [Parameter(Mandatory = $false)]
@@ -568,7 +568,7 @@ function Compare-BrownserveRepository
                     BuildScript = @{
                         TemplateDirectory = $TemplatesDirectory
                         TemplateName      = 'webapp_build_script.ps1.template'
-                        Substitutions     = @{ REPO_NAME = '' }
+                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
                     }
                     BuildTasks = @{
                         TemplateDirectory = $TemplatesDirectory
@@ -655,7 +655,7 @@ function Compare-BrownserveRepository
                     BuildScript = @{
                         TemplateDirectory = $TemplatesDirectory
                         TemplateName      = 'rustapp_build_script.ps1.template'
-                        Substitutions     = @{ REPO_NAME = '' }
+                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
                     }
                     BuildTasks = @{
                         TemplateDirectory = $TemplatesDirectory
@@ -1861,6 +1861,10 @@ function Compare-BrownserveRepository
                     }
                     $BuildScriptTemplateParams.BuildScript.Substitutions['REPO_NAME'] = $RepoName
                     $BuildScriptTemplateParams.BuildTasks.Substitutions['REPO_NAME']  = $RepoName
+                    if ($BuildScriptTemplateParams.BuildScript.Substitutions.ContainsKey('OWNER'))
+                    {
+                        $BuildScriptTemplateParams.BuildScript.Substitutions['OWNER'] = $Owner
+                    }
                     $BuildScriptParams = $BuildScriptTemplateParams.BuildScript
                     $BuildTasksParams  = $BuildScriptTemplateParams.BuildTasks
                     $NewBuildScriptContent      = New-BrownserveContentFromTemplate @BuildScriptParams | Format-BrownserveContent
@@ -1873,7 +1877,7 @@ function Compare-BrownserveRepository
                     {
                         $LegacyBuildScriptParams['IncludeUseWorkingCopyOption'] = $true
                     }
-                    $NewBuildScriptContent      = New-BrownserveBuildScript @LegacyBuildScriptParams | Format-BrownserveContent
+                    $NewBuildScriptContent      = New-BrownserveBuildScript @LegacyBuildScriptParams -Owner $Owner | Format-BrownserveContent
                     $NewBuildTasksScriptContent = New-BrownserveBuildTasksScript @LegacyBuildScriptParams | Format-BrownserveContent
                 }
             }

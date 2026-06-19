@@ -11,7 +11,7 @@ function Update-BrownserveRepository
         # The owner of the repository (used for licensing and other metadata)
         [Parameter(Mandatory = $false)]
         [string]
-        $Owner = 'Brownserve',
+        $Owner = 'Brownserve-UK',
 
         # Forces the recreation of files even if they already exist
         [Parameter(Mandatory = $false)]
