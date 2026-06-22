@@ -157,6 +157,7 @@ function Compare-BrownserveRepository
         $IncludePRTemplate = $false
         $IncludeBuildScripts = $false
         $IncludePesterTests = $false
+        $IncludeInstallScripts = $false
         $BuildScriptUseWorkingCopyOption = $false
 
         <#
@@ -663,6 +664,19 @@ function Compare-BrownserveRepository
                         TemplateDirectory = $TemplatesDirectory
                         TemplateName      = 'rustapp_build_tasks.ps1.template'
                         Substitutions     = @{ REPO_NAME = '' }
+                    }
+                }
+                $IncludeInstallScripts    = $true
+                $InstallScriptsParams = @{
+                    ShellScript = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_install.sh.template'
+                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
+                    }
+                    PowerShellScript = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_install.ps1.template'
+                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
                     }
                 }
             }
@@ -2016,6 +2030,75 @@ function Compare-BrownserveRepository
                 catch
                 {
                     throw "Failed to process '$PesterTestPath'.`n$($_.Exception.Message)"
+                }
+            }
+        }
+
+        if ($IncludeInstallScripts)
+        {
+            $ScriptsDirectory = Join-Path $RepositoryPath 'scripts'
+
+            if (!(Test-Path $ScriptsDirectory) -and ($MissingDirectories.Path -notcontains $ScriptsDirectory))
+            {
+                $MissingDirectories += [pscustomobject]@{ Path = $ScriptsDirectory }
+            }
+
+            try
+            {
+                $InstallScriptsParams.ShellScript.Substitutions['REPO_NAME']       = $RepoName
+                $InstallScriptsParams.ShellScript.Substitutions['OWNER']           = $Owner
+                $InstallScriptsParams.PowerShellScript.Substitutions['REPO_NAME']  = $RepoName
+                $InstallScriptsParams.PowerShellScript.Substitutions['OWNER']      = $Owner
+                $ShellScriptParams      = $InstallScriptsParams.ShellScript
+                $PSScriptParams         = $InstallScriptsParams.PowerShellScript
+                $NewInstallShContent    = New-BrownserveContentFromTemplate @ShellScriptParams   | Format-BrownserveContent
+                $NewInstallPS1Content   = New-BrownserveContentFromTemplate @PSScriptParams      | Format-BrownserveContent
+            }
+            catch
+            {
+                throw "Failed to generate install script content.`n$($_.Exception.Message)"
+            }
+
+            $InstallFiles = @(
+                @{ Path = (Join-Path $ScriptsDirectory 'install.sh');  Content = $NewInstallShContent;  LineEnding = 'LF' },
+                @{ Path = (Join-Path $ScriptsDirectory 'install.ps1'); Content = $NewInstallPS1Content; LineEnding = 'LF' }
+            )
+            foreach ($InstallFile in $InstallFiles)
+            {
+                try
+                {
+                    if (Test-Path $InstallFile.Path)
+                    {
+                        Write-Verbose "Checking for changes to '$($InstallFile.Path)'"
+                        $CurrentInstallContent = Get-BrownserveContent -Path $InstallFile.Path -ErrorAction 'Stop'
+                        $InstallCompare = Compare-Object `
+                            -ReferenceObject $CurrentInstallContent.Content `
+                            -DifferenceObject $InstallFile.Content.Content `
+                            -SyncWindow 1 `
+                            -ErrorAction 'Stop'
+                        if ($InstallCompare)
+                        {
+                            Write-Verbose "Changes detected in '$($InstallFile.Path)'"
+                            $ChangedFiles += [pscustomobject]@{
+                                Path       = $InstallFile.Path
+                                Content    = $InstallFile.Content.Content
+                                LineEnding = $InstallFile.LineEnding
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Write-Verbose "No existing install script found at '$($InstallFile.Path)', will create a new one."
+                        $MissingFiles += [pscustomobject]@{
+                            Path       = $InstallFile.Path
+                            Content    = $InstallFile.Content.Content
+                            LineEnding = $InstallFile.LineEnding
+                        }
+                    }
+                }
+                catch
+                {
+                    throw "Failed to process '$($InstallFile.Path)'.`n$($_.Exception.Message)"
                 }
             }
         }
