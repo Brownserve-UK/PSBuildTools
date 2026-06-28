@@ -418,6 +418,44 @@ task PublishRelease GetReleaseHistory, Build, {
     $script:PrefixedVersion = "v$script:ReleaseVersion"
     $script:ReleaseNotes = $script:Changelog.LatestVersion.ReleaseNotes -join "`n"
 
+    # Guard and create a draft GitHub release first so that if anything fails during publishing
+    # we are left with a mutable draft rather than a locked immutable published release.
+    if ('GitHub' -in $PublishTo)
+    {
+        Write-Build White 'Checking for existing GitHub releases'
+        $CurrentReleases = Get-GitHubRelease `
+            -GitHubToken $GitHubReleaseToken `
+            -RepoName    $GitHubRepoName `
+            -GitHubOrg   $GitHubRepoOwner
+        if ($CurrentReleases.tag_name -contains $script:PrefixedVersion)
+        {
+            throw "A GitHub release for $script:PrefixedVersion already exists!"
+        }
+
+        Write-Build White "Creating draft GitHub release $script:PrefixedVersion"
+        $GitHubReleaseParams = @{
+            Tag             = $script:PrefixedVersion
+            Name            = $script:PrefixedVersion
+            Description     = $script:ReleaseNotes
+            GitHubToken     = $GitHubReleaseToken
+            RepositoryName  = $GitHubRepoName
+            RepositoryOwner = $GitHubRepoOwner
+            Draft           = $true
+        }
+        try
+        {
+            $ReleaseResponse = New-GitHubRelease @GitHubReleaseParams
+        }
+        catch
+        {
+            throw "Failed to create draft GitHub release.`n$($_.Exception.Message)"
+        }
+    }
+    else
+    {
+        Write-Verbose 'GitHub not targeted, skipping draft release creation...'
+    }
+
     if ('DockerHub' -in $PublishTo)
     {
         Write-Build White 'Publishing to DockerHub'
@@ -461,29 +499,24 @@ task PublishRelease GetReleaseHistory, Build, {
         Write-Verbose 'GHCR not targeted, skipping...'
     }
 
+    # All publishing complete - mark the GitHub release live as the final step.
     if ('GitHub' -in $PublishTo)
     {
-        Write-Build White 'Creating GitHub release'
+        Write-Build White "Publishing release $script:PrefixedVersion"
         try
         {
-            $GitHubReleaseParams = @{
-                Tag             = $script:PrefixedVersion
-                Name            = $script:PrefixedVersion
-                Description     = $script:ReleaseNotes
-                GitHubToken     = $GitHubReleaseToken
-                RepositoryName  = $GitHubRepoName
-                RepositoryOwner = $GitHubRepoOwner
-            }
-            New-GitHubRelease @GitHubReleaseParams
+            Update-GitHubRelease `
+                -ReleaseId       $ReleaseResponse.id `
+                -RepositoryName  $GitHubRepoName `
+                -RepositoryOwner $GitHubRepoOwner `
+                -Token           $GitHubReleaseToken `
+                -Draft           $false `
+                -ErrorAction     'Stop'
         }
         catch
         {
-            throw "Failed to create GitHub release.`n$($_.Exception.Message)"
+            throw "Failed to publish GitHub release.`n$($_.Exception.Message)"
         }
-    }
-    else
-    {
-        Write-Verbose 'GitHub not targeted, skipping...'
     }
 }
 
