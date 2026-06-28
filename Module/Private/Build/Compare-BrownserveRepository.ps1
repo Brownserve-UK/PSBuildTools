@@ -537,8 +537,8 @@ function Compare-BrownserveRepository
                 )
                 $DependabotParams = @{
                     Updates = @(
-                        @{ Ecosystem = 'github-actions'; Directory = '/'; Interval = 'weekly' },
-                        @{ Ecosystem = 'docker';         Directory = '/'; Interval = 'weekly' }
+                        @{ Ecosystem = 'github-actions'; Directory = '/'; Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } },
+                        @{ Ecosystem = 'docker';         Directory = '/'; Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } }
                     )
                 }
                 $ContributingParams = @{
