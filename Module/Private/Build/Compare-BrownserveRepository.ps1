@@ -26,7 +26,7 @@ function Compare-BrownserveRepository
         # The owner of the repository
         [Parameter(Mandatory = $false)]
         [string]
-        $Owner = 'Brownserve',
+        $Owner = 'Brownserve-UK',
 
         # The type of build that should be installed in this repo
         [Parameter(Mandatory = $false)]
@@ -157,6 +157,7 @@ function Compare-BrownserveRepository
         $IncludePRTemplate = $false
         $IncludeBuildScripts = $false
         $IncludePesterTests = $false
+        $IncludeInstallScripts = $false
         $BuildScriptUseWorkingCopyOption = $false
 
         <#
@@ -433,6 +434,7 @@ function Compare-BrownserveRepository
                     TemplateName      = 'PowerShellModule_github_pull_request_template.md.template'
                     Substitutions     = @{
                         MODULE_NAME = $ModuleInfo.Name
+                        OWNER       = ''
                     }
                 }
             }
@@ -494,6 +496,7 @@ function Compare-BrownserveRepository
                     TemplateName      = 'PowerShellModule_github_pull_request_template.md.template'
                     Substitutions     = @{
                         MODULE_NAME = $ModuleInfo.Name
+                        OWNER       = ''
                     }
                 }
             }
@@ -545,7 +548,7 @@ function Compare-BrownserveRepository
                 $PRTemplateParams = @{
                     TemplateDirectory = $TemplatesDirectory
                     TemplateName      = 'WebApp_github_pull_request_template.md.template'
-                    Substitutions     = @{ REPO_NAME = '' }
+                    Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
                 }
                 $WorkflowTemplateParams = @{
                     Builds = @{
@@ -568,12 +571,112 @@ function Compare-BrownserveRepository
                     BuildScript = @{
                         TemplateDirectory = $TemplatesDirectory
                         TemplateName      = 'webapp_build_script.ps1.template'
-                        Substitutions     = @{ REPO_NAME = '' }
+                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
                     }
                     BuildTasks = @{
                         TemplateDirectory = $TemplatesDirectory
                         TemplateName      = 'webapp_build_tasks.ps1.template'
                         Substitutions     = @{ REPO_NAME = '' }
+                    }
+                }
+            }
+            <#
+                For a repo that builds and ships a Rust application we want to include:
+                    - Invoke-Build/Pester for building and testing
+                    - GitHub Actions workflows with a matrix build (linux/mac/windows) for the Release
+                    - A GitHub release that uploads compiled binaries as assets
+                    - Cargo version kept in sync with CHANGELOG.md via [workspace.package]
+            #>
+            'RustApp'
+            {
+                Write-Debug 'RustApp selected'
+                $DockerfileName        = $DevcontainerConfig.RustApp.Dockerfile
+                $ExtraPermanentPaths   = $RepositoryPathsConfig.RustApp.PermanentPaths
+                $ExtraEphemeralPaths   = $RepositoryPathsConfig.RustApp.EphemeralPaths
+                $ExtraPaketDeps        = $PaketDependenciesConfig.RustApp
+                $ExtraGitIgnores       = $GitIgnoreConfig.RustApp
+                $ExtraVSCodeExtensions = $VSCodeExtensionsConfig.RustApp
+                $ExtraPackageAliases   = $PackageAliasConfig.RustApp
+                $ExtraEditorConfig     = $EditorConfigConfig.RustApp
+                $IncludeChangelog      = $true
+                $InitParams = @{
+                    IncludeModuleLoader   = $false
+                    IncludePowerShellYaml = $false
+                    IncludePlatyPS        = $false
+                    IncludeBuildTestTools = $true
+                }
+                $LicenseType         = 'MIT'
+                $IncludeWorkflows    = $true
+                $IncludeMarkdownlint = $true
+                $IncludeDependabot   = $true
+                $IncludeLabelPR      = $true
+                $IncludeContributing = $true
+                $IncludePRTemplate   = $true
+                $IncludeBuildScripts = $true
+                $IncludePesterTests  = $true
+                $PesterTestsParams   = @(
+                    @{
+                        FileName          = 'Basic.Binary.Tests.ps1'
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_binary_tests.ps1.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                )
+                $DependabotParams = @{
+                    Updates = @(
+                        @{ Ecosystem = 'github-actions'; Directory = '/'; Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } },
+                        @{ Ecosystem = 'cargo';          Directory = '/'; Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } }
+                    )
+                }
+                $ContributingParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'RustApp_github_contributing.md.template'
+                }
+                $PRTemplateParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'RustApp_github_pull_request_template.md.template'
+                    Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
+                }
+                $WorkflowTemplateParams = @{
+                    Builds = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_github_builds.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                    StageRelease = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_github_stage-release.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                    Release = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_github_release.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                }
+                $BuildScriptTemplateParams = @{
+                    BuildScript = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_build_script.ps1.template'
+                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
+                    }
+                    BuildTasks = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_build_tasks.ps1.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                }
+                $IncludeInstallScripts    = $true
+                $InstallScriptsParams = @{
+                    ShellScript = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_install.sh.template'
+                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
+                    }
+                    PowerShellScript = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_install.ps1.template'
+                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
                     }
                 }
             }
@@ -1723,6 +1826,10 @@ function Compare-BrownserveRepository
             try
             {
                 $PRTemplateParams.Substitutions['REPO_NAME'] = $RepoName
+                if ($PRTemplateParams.Substitutions.ContainsKey('OWNER'))
+                {
+                    $PRTemplateParams.Substitutions['OWNER'] = $Owner
+                }
                 $NewPRTemplateContent = New-BrownserveContentFromTemplate @PRTemplateParams | Format-BrownserveContent
                 if (Test-Path $PRTemplatePath)
                 {
@@ -1774,6 +1881,10 @@ function Compare-BrownserveRepository
                     }
                     $BuildScriptTemplateParams.BuildScript.Substitutions['REPO_NAME'] = $RepoName
                     $BuildScriptTemplateParams.BuildTasks.Substitutions['REPO_NAME']  = $RepoName
+                    if ($BuildScriptTemplateParams.BuildScript.Substitutions.ContainsKey('OWNER'))
+                    {
+                        $BuildScriptTemplateParams.BuildScript.Substitutions['OWNER'] = $Owner
+                    }
                     $BuildScriptParams = $BuildScriptTemplateParams.BuildScript
                     $BuildTasksParams  = $BuildScriptTemplateParams.BuildTasks
                     $NewBuildScriptContent      = New-BrownserveContentFromTemplate @BuildScriptParams | Format-BrownserveContent
@@ -1786,7 +1897,7 @@ function Compare-BrownserveRepository
                     {
                         $LegacyBuildScriptParams['IncludeUseWorkingCopyOption'] = $true
                     }
-                    $NewBuildScriptContent      = New-BrownserveBuildScript @LegacyBuildScriptParams | Format-BrownserveContent
+                    $NewBuildScriptContent      = New-BrownserveBuildScript @LegacyBuildScriptParams -Owner $Owner | Format-BrownserveContent
                     $NewBuildTasksScriptContent = New-BrownserveBuildTasksScript @LegacyBuildScriptParams | Format-BrownserveContent
                 }
             }
@@ -1919,6 +2030,75 @@ function Compare-BrownserveRepository
                 catch
                 {
                     throw "Failed to process '$PesterTestPath'.`n$($_.Exception.Message)"
+                }
+            }
+        }
+
+        if ($IncludeInstallScripts)
+        {
+            $ScriptsDirectory = Join-Path $RepositoryPath 'scripts'
+
+            if (!(Test-Path $ScriptsDirectory) -and ($MissingDirectories.Path -notcontains $ScriptsDirectory))
+            {
+                $MissingDirectories += [pscustomobject]@{ Path = $ScriptsDirectory }
+            }
+
+            try
+            {
+                $InstallScriptsParams.ShellScript.Substitutions['REPO_NAME']       = $RepoName
+                $InstallScriptsParams.ShellScript.Substitutions['OWNER']           = $Owner
+                $InstallScriptsParams.PowerShellScript.Substitutions['REPO_NAME']  = $RepoName
+                $InstallScriptsParams.PowerShellScript.Substitutions['OWNER']      = $Owner
+                $ShellScriptParams      = $InstallScriptsParams.ShellScript
+                $PSScriptParams         = $InstallScriptsParams.PowerShellScript
+                $NewInstallShContent    = New-BrownserveContentFromTemplate @ShellScriptParams   | Format-BrownserveContent
+                $NewInstallPS1Content   = New-BrownserveContentFromTemplate @PSScriptParams      | Format-BrownserveContent
+            }
+            catch
+            {
+                throw "Failed to generate install script content.`n$($_.Exception.Message)"
+            }
+
+            $InstallFiles = @(
+                @{ Path = (Join-Path $ScriptsDirectory 'install.sh');  Content = $NewInstallShContent;  LineEnding = 'LF' },
+                @{ Path = (Join-Path $ScriptsDirectory 'install.ps1'); Content = $NewInstallPS1Content; LineEnding = 'LF' }
+            )
+            foreach ($InstallFile in $InstallFiles)
+            {
+                try
+                {
+                    if (Test-Path $InstallFile.Path)
+                    {
+                        Write-Verbose "Checking for changes to '$($InstallFile.Path)'"
+                        $CurrentInstallContent = Get-BrownserveContent -Path $InstallFile.Path -ErrorAction 'Stop'
+                        $InstallCompare = Compare-Object `
+                            -ReferenceObject $CurrentInstallContent.Content `
+                            -DifferenceObject $InstallFile.Content.Content `
+                            -SyncWindow 1 `
+                            -ErrorAction 'Stop'
+                        if ($InstallCompare)
+                        {
+                            Write-Verbose "Changes detected in '$($InstallFile.Path)'"
+                            $ChangedFiles += [pscustomobject]@{
+                                Path       = $InstallFile.Path
+                                Content    = $InstallFile.Content.Content
+                                LineEnding = $InstallFile.LineEnding
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Write-Verbose "No existing install script found at '$($InstallFile.Path)', will create a new one."
+                        $MissingFiles += [pscustomobject]@{
+                            Path       = $InstallFile.Path
+                            Content    = $InstallFile.Content.Content
+                            LineEnding = $InstallFile.LineEnding
+                        }
+                    }
+                }
+                catch
+                {
+                    throw "Failed to process '$($InstallFile.Path)'.`n$($_.Exception.Message)"
                 }
             }
         }

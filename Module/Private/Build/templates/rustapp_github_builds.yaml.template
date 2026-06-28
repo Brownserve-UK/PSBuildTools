@@ -1,0 +1,87 @@
+---
+name: builds
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      relevant: ${{ steps.filter.outputs.relevant }}
+    steps:
+      - name: check-relevant-changes
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          FILES=$(gh pr view ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --json files --jq '.files[].path')
+          if echo "$FILES" | grep -iqE '^(Cargo\.toml$|Cargo\.lock$|.*\.rs$|\.build/|\.config/|nuget\.config$)'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No relevant files changed, skipping build"
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # The matrix job is named 'build', not 'BuildTestAndCheck', so that its per-OS expanded
+  # check names (build (ubuntu-latest) etc.) are not the ones branch protection requires.
+  build:
+    needs: check-changes
+    if: needs.check-changes.outputs.relevant == 'true'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      # Step 1: Checkout the repo
+      - name: checkout-repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          path: ###REPO_NAME###
+      # Step 2: Run the build script
+      - name: run-build-script
+        shell: pwsh
+        run: |
+            ./###REPO_NAME###/.build/build.ps1 `
+              -GitHubRepoName '###REPO_NAME###' `
+              -BranchName $env:GITHUB_REF `
+              -Build 'BuildTestAndCheck' `
+              -Verbose
+
+  # Gate job: always runs (even when 'build' was skipped) and reports the single status check
+  # name that branch protection requires. This keeps the required-check name stable whether
+  # changes are present or not.
+  BuildTestAndCheck:
+    needs: [check-changes, build]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: evaluate-build-result
+        run: |
+          # check-changes must have succeeded
+          if [ "${{ needs.check-changes.result }}" != "success" ]; then
+            echo "check-changes did not succeed (result: ${{ needs.check-changes.result }})"
+            exit 1
+          fi
+          # no relevant changes -> build was correctly skipped -> pass
+          if [ "${{ needs.check-changes.outputs.relevant }}" != "true" ]; then
+            echo "No relevant changes, build skipped"
+            exit 0
+          fi
+          # relevant changes -> the whole matrix must have succeeded
+          if [ "${{ needs.build.result }}" == "success" ]; then
+            echo "All build matrix legs succeeded"
+            exit 0
+          fi
+          echo "Build matrix did not succeed (result: ${{ needs.build.result }})"
+          exit 1
