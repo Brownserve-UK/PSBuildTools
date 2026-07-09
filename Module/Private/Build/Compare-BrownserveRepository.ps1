@@ -680,6 +680,106 @@ function Compare-BrownserveRepository
                     }
                 }
             }
+            <#
+                bsdev is a Rust application that ALSO ships a Docker container (image/Dockerfile,
+                published to ghcr.io/<owner>/<repo>). It is therefore its own project type: the full
+                RustApp native-binary pipeline (matrix build -> GitHub release) PLUS a container
+                build/push to GHCR and DockerHub. The container is independent of the Rust binary.
+            #>
+            'bsdev'
+            {
+                Write-Debug 'bsdev selected'
+                $DockerfileName        = $DevcontainerConfig.bsdev.Dockerfile
+                $ExtraPermanentPaths   = $RepositoryPathsConfig.bsdev.PermanentPaths
+                $ExtraEphemeralPaths   = $RepositoryPathsConfig.bsdev.EphemeralPaths
+                $ExtraPaketDeps        = $PaketDependenciesConfig.bsdev
+                $ExtraGitIgnores       = $GitIgnoreConfig.bsdev
+                $ExtraVSCodeExtensions = $VSCodeExtensionsConfig.bsdev
+                $ExtraPackageAliases   = $PackageAliasConfig.bsdev
+                $ExtraEditorConfig     = $EditorConfigConfig.bsdev
+                $IncludeChangelog      = $true
+                $InitParams = @{
+                    IncludeModuleLoader   = $false
+                    IncludePowerShellYaml = $false
+                    IncludePlatyPS        = $false
+                    IncludeBuildTestTools = $true
+                }
+                $LicenseType         = 'MIT'
+                $IncludeWorkflows    = $true
+                $IncludeMarkdownlint = $true
+                $IncludeDependabot   = $true
+                $IncludeLabelPR      = $true
+                $IncludeContributing = $true
+                $IncludePRTemplate   = $true
+                $IncludeBuildScripts = $true
+                $IncludePesterTests  = $true
+                $PesterTestsParams   = @(
+                    @{
+                        FileName          = 'Basic.Binary.Tests.ps1'
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_binary_tests.ps1.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                )
+                $DependabotParams = @{
+                    Updates = @(
+                        @{ Ecosystem = 'github-actions'; Directory = '/';      Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } },
+                        @{ Ecosystem = 'cargo';          Directory = '/';      Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } },
+                        @{ Ecosystem = 'docker';         Directory = '/image'; Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } }
+                    )
+                }
+                $ContributingParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'RustApp_github_contributing.md.template'
+                }
+                $PRTemplateParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'RustApp_github_pull_request_template.md.template'
+                    Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
+                }
+                $WorkflowTemplateParams = @{
+                    Builds = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'bsdev_github_builds.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                    StageRelease = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_github_stage-release.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                    Release = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'bsdev_github_release.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                }
+                $BuildScriptTemplateParams = @{
+                    BuildScript = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'bsdev_build_script.ps1.template'
+                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
+                    }
+                    BuildTasks = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'bsdev_build_tasks.ps1.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                }
+                $IncludeInstallScripts    = $true
+                $InstallScriptsParams = @{
+                    ShellScript = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_install.sh.template'
+                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
+                    }
+                    PowerShellScript = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustapp_install.ps1.template'
+                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
+                    }
+                }
+            }
             Default
             {
                 Write-Debug 'Generic project type selected'

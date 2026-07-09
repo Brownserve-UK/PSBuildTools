@@ -10,5 +10,9 @@
     "RustApp":
     {
         "Dockerfile": "Dockerfile_RustApp"
+    },
+    "bsdev":
+    {
+        "Dockerfile": "Dockerfile_RustApp"
     }
 }
