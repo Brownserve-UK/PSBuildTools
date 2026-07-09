@@ -567,6 +567,7 @@ enum BrownserveRepoProjectType
     BrownservePSTools
     WebApp
     RustApp
+    bsdev
     Generic
 }
 

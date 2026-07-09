@@ -101,5 +101,16 @@
                 "PathType": "Directory"
             }
         ]
+    },
+    "bsdev": {
+        "PermanentPaths": [
+            {
+                "VariableName": "BrownserveRepoTestsDirectory",
+                "Path": ".build",
+                "ChildPaths": "tests",
+                "Description": "Stores any tests that we pass to Pester",
+                "PathType": "Directory"
+            }
+        ]
     }
 }
