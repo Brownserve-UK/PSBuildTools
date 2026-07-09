@@ -52,5 +52,25 @@
                 "PackageName": "Pester"
             }
         }
+    ],
+    "RustApp":
+    [
+        {
+            "comment": "Pester is used to perform testing on the build scripts and binary smoke tests",
+            "rule": {
+                "source": "nuget",
+                "PackageName": "Pester"
+            }
+        }
+    ],
+    "bsdev":
+    [
+        {
+            "comment": "Pester is used to perform testing on the build scripts and binary smoke tests",
+            "rule": {
+                "source": "nuget",
+                "PackageName": "Pester"
+            }
+        }
     ]
 }

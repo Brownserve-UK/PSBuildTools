@@ -1,4 +1,4 @@
-Thank you for submitting a PR to ###MODULE_NAME###!
+Thank you for submitting a PR to ###REPO_NAME###!
 Please fill out the information below to aid in getting this PR merged as quickly as possible.
 
 ## Description
@@ -10,6 +10,6 @@ Please fill out the information below to aid in getting this PR merged as quickl
 Please ensure you have completed the following before submitting your PR:
 
 - [ ] Read the [contributing guide](https://github.com/###OWNER###/###REPO_NAME###/blob/main/.github/CONTRIBUTING.md)
-- [ ] Read our [style guidelines](https://docs.brownserve.co.uk/powershell/style-guidelines/)
 - [ ] Read our [code of conduct](https://github.com/###OWNER###/.github/blob/main/CODE_OF_CONDUCT.md)
-- [ ] Updated help documentation (if creating/updating a cmdlet)
+- [ ] Verified that `cargo build --release` succeeds locally
+- [ ] Verified that `cargo test --workspace` passes locally

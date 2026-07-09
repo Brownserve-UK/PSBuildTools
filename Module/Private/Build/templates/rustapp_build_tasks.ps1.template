@@ -6,12 +6,12 @@
 [CmdletBinding()]
 param
 (
-    # The Docker image name (without tag)
+    # The name of the binary to build and package (without extension)
     [Parameter(
         Mandatory = $false
     )]
     [string]
-    $ImageName = $Global:BrownserveRepoName,
+    $BinaryName = $Global:BrownserveRepoName,
 
     # The branch this is being built from
     [Parameter(
@@ -44,7 +44,7 @@ param
         Mandatory = $false
     )]
     [ValidateNotNullOrEmpty()]
-    [ValidateSet('DockerHub', 'GHCR', 'GitHub')]
+    [ValidateSet('GitHub')]
     [string[]]
     $PublishTo,
 
@@ -81,49 +81,45 @@ param
     [string]
     $GitHubReleaseToken,
 
-    # DockerHub username, required when publishing to DockerHub
+    # The Rust target triple to build for (e.g. x86_64-unknown-linux-gnu).
+    # When not set the build uses the host target.
     [Parameter(
         Mandatory = $false
     )]
     [string]
-    $DockerHubUsername,
-
-    # DockerHub access token, required when publishing to DockerHub
-    [Parameter(
-        Mandatory = $false
-    )]
-    [string]
-    $DockerHubToken,
-
-    # Token used to authenticate with GitHub Container Registry (ghcr.io).
-    # Requires packages:write scope. Typically the workflow's GITHUB_TOKEN.
-    [Parameter(
-        Mandatory = $false
-    )]
-    [string]
-    $GHCRToken
+    $Target
 )
-
-# Docker requires image names to be lowercase
-$ImageName = $ImageName.ToLower()
 
 # Depending on how we got the branch name we may need to remove the full ref
 $BranchName = $BranchName -replace 'refs\/heads\/', ''
 $script:CurrentCommitHash = & git rev-parse HEAD
 
 # Script-scoped variables populated by tasks
-$script:Release = $false
-$script:Stage = $false
-$script:Changelog = $null
-$script:CurrentVersion = $null
-$script:NewVersion = $null
-$script:PrefixedVersion = $null
-$script:ReleaseVersion = $null
-$script:ReleaseNotes = $null
+$script:Release          = $false
+$script:Stage            = $false
+$script:Changelog        = $null
+$script:CurrentVersion   = $null
+$script:NewVersion       = $null
+$script:PrefixedVersion  = $null
+$script:ReleaseVersion   = $null
+$script:ReleaseNotes     = $null
 $script:StagingBranchName = $null
-$script:PRLink = $null
-$script:TrackedFiles = @()
-$script:ChangelogPath = Join-Path $Global:BrownserveRepoRootDirectory 'CHANGELOG.md'
+$script:PRLink           = $null
+$script:TrackedFiles     = @()
+$script:ChangelogPath    = Join-Path $Global:BrownserveRepoRootDirectory 'CHANGELOG.md'
+
+# Resolve the effective Rust target triple used by Package to name the archive.
+# When -Target is supplied we use it directly; otherwise we ask rustc for the host triple.
+if ($Target)
+{
+    $script:EffectiveTarget = $Target
+}
+else
+{
+    $RustcOutput = & rustc -vV 2>&1
+    $HostLine = $RustcOutput | Select-String 'host: (.+)'
+    $script:EffectiveTarget = if ($HostLine) { $HostLine.Matches[0].Groups[1].Value.Trim() } else { 'unknown-target' }
+}
 
 <#
 .SYNOPSIS
@@ -133,24 +129,6 @@ task CheckPublishingParameters {
     if (!$PublishTo)
     {
         throw 'PublishTo must be set when performing a release'
-    }
-    if ('DockerHub' -in $PublishTo)
-    {
-        if (!$DockerHubUsername)
-        {
-            throw 'DockerHubUsername must be provided when publishing to DockerHub'
-        }
-        if (!$DockerHubToken)
-        {
-            throw 'DockerHubToken must be provided when publishing to DockerHub'
-        }
-    }
-    if ('GHCR' -in $PublishTo)
-    {
-        if (!$GHCRToken)
-        {
-            throw 'GHCRToken must be provided when publishing to GHCR'
-        }
     }
     if ('GitHub' -in $PublishTo)
     {
@@ -232,6 +210,49 @@ task SetVersion GetReleaseHistory, {
 
 <#
 .SYNOPSIS
+    Writes the new version into the root Cargo.toml [workspace.package] table and regenerates Cargo.lock.
+.DESCRIPTION
+    Requires the root Cargo.toml to contain a [workspace.package] section with a version field.
+    The version written is the plain semver string (e.g. 1.2.0) without the 'v' prefix, as required by Cargo.
+    Both Cargo.toml and the regenerated Cargo.lock are added to the set of tracked files that will be
+    committed to the staging branch alongside CHANGELOG.md.
+    Note: this task requires Rust/Cargo to be available on the runner because it calls 'cargo generate-lockfile'.
+    The stage-release GitHub Actions workflow installs Rust before calling this build script.
+#>
+task UpdateCargoVersion SetVersion, {
+    Write-Build White 'Updating Cargo.toml version'
+    $CargoTomlPath = Join-Path $Global:BrownserveRepoRootDirectory 'Cargo.toml' | Convert-Path
+    $CargoContent  = Get-Content -Path $CargoTomlPath -Raw
+
+    # Plain semver without 'v' prefix, as Cargo requires
+    $NewSemver = "$($script:NewVersion.Major).$($script:NewVersion.Minor).$($script:NewVersion.Patch)"
+
+    $CargoVersionPattern = '(?ms)(\[workspace\.package\].*?^version\s*=\s*")[^"]*(")'
+    if (-not [regex]::IsMatch($CargoContent, $CargoVersionPattern))
+    {
+        throw "Failed to update version in Cargo.toml. Ensure the root Cargo.toml has a [workspace.package] section containing a version = '...' field."
+    }
+    $Updated = $CargoContent -replace $CargoVersionPattern, "`${1}$NewSemver`${2}"
+    Set-Content -Path $CargoTomlPath -Value $Updated -NoNewline
+    $script:TrackedFiles += $CargoTomlPath
+    Write-Verbose "Cargo.toml version updated to $NewSemver"
+
+    # Regenerate Cargo.lock so it stays consistent with the new Cargo.toml version
+    Write-Build White 'Regenerating Cargo.lock'
+    try
+    {
+        exec { cargo generate-lockfile }
+    }
+    catch
+    {
+        throw "Failed to regenerate Cargo.lock.`n$($_.Exception.Message)"
+    }
+    $CargoLockPath = Join-Path $Global:BrownserveRepoRootDirectory 'Cargo.lock' | Convert-Path
+    $script:TrackedFiles += $CargoLockPath
+}
+
+<#
+.SYNOPSIS
     Creates a new changelog entry for the upcoming release.
 #>
 task CreateChangelogEntry SetVersion, {
@@ -309,9 +330,9 @@ task CreateStagingBranch SetVersion, {
 
 <#
 .SYNOPSIS
-    Commits tracked file changes to the staging branch via the GitHub API.
+    Commits tracked file changes (CHANGELOG.md, Cargo.toml, Cargo.lock) to the staging branch.
 #>
-task CommitTrackedChanges UpdateChangelog, CreateStagingBranch, {
+task CommitTrackedChanges UpdateChangelog, UpdateCargoVersion, CreateStagingBranch, {
     if ($script:TrackedFiles.Count -gt 0)
     {
         Write-Build White 'Committing tracked changes'
@@ -376,50 +397,118 @@ Please review the changes and merge if they look good.
 
 <#
 .SYNOPSIS
-    Builds the Docker image.
+    Compiles the Rust application in release mode.
+.DESCRIPTION
+    Sets CARGO_TARGET_DIR to the build output directory so the compiled binary lands in .tmp/output.
 #>
 task Build {
-    Write-Build White "Building Docker image '$ImageName'"
+    Write-Build White "Building '$BinaryName'"
+    $env:CARGO_TARGET_DIR = $Global:BrownserveRepoBuildOutputDirectory
+    $CargoArgs = @('build', '--release')
+    if ($Target)
+    {
+        $CargoArgs += '--target'
+        $CargoArgs += $Target
+    }
     try
     {
-        exec { docker build -t "${ImageName}:latest" $Global:BrownserveRepoRootDirectory }
+        exec { & cargo $CargoArgs }
     }
     catch
     {
-        throw "Docker build failed.`n$($_.Exception.Message)"
+        throw "Cargo build failed.`n$($_.Exception.Message)"
     }
 }
 
 <#
 .SYNOPSIS
-    Runs Pester tests for the repository.
+    Runs all Cargo tests for the workspace.
+#>
+task CargoTest {
+    Write-Build White 'Running Cargo tests'
+    try
+    {
+        exec { cargo test --workspace }
+    }
+    catch
+    {
+        throw "Cargo tests failed.`n$($_.Exception.Message)"
+    }
+}
+
+<#
+.SYNOPSIS
+    Runs Pester tests (binary smoke tests) for the repository.
 #>
 task Tests {
     Write-Build White 'Running Pester tests'
-    $Global:BrownserveRepoDockerImageName = $ImageName
     $Results = Invoke-Pester -Path $Global:BrownserveRepoTestsDirectory -PassThru
     assert ($Results.FailedCount -eq 0) "$($Results.FailedCount) test(s) failed."
 }
 
 <#
 .SYNOPSIS
-    Builds the Docker image and runs Pester tests.
-    Used by the CI pipeline on pull requests.
+    Archives the compiled binary for the current platform and target.
+.DESCRIPTION
+    The archive is written to $Global:BrownserveRepoBuildOutputDirectory (.tmp/output) using the
+    naming convention: <binary>-v<version>-<target-triple>.tar.gz (Linux/macOS) or .zip (Windows).
+    In the release workflow each matrix runner runs this task, then uploads the archive as a
+    GitHub Actions artifact for the final Release job to collect and attach to the GitHub release.
 #>
-task BuildTestAndCheck Build, Tests, {}
+task Package GetReleaseHistory, Build, {
+    Write-Build White "Packaging '$BinaryName' for target '$script:EffectiveTarget'"
+    $script:ReleaseVersion = $script:Changelog.LatestVersion.Version.ToString()
+    $script:PrefixedVersion = "v$script:ReleaseVersion"
+
+    # Cargo places the binary under $BrownserveRepoBuildOutputDirectory because CARGO_TARGET_DIR is
+    # set by the Build task. The release subdirectory mirrors the normal target/[triple]/release layout.
+    $BinDir = if ($Target)
+    {
+        Join-Path $Global:BrownserveRepoBuildOutputDirectory $Target 'release'
+    }
+    else
+    {
+        Join-Path $Global:BrownserveRepoBuildOutputDirectory 'release'
+    }
+    $BinaryFileName = if ($IsWindows) { "$BinaryName.exe" } else { $BinaryName }
+    $BinaryPath     = Join-Path $BinDir $BinaryFileName
+    if (!(Test-Path $BinaryPath))
+    {
+        throw "Compiled binary not found at '$BinaryPath'. Ensure the Build task ran successfully."
+    }
+
+    # Create the archive in the build output directory
+    if ($IsWindows)
+    {
+        $ArchiveName = "$BinaryName-$script:PrefixedVersion-$script:EffectiveTarget.zip"
+        $ArchivePath = Join-Path $Global:BrownserveRepoBuildOutputDirectory $ArchiveName
+        Write-Build White "Creating zip archive '$ArchiveName'"
+        Compress-Archive -Path $BinaryPath -DestinationPath $ArchivePath -Force
+    }
+    else
+    {
+        $ArchiveName = "$BinaryName-$script:PrefixedVersion-$script:EffectiveTarget.tar.gz"
+        $ArchivePath = Join-Path $Global:BrownserveRepoBuildOutputDirectory $ArchiveName
+        Write-Build White "Creating tar archive '$ArchiveName'"
+        exec { tar -czf $ArchivePath -C $BinDir $BinaryFileName }
+    }
+    Write-Build Green "Archive created: $ArchivePath"
+}
 
 <#
 .SYNOPSIS
-    Publishes the Docker image to the selected registries and creates a GitHub release.
+    Creates a GitHub release and uploads all archives from the build output directory as assets.
+.DESCRIPTION
+    This task is intended to run once on a single Linux runner after all platform binaries have been
+    downloaded from GitHub Actions artifacts into $Global:BrownserveRepoBuildOutputDirectory.
+    It does not compile anything; it only publishes.
 #>
-task PublishRelease GetReleaseHistory, Build, {
+task PublishRelease GetReleaseHistory, {
     Write-Build White 'Publishing release'
     $script:ReleaseVersion = $script:Changelog.LatestVersion.Version.ToString()
     $script:PrefixedVersion = "v$script:ReleaseVersion"
-    $script:ReleaseNotes = $script:Changelog.LatestVersion.ReleaseNotes -join "`n"
+    $script:ReleaseNotes    = $script:Changelog.LatestVersion.ReleaseNotes -join "`n"
 
-    # Guard and create a draft GitHub release first so that if anything fails during publishing
-    # we are left with a mutable draft rather than a locked immutable published release.
     if ('GitHub' -in $PublishTo)
     {
         Write-Build White 'Checking for existing GitHub releases'
@@ -432,100 +521,67 @@ task PublishRelease GetReleaseHistory, Build, {
             throw "A GitHub release for $script:PrefixedVersion already exists!"
         }
 
+        # Validate archives are present before creating the release so we never
+        # end up with a published release that has no assets.
+        $Archives = Get-ChildItem -Path $Global:BrownserveRepoBuildOutputDirectory -File |
+            Where-Object { $_.Extension -in @('.gz', '.zip') }
+        if (!$Archives)
+        {
+            throw "No release archives found in '$Global:BrownserveRepoBuildOutputDirectory'. Ensure the Package task ran on all platforms first."
+        }
+
         Write-Build White "Creating draft GitHub release $script:PrefixedVersion"
-        $GitHubReleaseParams = @{
-            Tag             = $script:PrefixedVersion
-            Name            = $script:PrefixedVersion
-            Description     = $script:ReleaseNotes
-            GitHubToken     = $GitHubReleaseToken
-            RepositoryName  = $GitHubRepoName
-            RepositoryOwner = $GitHubRepoOwner
-            Draft           = $true
-        }
-        try
+        $ReleaseResponse = New-GitHubRelease `
+            -Name            $script:PrefixedVersion `
+            -Tag             $script:PrefixedVersion `
+            -Description     $script:ReleaseNotes `
+            -GitHubToken     $GitHubReleaseToken `
+            -RepositoryName  $GitHubRepoName `
+            -RepositoryOwner $GitHubRepoOwner `
+            -Draft
+        foreach ($Archive in $Archives)
         {
-            $ReleaseResponse = New-GitHubRelease @GitHubReleaseParams
+            Write-Build White "Uploading '$($Archive.Name)' as release asset"
+            Add-GitHubReleaseAsset `
+                -UploadUrl $ReleaseResponse.upload_url `
+                -Token     $GitHubReleaseToken `
+                -FilePath  $Archive.FullName `
+                -ErrorAction 'Stop'
         }
-        catch
-        {
-            throw "Failed to create draft GitHub release.`n$($_.Exception.Message)"
-        }
-    }
-    else
-    {
-        Write-Verbose 'GitHub not targeted, skipping draft release creation...'
-    }
-
-    if ('DockerHub' -in $PublishTo)
-    {
-        Write-Build White 'Publishing to DockerHub'
-        try
-        {
-            exec { docker login -u $DockerHubUsername -p $DockerHubToken }
-            exec { docker tag "${ImageName}:latest" "${DockerHubUsername}/${ImageName}:$script:ReleaseVersion" }
-            exec { docker tag "${ImageName}:latest" "${DockerHubUsername}/${ImageName}:latest" }
-            exec { docker push "${DockerHubUsername}/${ImageName}:$script:ReleaseVersion" }
-            exec { docker push "${DockerHubUsername}/${ImageName}:latest" }
-        }
-        catch
-        {
-            throw "Failed to publish to DockerHub.`n$($_.Exception.Message)"
-        }
-    }
-    else
-    {
-        Write-Verbose 'DockerHub not targeted, skipping...'
-    }
-
-    if ('GHCR' -in $PublishTo)
-    {
-        Write-Build White 'Publishing to GitHub Container Registry'
-        $GHCRImage = "ghcr.io/${GitHubRepoOwner}/${ImageName}"
-        try
-        {
-            exec { docker login ghcr.io -u $GitHubRepoOwner -p $GHCRToken }
-            exec { docker tag "${ImageName}:latest" "${GHCRImage}:$script:ReleaseVersion" }
-            exec { docker tag "${ImageName}:latest" "${GHCRImage}:latest" }
-            exec { docker push "${GHCRImage}:$script:ReleaseVersion" }
-            exec { docker push "${GHCRImage}:latest" }
-        }
-        catch
-        {
-            throw "Failed to publish to GHCR.`n$($_.Exception.Message)"
-        }
-    }
-    else
-    {
-        Write-Verbose 'GHCR not targeted, skipping...'
-    }
-
-    # All publishing complete - mark the GitHub release live as the final step.
-    if ('GitHub' -in $PublishTo)
-    {
         Write-Build White "Publishing release $script:PrefixedVersion"
-        try
-        {
-            Update-GitHubRelease `
-                -ReleaseId       $ReleaseResponse.id `
-                -RepositoryName  $GitHubRepoName `
-                -RepositoryOwner $GitHubRepoOwner `
-                -Token           $GitHubReleaseToken `
-                -Draft           $false `
-                -ErrorAction     'Stop'
-        }
-        catch
-        {
-            throw "Failed to publish GitHub release.`n$($_.Exception.Message)"
-        }
+        Update-GitHubRelease `
+            -ReleaseId       $ReleaseResponse.id `
+            -RepositoryName  $GitHubRepoName `
+            -RepositoryOwner $GitHubRepoOwner `
+            -Token           $GitHubReleaseToken `
+            -Draft           $false `
+            -ErrorAction     'Stop'
+    }
+    else
+    {
+        Write-Verbose 'GitHub not targeted, skipping...'
     }
 }
 
 <#
-.SYNOPSIS
-    Stages a release by updating the changelog and creating a pull request.
-    This is the first step in a two-stage release process.
+    Below are the meta tasks used to compose the above leaf tasks.
+    These are the task names that build.ps1 passes to Invoke-Build via -Task.
+    !! BE VERY CAREFUL WITH THE ORDERING OF DEPENDENCIES !!
 #>
-task StageRelease CheckStagingParameters, SetStagingVariables, CreatePullRequest, {
+
+<#
+.SYNOPSIS
+    Meta task: build, run all Cargo tests and Pester smoke tests.
+    Used by the CI pipeline on pull requests.
+#>
+task BuildTestAndCheck Build, CargoTest, Tests, {}
+
+<#
+.SYNOPSIS
+    Meta task: stages a release by bumping CHANGELOG.md, Cargo.toml and Cargo.lock,
+    then opening a pull request.
+#>
+task StageRelease CheckStagingParameters, SetStagingVariables, GetReleaseHistory, SetVersion, UpdateCargoVersion, CreateChangelogEntry, UpdateChangelog, CreateStagingBranch, CommitTrackedChanges, CreatePullRequest, {
     $BuildMessage = @"
 The release has been successfully staged and a pull request has been created.
 Please review the changes at $script:PRLink and merge if they look good.
@@ -535,7 +591,14 @@ Please review the changes at $script:PRLink and merge if they look good.
 
 <#
 .SYNOPSIS
-    Publishes the release by pushing Docker images and creating a GitHub release.
-    Run this after merging the pull request created by StageRelease.
+    Meta task: performs all release steps except publishing to GitHub.
+    Useful for verifying the release process locally without pushing anything.
 #>
-task Release CheckPublishingParameters, SetReleaseVariables, PublishRelease, {}
+task DryRun SetReleaseVariables, CheckPublishingParameters, GetReleaseHistory, Build, CargoTest, Tests, Package, {}
+
+<#
+.SYNOPSIS
+    Meta task: creates a GitHub release and uploads all platform archives as assets.
+    Run this after the Package jobs have completed and their archives are in .tmp/output.
+#>
+task Release CheckPublishingParameters, SetReleaseVariables, GetReleaseHistory, PublishRelease, {}

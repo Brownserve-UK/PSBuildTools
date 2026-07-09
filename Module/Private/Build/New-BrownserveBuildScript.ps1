@@ -5,7 +5,11 @@ function New-BrownserveBuildScript
     (
         [Parameter(Mandatory = $false)]
         [switch]
-        $IncludeUseWorkingCopyOption
+        $IncludeUseWorkingCopyOption,
+
+        [Parameter(Mandatory = $false)]
+        [string]
+        $Owner = 'Brownserve-UK'
     )
     begin
     {
@@ -20,6 +24,8 @@ function New-BrownserveBuildScript
         {
             throw "Failed to import build script template.`n$($_.Exception.Message)"
         }
+
+        $ScriptTemplate = $ScriptTemplate -replace '###OWNER###', $Owner
 
         if ($IncludeUseWorkingCopyOption)
         {
