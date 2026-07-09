@@ -4,6 +4,8 @@
 .DESCRIPTION
     Builds a dependabot.yml from an array of update definitions. Each entry specifies
     a package ecosystem, the directory to scan, and the update schedule interval.
+    Optionally a Cooldown hashtable with a DefaultDays key adds a cooldown block so
+    Dependabot waits before opening PRs for newly published versions.
 #>
 function New-BrownserveDependabotConfig
 {
@@ -11,6 +13,7 @@ function New-BrownserveDependabotConfig
     param
     (
         # The list of ecosystems to monitor. Each entry must contain Ecosystem, Directory, and Interval keys.
+        # An optional Cooldown hashtable with a DefaultDays key emits a cooldown block.
         [Parameter(Mandatory = $true)]
         [hashtable[]]
         $Updates
@@ -26,6 +29,11 @@ function New-BrownserveDependabotConfig
             $Lines += "    directory: $($Update.Directory)"
             $Lines += '    schedule:'
             $Lines += "      interval: $($Update.Interval)"
+            if ($Update.Cooldown)
+            {
+                $Lines += '    cooldown:'
+                $Lines += "      default-days: $($Update.Cooldown.DefaultDays)"
+            }
             if ($i -lt $Last)
             {
                 $Lines += ''

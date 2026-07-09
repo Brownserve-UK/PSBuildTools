@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Builds and releases the web application via Invoke-Build.
+    Builds and releases the Rust application via Invoke-Build.
 #>
 [CmdletBinding()]
 param
@@ -28,6 +28,7 @@ param
     [ValidateSet(
         'Build',
         'BuildTestAndCheck',
+        'Package',
         'StageRelease',
         'DryRun',
         'Release'
@@ -54,7 +55,7 @@ param
         Mandatory = $false
     )]
     [ValidateNotNullOrEmpty()]
-    [ValidateSet('DockerHub', 'GHCR', 'GitHub')]
+    [ValidateSet('GitHub')]
     [string[]]
     $PublishTo,
 
@@ -91,27 +92,21 @@ param
     [string]
     $GitHubReleaseToken,
 
-    # DockerHub username, required when publishing to DockerHub
+    # The Rust target triple to build for (e.g. x86_64-unknown-linux-gnu).
+    # Defaults to the host target when not specified.
     [Parameter(
         Mandatory = $false
     )]
     [string]
-    $DockerHubUsername,
+    $Target,
 
-    # DockerHub access token, required when publishing to DockerHub
+    # Directory containing pre-built archives to copy into the build output directory before running the task.
+    # Used by the release workflow to make artifacts available after _init.ps1 recreates ephemeral directories.
     [Parameter(
         Mandatory = $false
     )]
     [string]
-    $DockerHubToken,
-
-    # Token used to authenticate with GitHub Container Registry (ghcr.io).
-    # Requires packages:write scope. Typically the workflow's GITHUB_TOKEN.
-    [Parameter(
-        Mandatory = $false
-    )]
-    [string]
-    $GHCRToken
+    $ArchiveSourceDirectory
 )
 # Always stop on errors
 $ErrorActionPreference = 'Stop'
@@ -140,6 +135,14 @@ catch
     Write-Error "Failed to init repo.`n$($_.Exception.Message)"
 }
 
+# If a source directory was given, copy its archives into the build output directory now that
+# _init.ps1 has recreated the ephemeral directories.
+if ($ArchiveSourceDirectory)
+{
+    Write-Verbose "Copying release archives from '$ArchiveSourceDirectory'"
+    Get-ChildItem -Path $ArchiveSourceDirectory -File | Copy-Item -Destination $global:BrownserveRepoBuildOutputDirectory
+}
+
 # Invoke our build task
 try
 {
@@ -148,11 +151,15 @@ try
         Task          = $Build
         BranchName    = $BranchName
         DefaultBranch = $DefaultBranch
-        ImageName     = '###REPO_NAME###'
+        BinaryName    = '###REPO_NAME###'
     }
     if ($ReleaseType)
     {
         $BuildParams.Add('ReleaseType', $ReleaseType)
+    }
+    if ($Target)
+    {
+        $BuildParams.Add('Target', $Target)
     }
     if ($GitHubRepoOwner)
     {
@@ -169,18 +176,6 @@ try
     if ($GitHubReleaseToken)
     {
         $BuildParams.Add('GitHubReleaseToken', $GitHubReleaseToken)
-    }
-    if ($DockerHubUsername)
-    {
-        $BuildParams.Add('DockerHubUsername', $DockerHubUsername)
-    }
-    if ($DockerHubToken)
-    {
-        $BuildParams.Add('DockerHubToken', $DockerHubToken)
-    }
-    if ($GHCRToken)
-    {
-        $BuildParams.Add('GHCRToken', $GHCRToken)
     }
     if ($PublishTo)
     {

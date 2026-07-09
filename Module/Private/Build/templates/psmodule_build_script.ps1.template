@@ -81,7 +81,7 @@ param
     )]
     [ValidateNotNullOrEmpty()]
     [string]
-    $GitHubRepoOwner = 'Brownserve-UK',
+    $GitHubRepoOwner = '###OWNER###',
 
     # The GitHub repo that contains this module, it's needed to build up documentation URI's
     [Parameter(

@@ -566,6 +566,8 @@ enum BrownserveRepoProjectType
     PowerShellModule
     BrownservePSTools
     WebApp
+    RustApp
+    bsdev
     Generic
 }
 
