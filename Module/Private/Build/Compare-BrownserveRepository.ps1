@@ -680,6 +680,82 @@ function Compare-BrownserveRepository
                     }
                 }
             }
+            'RustWebApp'
+            {
+                Write-Debug 'RustWebApp selected'
+                $DockerfileName        = $null
+                $ExtraPermanentPaths   = $RepositoryPathsConfig.RustWebApp.PermanentPaths
+                $ExtraEphemeralPaths   = $RepositoryPathsConfig.RustWebApp.EphemeralPaths
+                $ExtraPaketDeps        = $PaketDependenciesConfig.RustWebApp
+                $ExtraGitIgnores       = $GitIgnoreConfig.RustWebApp
+                $ExtraVSCodeExtensions = $VSCodeExtensionsConfig.RustWebApp
+                $ExtraPackageAliases   = $PackageAliasConfig.RustWebApp
+                $ExtraEditorConfig     = $EditorConfigConfig.RustWebApp
+                $IncludeChangelog      = $true
+                $InitParams = @{
+                    IncludeModuleLoader   = $false
+                    IncludePowerShellYaml = $false
+                    IncludePlatyPS        = $false
+                    IncludeBuildTestTools = $false
+                }
+                $InitScriptTemplateParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'rustwebapp_init.ps1.template'
+                }
+                $IncludeWorkflows    = $true
+                $IncludeMarkdownlint = $true
+                $IncludeDependabot   = $true
+                $IncludeLabelPR      = $false
+                $IncludeContributing = $true
+                $IncludePRTemplate   = $true
+                $IncludeBuildScripts = $true
+                $DependabotParams = @{
+                    Updates = @(
+                        @{ Ecosystem = 'github-actions'; Directory = '/';    Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } },
+                        @{ Ecosystem = 'cargo';          Directory = '/';    Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } },
+                        @{ Ecosystem = 'npm';            Directory = '/web'; Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } },
+                        @{ Ecosystem = 'docker';         Directory = '/';    Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } }
+                    )
+                }
+                $ContributingParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'RustWebApp_github_contributing.md.template'
+                }
+                $PRTemplateParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'RustWebApp_github_pull_request_template.md.template'
+                    Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
+                }
+                $WorkflowTemplateParams = @{
+                    Builds = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustwebapp_github_builds.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                    StageRelease = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustwebapp_github_stage-release.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                    Release = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustwebapp_github_release.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                }
+                $BuildScriptTemplateParams = @{
+                    BuildScript = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustwebapp_build_script.ps1.template'
+                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
+                    }
+                    BuildTasks = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'rustwebapp_build_tasks.ps1.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                }
+            }
             <#
                 bsdev is a Rust application that ALSO ships a Docker container (image/Dockerfile,
                 published to ghcr.io/<owner>/<repo>). It is therefore its own project type: the full
@@ -980,6 +1056,11 @@ function Compare-BrownserveRepository
         try
         {
             $NewInitScriptContent = New-BrownserveInitScript @InitParams -ErrorAction 'Stop'
+            if ($InitScriptTemplateParams)
+            {
+                $NewInitScriptContent = New-BrownserveContentFromTemplate @InitScriptTemplateParams |
+                    Format-BrownserveContent
+            }
         }
         catch
         {

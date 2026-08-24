@@ -1,0 +1,71 @@
+#Requires -Version 6.0
+[CmdletBinding()]
+param()
+
+$ErrorActionPreference = 'Stop'
+$Global:BrownserveRepoRootDirectory = (Resolve-Path (Get-Item $PSScriptRoot -Force).PSParentPath) | Convert-Path
+$Global:BrownserveRepoBuildDirectory = Join-Path $Global:BrownserveRepoRootDirectory '.build' | Convert-Path
+$Global:BrownserveRepoBuildTasksDirectory = Join-Path $Global:BrownserveRepoBuildDirectory 'tasks' | Convert-Path
+$Global:BrownserveRepoTempDirectory = Join-Path $Global:BrownserveRepoRootDirectory '.tmp'
+$Global:BrownserveRepoLogDirectory = Join-Path $Global:BrownserveRepoTempDirectory 'logs'
+$Global:BrownserveRepoBuildOutputDirectory = Join-Path $Global:BrownserveRepoTempDirectory 'output'
+$Global:BrownserveRepoBinaryDirectory = Join-Path $Global:BrownserveRepoTempDirectory 'bin'
+$Global:BrownserveRepoNugetPackagesDirectory = Join-Path $Global:BrownserveRepoRootDirectory 'packages'
+$Global:BrownserveRepoPaketFilesDirectory = Join-Path $Global:BrownserveRepoRootDirectory 'paket-files'
+$Global:BrownserveRepoName = Split-Path $Global:BrownserveRepoRootDirectory -Leaf
+
+if (Test-Path $Global:BrownserveRepoTempDirectory)
+{
+    Remove-Item $Global:BrownserveRepoTempDirectory -Recurse -Force
+}
+foreach ($Directory in @(
+    $Global:BrownserveRepoTempDirectory,
+    $Global:BrownserveRepoLogDirectory,
+    $Global:BrownserveRepoBuildOutputDirectory,
+    $Global:BrownserveRepoBinaryDirectory,
+    $Global:BrownserveRepoNugetPackagesDirectory,
+    $Global:BrownserveRepoPaketFilesDirectory
+))
+{
+    New-Item $Directory -ItemType Directory -Force | Out-Null
+}
+
+Push-Location $Global:BrownserveRepoRootDirectory
+try
+{
+    & dotnet tool restore
+    if ($LASTEXITCODE -ne 0)
+    {
+        throw 'dotnet tool restore failed.'
+    }
+    & dotnet paket install
+    if ($LASTEXITCODE -ne 0)
+    {
+        throw 'dotnet paket install failed.'
+    }
+}
+finally
+{
+    Pop-Location
+}
+
+foreach ($ModuleSpec in @(
+    @{ Name = 'Brownserve.PSCommon'; Filter = 'brownserve.pscommon.psd1' },
+    @{ Name = 'Brownserve.PSSourceControl'; Filter = 'brownserve.pssourcecontrol.psd1' },
+    @{ Name = 'Brownserve.PSBuildTools'; Filter = 'brownserve.psbuildtools.psd1' }
+))
+{
+    Remove-Module $ModuleSpec.Name -Force -ErrorAction SilentlyContinue
+    $ModulePath = Get-ChildItem `
+        -Path (Join-Path $Global:BrownserveRepoNugetPackagesDirectory $ModuleSpec.Name) `
+        -Filter $ModuleSpec.Filter `
+        -Recurse
+    if (@($ModulePath).Count -ne 1)
+    {
+        throw "Expected one $($ModuleSpec.Name) manifest, found $(@($ModulePath).Count)."
+    }
+    Import-Module ($ModulePath | Convert-Path) -Force -Verbose:$false
+}
+
+$InvokeBuildPath = Join-Path $Global:BrownserveRepoNugetPackagesDirectory 'Invoke-Build' -AdditionalChildPath 'tools', 'InvokeBuild.psd1'
+Import-Module $InvokeBuildPath -Force -Verbose:$false

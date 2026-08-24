@@ -1,0 +1,48 @@
+---
+name: stage-release
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'The type of release to perform'
+        required: true
+        default: 'minor'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+
+permissions: {}
+
+jobs:
+  stage-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: generate-app-token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          app-id: ${{ secrets.BROWNSERVE_CI_APP_ID }}
+          private-key: ${{ secrets.BROWNSERVE_CI_APP_PRIVATE_KEY }}
+      - name: checkout-repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          path: ###REPO_NAME###
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+      - name: install-rust
+        run: rustup toolchain install stable --profile minimal
+      - name: run-build-script
+        shell: pwsh
+        env:
+          GitHubPAT: ${{ steps.app-token.outputs.token }}
+        run: |
+          ./###REPO_NAME###/.build/build.ps1 `
+            -BranchName $env:GITHUB_REF `
+            -GitHubRepoName '###REPO_NAME###' `
+            -Build 'StageRelease' `
+            -GitHubStageReleaseToken $env:GitHubPAT `
+            -ReleaseType '${{ inputs.release_type }}' `
+            -Verbose

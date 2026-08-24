@@ -1,0 +1,72 @@
+---
+name: builds
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      relevant: ${{ steps.filter.outputs.relevant }}
+    steps:
+      - name: check-relevant-changes
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          FILES=$(gh pr view ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --json files --jq '.files[].path')
+          if echo "$FILES" | grep -iqE '^(crates/|web/|Cargo\.toml$|Cargo\.lock$|Dockerfile$|\.dockerignore$|\.build/|\.config/|nuget\.config$|paket\.dependencies$)'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No relevant files changed, skipping build"
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: check-changes
+    if: needs.check-changes.outputs.relevant == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: checkout-repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          path: ###REPO_NAME###
+      - name: install-rust
+        run: rustup toolchain install stable --profile minimal --component rustfmt,clippy
+      - name: run-build-script
+        shell: pwsh
+        run: |
+          ./###REPO_NAME###/.build/build.ps1 `
+            -GitHubRepoName '###REPO_NAME###' `
+            -BranchName $env:GITHUB_REF `
+            -Build 'BuildTestAndCheck' `
+            -Verbose
+
+  BuildTestAndCheck:
+    needs: [check-changes, build]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: evaluate-build-result
+        run: |
+          if [ "${{ needs.check-changes.result }}" != "success" ]; then
+            exit 1
+          fi
+          if [ "${{ needs.check-changes.outputs.relevant }}" != "true" ]; then
+            exit 0
+          fi
+          if [ "${{ needs.build.result }}" != "success" ]; then
+            exit 1
+          fi
+          exit 0

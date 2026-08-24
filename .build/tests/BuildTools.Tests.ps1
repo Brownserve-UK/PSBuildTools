@@ -81,4 +81,52 @@ Describe 'Build tool cmdlets' {
             $Result.LatestVersion.Version.ToString() | Should -Be '1.2.0'
         }
     }
+
+    Context 'RustWebApp repository type' {
+        BeforeAll {
+            $script:TemplatesDirectory = Join-Path $Global:BrownserveRepoRootDirectory 'Module' 'Private' 'Build' 'templates'
+            $script:ConfigDirectory = Join-Path $Global:BrownserveRepoRootDirectory 'Module' 'Private' '.config'
+        }
+
+        It 'should be available as a repository type' {
+            $ProjectType = (Get-Command Initialize-BrownserveRepository).Parameters.ProjectType.ParameterType
+            $ProjectType.GetEnumNames() | Should -Contain 'RustWebApp'
+        }
+
+        It 'should provide every managed template' {
+            @(
+                'RustWebApp_github_contributing.md.template',
+                'RustWebApp_github_pull_request_template.md.template',
+                'rustwebapp_build_script.ps1.template',
+                'rustwebapp_build_tasks.ps1.template',
+                'rustwebapp_github_builds.yaml.template',
+                'rustwebapp_github_release.yaml.template',
+                'rustwebapp_github_stage-release.yaml.template',
+                'rustwebapp_init.ps1.template'
+            ) | ForEach-Object {
+                Join-Path $script:TemplatesDirectory $_ | Should -Exist
+            }
+        }
+
+        It 'should provide configuration for every generator input' {
+            @(
+                'editorconfig_config.json',
+                'gitignore_config.json',
+                'paket_dependencies_config.json',
+                'repository_paths_config.json',
+                'repository_vscode_extensions.json'
+            ) | ForEach-Object {
+                $Configuration = Get-Content (Join-Path $script:ConfigDirectory $_) -Raw | ConvertFrom-Json
+                $Configuration.PSObject.Properties.Name | Should -Contain 'RustWebApp'
+            }
+        }
+
+        It 'should expose local validation tasks from the shared container build template' {
+            $BuildTasks = Get-Content (Join-Path $script:TemplatesDirectory 'rustwebapp_build_tasks.ps1.template') -Raw
+            foreach ($TaskName in @('BuildImage', 'BuildTestAndCheck', 'ContainerTest', 'DatabaseTest', 'Lint', 'Test'))
+            {
+                $BuildTasks | Should -Match "task $TaskName"
+            }
+        }
+    }
 }
