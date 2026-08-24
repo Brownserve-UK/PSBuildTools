@@ -1,0 +1,116 @@
+[CmdletBinding()]
+param
+(
+    [Parameter(Mandatory = $false)]
+    [string]
+    $DefaultBranch = 'main',
+
+    [Parameter(Mandatory = $false)]
+    [ValidateNotNullOrEmpty()]
+    [string]
+    $BranchName,
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('Build', 'BuildImage', 'BuildTestAndCheck', 'Clean', 'DatabaseTest', 'DryRun', 'Lint', 'Release', 'StageRelease', 'Test')]
+    [AllowEmptyString()]
+    [string]
+    $Build = 'Build',
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('major', 'minor', 'patch')]
+    [string]
+    $ReleaseType = 'minor',
+
+    [Parameter(Mandatory = $false)]
+    [ValidateNotNullOrEmpty()]
+    [ValidateSet('DockerHub', 'GHCR', 'GitHub')]
+    [string[]]
+    $PublishTo,
+
+    [Parameter(Mandatory = $false)]
+    [ValidateNotNullOrEmpty()]
+    [string]
+    $GitHubRepoOwner = '###OWNER###',
+
+    [Parameter(Mandatory = $false)]
+    [ValidateNotNullOrEmpty()]
+    [string]
+    $GitHubRepoName,
+
+    [Parameter(Mandatory = $false)]
+    [string]
+    $GitHubStageReleaseToken,
+
+    [Parameter(Mandatory = $false)]
+    [string]
+    $GitHubReleaseToken,
+
+    [Parameter(Mandatory = $false)]
+    [string]
+    $DockerHubUsername,
+
+    [Parameter(Mandatory = $false)]
+    [string]
+    $DockerHubToken,
+
+    [Parameter(Mandatory = $false)]
+    [string]
+    $GHCRToken
+)
+
+$ErrorActionPreference = 'Stop'
+
+if (!$BranchName)
+{
+    $BranchName = & git rev-parse --abbrev-ref HEAD
+}
+if (!$BranchName)
+{
+    $BranchName = 'preview'
+}
+$BranchName = $BranchName -replace 'refs\/heads\/', ''
+
+try
+{
+    $InitScriptPath = Join-Path $PSScriptRoot '_init.ps1' | Convert-Path
+    . $InitScriptPath
+}
+catch
+{
+    Write-Error "Failed to initialise the repository.`n$($_.Exception.Message)"
+}
+
+try
+{
+    $BuildParams = @{
+        File          = (Join-Path $Global:BrownserveRepoBuildTasksDirectory 'build_tasks.ps1' | Convert-Path)
+        Task          = $Build
+        BranchName    = $BranchName
+        DefaultBranch = $DefaultBranch
+        ImageName     = '###REPO_NAME###'
+        RustWebApp    = $true
+    }
+    foreach ($ParameterName in @(
+        'ReleaseType',
+        'GitHubRepoOwner',
+        'GitHubRepoName',
+        'GitHubStageReleaseToken',
+        'GitHubReleaseToken',
+        'DockerHubUsername',
+        'DockerHubToken',
+        'GHCRToken',
+        'PublishTo'
+    ))
+    {
+        $ParameterValue = Get-Variable -Name $ParameterName -ValueOnly
+        if ($null -ne $ParameterValue -and $ParameterValue.Count -gt 0)
+        {
+            $BuildParams[$ParameterName] = $ParameterValue
+        }
+    }
+    Invoke-Build @BuildParams -Verbose:($PSBoundParameters['Verbose'] -eq $true)
+}
+catch
+{
+    Write-Error $_.Exception.Message
+}

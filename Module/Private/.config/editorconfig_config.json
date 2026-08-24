@@ -63,6 +63,44 @@
       }
     }
   ],
+  "RustWebApp": [
+    {
+      "FilePath": "{*.ps1,*.psm1,*.psd1,*.ps1.template}",
+      "Properties": {
+        "end_of_line": "lf",
+        "charset": "utf-8",
+        "indent_style": "space",
+        "indent_size": 4
+      }
+    },
+    {
+      "FilePath": "*.rs",
+      "Properties": {
+        "end_of_line": "lf",
+        "charset": "utf-8",
+        "indent_style": "space",
+        "indent_size": 4
+      }
+    },
+    {
+      "FilePath": "*.toml",
+      "Properties": {
+        "end_of_line": "lf",
+        "charset": "utf-8",
+        "indent_style": "space",
+        "indent_size": 2
+      }
+    },
+    {
+      "FilePath": "{*.ts,*.tsx,*.js,*.jsx,*.css,*.json,*.yaml,*.yml}",
+      "Properties": {
+        "end_of_line": "lf",
+        "charset": "utf-8",
+        "indent_style": "space",
+        "indent_size": 2
+      }
+    }
+  ],
   "bsdev": [
     {
       "Comment": [

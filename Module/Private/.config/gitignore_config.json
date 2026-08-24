@@ -45,6 +45,34 @@
             "item": "**/*.rs.bk"
         }
     ],
+    "RustWebApp": [
+        {
+            "comment": "2026-08-24 - SB: We'll ignore Cargo build output, but we want to retain Cargo.lock for application builds.",
+            "item": "target/"
+        },
+        {
+            "comment": "2026-08-24 - SB: We'll ignore Rust backup files created by editors.",
+            "item": "**/*.rs.bk"
+        },
+        {
+            "comment": "2026-08-24 - SB: We'll recreate Node dependencies and frontend build output when needed.",
+            "item": [
+                "**/node_modules/",
+                "web/dist/"
+            ]
+        },
+        {
+            "comment": "2026-08-24 - SB: We don't want to commit environment files because they may contain secrets.",
+            "item": [
+                ".env",
+                ".env.*"
+            ]
+        },
+        {
+            "comment": "2026-08-24 - SB: We'll recreate Docker build output and cache when needed.",
+            "item": ".docker/"
+        }
+    ],
     "bsdev": [
         {
             "comment": "Cargo build output. Note: Cargo.lock is intentionally NOT ignored for binary applications.",

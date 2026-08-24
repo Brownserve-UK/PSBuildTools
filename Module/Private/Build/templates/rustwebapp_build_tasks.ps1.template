@@ -1,0 +1,782 @@
+[CmdletBinding()]
+param
+(
+    [Parameter(
+        Mandatory = $false
+    )]
+    [string]
+    $ImageName = $Global:BrownserveRepoName,
+
+    [Parameter(
+        Mandatory = $true
+    )]
+    [string]
+    $BranchName,
+
+    [Parameter(
+        Mandatory = $true
+    )]
+    [string]
+    $DefaultBranch,
+
+    [Parameter(
+        Mandatory = $false
+    )]
+    [ValidateSet(
+        'major',
+        'minor',
+        'patch'
+    )]
+    [string]
+    $ReleaseType,
+
+    [Parameter(
+        Mandatory = $false
+    )]
+    [ValidateNotNullOrEmpty()]
+    [ValidateSet('DockerHub', 'GHCR', 'GitHub')]
+    [string[]]
+    $PublishTo,
+
+    [Parameter(
+        Mandatory = $true
+    )]
+    [ValidateNotNullOrEmpty()]
+    [string]
+    $GitHubRepoOwner,
+
+    [Parameter(
+        Mandatory = $false
+    )]
+    [ValidateNotNullOrEmpty()]
+    [string]
+    $GitHubRepoName = $Global:BrownserveRepoName,
+
+    [Parameter(
+        Mandatory = $false
+    )]
+    [string]
+    $GitHubStageReleaseToken,
+
+    [Parameter(
+        Mandatory = $false
+    )]
+    [string]
+    $GitHubReleaseToken,
+
+    [Parameter(
+        Mandatory = $false
+    )]
+    [string]
+    $DockerHubUsername,
+
+    [Parameter(
+        Mandatory = $false
+    )]
+    [string]
+    $DockerHubToken,
+
+    [Parameter(
+        Mandatory = $false
+    )]
+    [string]
+    $GHCRToken,
+
+    [Parameter(Mandatory = $false)]
+    [switch]
+    $RustWebApp
+)
+
+$ImageName = $ImageName.ToLower()
+
+$BranchName = $BranchName -replace 'refs\/heads\/', ''
+$script:CurrentCommitHash = & git rev-parse HEAD
+
+$script:Release = $false
+$script:Stage = $false
+$script:Changelog = $null
+$script:CurrentVersion = $null
+$script:NewVersion = $null
+$script:PrefixedVersion = $null
+$script:ReleaseVersion = $null
+$script:ReleaseNotes = $null
+$script:StagingBranchName = $null
+$script:PRLink = $null
+$script:TrackedFiles = @()
+$script:ChangelogPath = Join-Path $Global:BrownserveRepoRootDirectory 'CHANGELOG.md'
+$script:RustWebAppConfig = @{}
+
+if ($RustWebApp)
+{
+    $RustWebAppConfigPath = Join-Path $Global:BrownserveRepoBuildDirectory 'RustWebApp.json'
+    if (Test-Path $RustWebAppConfigPath)
+    {
+        $script:RustWebAppConfig = Get-Content $RustWebAppConfigPath -Raw | ConvertFrom-Json -AsHashtable
+    }
+}
+
+function Get-RustWebAppConfigValue
+{
+    param
+    (
+        [string]
+        $Name,
+
+        $Default
+    )
+
+    if ($script:RustWebAppConfig.ContainsKey($Name))
+    {
+        return $script:RustWebAppConfig[$Name]
+    }
+    return $Default
+}
+
+function Wait-RustWebAppContainerHealth
+{
+    param
+    (
+        [string]
+        $ContainerName
+    )
+
+    foreach ($Attempt in 1..60)
+    {
+        $Status = & docker inspect --format '{{.State.Health.Status}}' $ContainerName 2>$null
+        if ($LASTEXITCODE -eq 0 -and $Status.Trim() -eq 'healthy')
+        {
+            return
+        }
+        Start-Sleep -Seconds 1
+    }
+    throw "Container '$ContainerName' did not become healthy."
+}
+
+function Remove-RustWebAppContainer
+{
+    param
+    (
+        [string]
+        $ContainerName
+    )
+
+    & docker rm --force $ContainerName 2>&1 | Out-Null
+}
+
+task CheckPublishingParameters {
+    if (!$PublishTo)
+    {
+        throw 'PublishTo must be set when performing a release'
+    }
+    if ('DockerHub' -in $PublishTo)
+    {
+        if (!$DockerHubUsername)
+        {
+            throw 'DockerHubUsername must be provided when publishing to DockerHub'
+        }
+        if (!$DockerHubToken)
+        {
+            throw 'DockerHubToken must be provided when publishing to DockerHub'
+        }
+    }
+    if ('GHCR' -in $PublishTo)
+    {
+        if (!$GHCRToken)
+        {
+            throw 'GHCRToken must be provided when publishing to GHCR'
+        }
+    }
+    if ('GitHub' -in $PublishTo)
+    {
+        if (!$GitHubReleaseToken)
+        {
+            throw 'GitHubReleaseToken must be provided when publishing to GitHub'
+        }
+    }
+}
+
+task CheckStagingParameters {
+    if (!$GitHubStageReleaseToken)
+    {
+        throw 'GitHubStageReleaseToken must be set when staging a release'
+    }
+}
+
+task SetStagingVariables {
+    Write-Verbose 'Setting staging variables'
+    $script:Stage = $true
+}
+
+task SetReleaseVariables {
+    Write-Verbose 'Setting release variables'
+    $script:Release = $true
+}
+
+task GetReleaseHistory {
+    Write-Build White 'Getting release history'
+    $script:Changelog = Read-BrownserveChangelog `
+        -ChangelogPath $script:ChangelogPath
+    if ($script:Release -ne $true)
+    {
+        $script:CurrentVersion = ($script:Changelog.VersionHistory | Where-Object { !$_.PreRelease } | Select-Object -First 1).Version
+    }
+    else
+    {
+        $script:CurrentVersion = $script:Changelog.LatestVersion.Version
+    }
+    Write-Verbose "Current version: $script:CurrentVersion"
+}
+
+task SetVersion GetReleaseHistory, {
+    Write-Build White 'Setting version'
+    if (!$ReleaseType)
+    {
+        throw 'ReleaseType must be set when staging or releasing'
+    }
+    $script:NewVersion = switch ($ReleaseType)
+    {
+        'major' { [semver]::new($script:CurrentVersion.Major + 1, 0, 0) }
+        'minor' { [semver]::new($script:CurrentVersion.Major, $script:CurrentVersion.Minor + 1, 0) }
+        'patch' { [semver]::new($script:CurrentVersion.Major, $script:CurrentVersion.Minor, $script:CurrentVersion.Patch + 1) }
+    }
+    $script:PrefixedVersion = "v$script:NewVersion"
+    Write-Verbose "New version: $script:PrefixedVersion"
+    $script:StagingBranchName = "release/$script:PrefixedVersion"
+}
+
+task CreateChangelogEntry SetVersion, {
+    if ($script:CurrentVersion -eq $script:NewVersion)
+    {
+        throw 'Current version and new version are the same, cannot create changelog entry'
+    }
+    Write-Build White "Creating new changelog entry for '$script:NewVersion'"
+    $NewChangelogEntryParams = @{
+        Version         = $script:NewVersion
+        RepositoryOwner = $GitHubRepoOwner
+        RepositoryName  = $GitHubRepoName
+        ChangelogObject = $script:Changelog
+        SinceVersion    = $script:CurrentVersion
+    }
+    if ($GitHubStageReleaseToken)
+    {
+        $NewChangelogEntryParams.Add('Auto', $true)
+        $NewChangelogEntryParams.Add('GitHubToken', $GitHubStageReleaseToken)
+    }
+    else
+    {
+        throw 'GitHub token not provided, cannot generate release notes'
+    }
+    try
+    {
+        $script:NewReleaseNotes = New-BrownserveChangelogEntry @NewChangelogEntryParams
+    }
+    catch
+    {
+        throw "Failed to create changelog entry.`n$($_.Exception.Message)"
+    }
+}
+
+task UpdateChangelog CreateChangelogEntry, {
+    Write-Build White 'Updating changelog'
+    try
+    {
+        $script:Changelog | Add-BrownserveChangelogEntry `
+            -NewContent $script:NewReleaseNotes `
+            -ErrorAction 'Stop'
+    }
+    catch
+    {
+        throw "Failed to update changelog.`n$($_.Exception.Message)"
+    }
+    $script:TrackedFiles += ($script:ChangelogPath | Convert-Path)
+}
+
+task UpdateCargoVersion SetVersion, {
+    if (!$RustWebApp)
+    {
+        return
+    }
+
+    $CargoTomlPath = Join-Path $Global:BrownserveRepoRootDirectory 'Cargo.toml' | Convert-Path
+    $CargoContent = Get-Content $CargoTomlPath -Raw
+    $CargoVersionPattern = '(?ms)(\[workspace\.package\].*?^version\s*=\s*")[^"]*(")'
+    if (-not [regex]::IsMatch($CargoContent, $CargoVersionPattern))
+    {
+        throw 'Cargo.toml must contain a version in [workspace.package].'
+    }
+
+    $NewSemver = $script:NewVersion.ToString()
+    $UpdatedCargoContent = $CargoContent -replace $CargoVersionPattern, "`${1}$NewSemver`${2}"
+    Set-Content -Path $CargoTomlPath -Value $UpdatedCargoContent -NoNewline
+
+    Push-Location $Global:BrownserveRepoRootDirectory
+    try
+    {
+        exec { cargo generate-lockfile }
+    }
+    finally
+    {
+        Pop-Location
+    }
+
+    $script:TrackedFiles += $CargoTomlPath
+    $script:TrackedFiles += (Join-Path $Global:BrownserveRepoRootDirectory 'Cargo.lock' | Convert-Path)
+}
+
+task CreateStagingBranch SetVersion, {
+    Write-Build White "Creating staging branch '$script:StagingBranchName'"
+    try
+    {
+        New-GitHubBranch `
+            -RepositoryOwner $GitHubRepoOwner `
+            -RepositoryName  $GitHubRepoName `
+            -BranchName      $script:StagingBranchName `
+            -SHA             $script:CurrentCommitHash `
+            -Token           $GitHubStageReleaseToken `
+            -ErrorAction 'Stop'
+    }
+    catch
+    {
+        throw "Failed to create staging branch '$script:StagingBranchName'.`n$($_.Exception.Message)"
+    }
+}
+
+task CommitTrackedChanges UpdateChangelog, UpdateCargoVersion, CreateStagingBranch, {
+    if ($script:TrackedFiles.Count -gt 0)
+    {
+        Write-Build White 'Committing tracked changes'
+        try
+        {
+            $Files = $script:TrackedFiles | ForEach-Object {
+                @{
+                    Path    = [System.IO.Path]::GetRelativePath($Global:BrownserveRepoRootDirectory, $_).Replace('\', '/')
+                    Content = Get-Content -Path $_ -Raw
+                }
+            }
+            New-GitHubCommit `
+                -RepositoryOwner $GitHubRepoOwner `
+                -RepositoryName  $GitHubRepoName `
+                -BranchName      $script:StagingBranchName `
+                -CommitMessage   "docs: Prepare for $script:PrefixedVersion`n`nThis commit was automatically generated." `
+                -Files           $Files `
+                -Token           $GitHubStageReleaseToken `
+                -ErrorAction 'Stop'
+        }
+        catch
+        {
+            throw "Failed to commit tracked changes.`n$($_.Exception.Message)"
+        }
+    }
+    else
+    {
+        Write-Verbose 'No tracked files to commit.'
+    }
+}
+
+task CreatePullRequest CommitTrackedChanges, {
+    Write-Build White 'Creating pull request'
+    try
+    {
+        $Body = @'
+This PR was automatically generated.
+Please review the changes and merge if they look good.
+'@
+        $PullRequestParams = @{
+            BaseBranch      = $DefaultBranch
+            HeadBranch      = $script:StagingBranchName
+            Title           = "chore: prepare for $script:PrefixedVersion"
+            Body            = $Body
+            GitHubToken     = $GitHubStageReleaseToken
+            RepositoryName  = $GitHubRepoName
+            RepositoryOwner = $GitHubRepoOwner
+        }
+        $PRDetails = New-GitHubPullRequest @PullRequestParams
+        $script:PRLink = $PRDetails.html_url
+        Write-Debug "PRLink: $script:PRLink"
+    }
+    catch
+    {
+        throw "Failed to create pull request.`n$($_.Exception.Message)"
+    }
+}
+
+task RestoreWeb {
+    if (!$RustWebApp)
+    {
+        return
+    }
+
+    $WebDirectory = Join-Path $Global:BrownserveRepoRootDirectory (Get-RustWebAppConfigValue -Name 'WebDirectory' -Default 'web')
+    exec { npm --prefix $WebDirectory ci }
+}
+
+task RustFormat {
+    if ($RustWebApp)
+    {
+        exec { cargo fmt --all -- --check }
+    }
+}
+
+task RustClippy {
+    if ($RustWebApp)
+    {
+        exec { cargo clippy --workspace --all-targets --all-features -- -D warnings }
+    }
+}
+
+task CargoTest {
+    if ($RustWebApp)
+    {
+        exec { cargo test --workspace }
+    }
+}
+
+task DatabaseTest {
+    if (!$RustWebApp -or !(Get-RustWebAppConfigValue -Name 'DatabaseTests' -Default $false))
+    {
+        return
+    }
+
+    $PostgresImage = Get-RustWebAppConfigValue -Name 'PostgresImage' -Default 'postgres:18-alpine'
+    $DatabaseUser = Get-RustWebAppConfigValue -Name 'DatabaseUser' -Default 'brownserve'
+    $DatabasePassword = Get-RustWebAppConfigValue -Name 'DatabasePassword' -Default 'brownserve'
+    $DatabaseName = Get-RustWebAppConfigValue -Name 'DatabaseName' -Default 'brownserve'
+    $DatabaseTestArguments = @(Get-RustWebAppConfigValue -Name 'DatabaseTestArguments' -Default @('test', '--workspace', '--all-features'))
+    $Suffix = [guid]::NewGuid().ToString('N').Substring(0, 12)
+    $ContainerName = ("$ImageName-database-test-$Suffix" -replace '[^a-z0-9_.-]', '-').ToLower()
+    $OriginalDatabaseUrl = [Environment]::GetEnvironmentVariable('DATABASE_URL', 'Process')
+
+    try
+    {
+        $DockerArguments = @(
+            'run', '--detach', '--rm',
+            '--name', $ContainerName,
+            '--publish', '127.0.0.1::5432',
+            '--env', "POSTGRES_USER=$DatabaseUser",
+            '--env', "POSTGRES_PASSWORD=$DatabasePassword",
+            '--env', "POSTGRES_DB=$DatabaseName",
+            '--health-cmd', "pg_isready -U $DatabaseUser -d $DatabaseName",
+            '--health-interval', '1s',
+            '--health-timeout', '5s',
+            '--health-retries', '60',
+            $PostgresImage
+        )
+        exec { & docker $DockerArguments | Out-Null }
+        Wait-RustWebAppContainerHealth -ContainerName $ContainerName
+
+        $PortOutput = & docker port $ContainerName '5432/tcp'
+        if ($LASTEXITCODE -ne 0 -or !$PortOutput -or @($PortOutput)[0] -notmatch ':(\d+)$')
+        {
+            throw "Could not determine the PostgreSQL port for '$ContainerName'."
+        }
+        $env:DATABASE_URL = "postgres://${DatabaseUser}:${DatabasePassword}@127.0.0.1:$($Matches[1])/$DatabaseName"
+        exec { & cargo $DatabaseTestArguments }
+    }
+    finally
+    {
+        if ($null -eq $OriginalDatabaseUrl)
+        {
+            Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+        }
+        else
+        {
+            $env:DATABASE_URL = $OriginalDatabaseUrl
+        }
+        Remove-RustWebAppContainer -ContainerName $ContainerName
+    }
+}
+
+task WebTypeCheck RestoreWeb, {
+    if ($RustWebApp)
+    {
+        $WebDirectory = Join-Path $Global:BrownserveRepoRootDirectory (Get-RustWebAppConfigValue -Name 'WebDirectory' -Default 'web')
+        exec { npm --prefix $WebDirectory run typecheck }
+    }
+}
+
+task WebLint RestoreWeb, {
+    if ($RustWebApp)
+    {
+        $WebDirectory = Join-Path $Global:BrownserveRepoRootDirectory (Get-RustWebAppConfigValue -Name 'WebDirectory' -Default 'web')
+        exec { npm --prefix $WebDirectory run lint }
+    }
+}
+
+task WebTest RestoreWeb, {
+    if ($RustWebApp)
+    {
+        $WebDirectory = Join-Path $Global:BrownserveRepoRootDirectory (Get-RustWebAppConfigValue -Name 'WebDirectory' -Default 'web')
+        exec { npm --prefix $WebDirectory run test }
+    }
+}
+
+task SourceBuild RestoreWeb, {
+    if (!$RustWebApp)
+    {
+        return
+    }
+
+    $WebDirectory = Join-Path $Global:BrownserveRepoRootDirectory (Get-RustWebAppConfigValue -Name 'WebDirectory' -Default 'web')
+    exec { cargo build --workspace --release }
+    exec { npm --prefix $WebDirectory run build }
+}
+
+task BuildImage {
+    Write-Build White "Building Docker image '$ImageName'"
+    if ($RustWebApp)
+    {
+        exec { docker build --target runtime -t "${ImageName}:latest" $Global:BrownserveRepoRootDirectory }
+    }
+    else
+    {
+        exec { docker build -t "${ImageName}:latest" $Global:BrownserveRepoRootDirectory }
+    }
+}
+
+task ContainerTest BuildImage, {
+    if (!$RustWebApp -or !(Get-RustWebAppConfigValue -Name 'ContainerTests' -Default $false))
+    {
+        return
+    }
+
+    $PostgresImage = Get-RustWebAppConfigValue -Name 'PostgresImage' -Default 'postgres:18-alpine'
+    $DatabaseUser = Get-RustWebAppConfigValue -Name 'DatabaseUser' -Default 'brownserve'
+    $DatabasePassword = Get-RustWebAppConfigValue -Name 'DatabasePassword' -Default 'brownserve'
+    $DatabaseName = Get-RustWebAppConfigValue -Name 'DatabaseName' -Default 'brownserve'
+    $ContainerPort = Get-RustWebAppConfigValue -Name 'ContainerPort' -Default 8080
+    $HealthPath = Get-RustWebAppConfigValue -Name 'HealthPath' -Default '/health'
+    $ContainerEnvironment = Get-RustWebAppConfigValue -Name 'ContainerEnvironment' -Default @{}
+    $Suffix = [guid]::NewGuid().ToString('N').Substring(0, 12)
+    $NetworkName = ("$ImageName-test-$Suffix" -replace '[^a-z0-9_.-]', '-').ToLower()
+    $DatabaseContainerName = "$NetworkName-database"
+    $ApplicationContainerName = "$NetworkName-application"
+
+    try
+    {
+        exec { docker network create $NetworkName | Out-Null }
+        $DatabaseArguments = @(
+            'run', '--detach', '--rm',
+            '--name', $DatabaseContainerName,
+            '--network', $NetworkName,
+            '--env', "POSTGRES_USER=$DatabaseUser",
+            '--env', "POSTGRES_PASSWORD=$DatabasePassword",
+            '--env', "POSTGRES_DB=$DatabaseName",
+            '--health-cmd', "pg_isready -U $DatabaseUser -d $DatabaseName",
+            '--health-interval', '1s',
+            '--health-timeout', '5s',
+            '--health-retries', '60',
+            $PostgresImage
+        )
+        exec { & docker $DatabaseArguments | Out-Null }
+        Wait-RustWebAppContainerHealth -ContainerName $DatabaseContainerName
+
+        $ApplicationArguments = @(
+            'run', '--detach', '--rm',
+            '--name', $ApplicationContainerName,
+            '--network', $NetworkName,
+            '--publish', "127.0.0.1::$ContainerPort",
+            '--env', "DATABASE_URL=postgres://${DatabaseUser}:${DatabasePassword}@${DatabaseContainerName}:5432/$DatabaseName"
+        )
+        foreach ($EnvironmentEntry in $ContainerEnvironment.GetEnumerator())
+        {
+            $ApplicationArguments += '--env'
+            $ApplicationArguments += "$($EnvironmentEntry.Key)=$($EnvironmentEntry.Value)"
+        }
+        $ApplicationArguments += "${ImageName}:latest"
+        exec { & docker $ApplicationArguments | Out-Null }
+
+        $PortOutput = & docker port $ApplicationContainerName "$ContainerPort/tcp"
+        if ($LASTEXITCODE -ne 0 -or !$PortOutput -or @($PortOutput)[0] -notmatch ':(\d+)$')
+        {
+            throw "Could not determine the application port for '$ApplicationContainerName'."
+        }
+        $HealthUri = "http://127.0.0.1:$($Matches[1])$HealthPath"
+        $Healthy = $false
+        foreach ($Attempt in 1..60)
+        {
+            try
+            {
+                $Response = Invoke-WebRequest -Uri $HealthUri -TimeoutSec 2 -UseBasicParsing
+                if ($Response.StatusCode -eq 200)
+                {
+                    $Healthy = $true
+                    break
+                }
+            }
+            catch
+            {
+                $Running = & docker inspect --format '{{.State.Running}}' $ApplicationContainerName 2>$null
+                if ($LASTEXITCODE -ne 0 -or $Running.Trim() -ne 'true')
+                {
+                    $ApplicationLogs = & docker logs $ApplicationContainerName 2>&1
+                    throw "Application container stopped before it became healthy.`n$ApplicationLogs"
+                }
+            }
+            Start-Sleep -Seconds 1
+        }
+        if (!$Healthy)
+        {
+            $ApplicationLogs = & docker logs $ApplicationContainerName 2>&1
+            throw "Application did not become healthy at '$HealthUri'.`n$ApplicationLogs"
+        }
+    }
+    finally
+    {
+        Remove-RustWebAppContainer -ContainerName $ApplicationContainerName
+        Remove-RustWebAppContainer -ContainerName $DatabaseContainerName
+        & docker network rm $NetworkName 2>&1 | Out-Null
+    }
+}
+
+task Build SourceBuild, BuildImage, {}
+
+task Tests {
+    if (!$RustWebApp)
+    {
+        Write-Build White 'Running Pester tests'
+        $Global:BrownserveRepoDockerImageName = $ImageName
+        $Results = Invoke-Pester -Path $Global:BrownserveRepoTestsDirectory -PassThru
+        assert ($Results.FailedCount -eq 0) "$($Results.FailedCount) test(s) failed."
+    }
+}
+
+task Lint RustFormat, RustClippy, WebTypeCheck, WebLint, {}
+
+task Test CargoTest, DatabaseTest, WebTest, ContainerTest, Tests, {}
+
+task Clean {
+    if ($RustWebApp)
+    {
+        $WebDirectory = Join-Path $Global:BrownserveRepoRootDirectory (Get-RustWebAppConfigValue -Name 'WebDirectory' -Default 'web')
+        exec { cargo clean }
+        foreach ($Path in @(
+            (Join-Path $WebDirectory 'dist'),
+            (Join-Path $WebDirectory 'node_modules')
+        ))
+        {
+            if (Test-Path $Path)
+            {
+                Remove-Item $Path -Recurse -Force
+            }
+        }
+    }
+}
+
+task BuildTestAndCheck Build, Lint, Test, {}
+
+task PublishRelease GetReleaseHistory, Build, {
+    Write-Build White 'Publishing release'
+    $script:ReleaseVersion = $script:Changelog.LatestVersion.Version.ToString()
+    $script:PrefixedVersion = "v$script:ReleaseVersion"
+    $script:ReleaseNotes = $script:Changelog.LatestVersion.ReleaseNotes -join "`n"
+
+    if ('GitHub' -in $PublishTo)
+    {
+        Write-Build White 'Checking for existing GitHub releases'
+        $CurrentReleases = Get-GitHubRelease `
+            -GitHubToken $GitHubReleaseToken `
+            -RepoName    $GitHubRepoName `
+            -GitHubOrg   $GitHubRepoOwner
+        if ($CurrentReleases.tag_name -contains $script:PrefixedVersion)
+        {
+            throw "A GitHub release for $script:PrefixedVersion already exists!"
+        }
+
+        Write-Build White "Creating draft GitHub release $script:PrefixedVersion"
+        $GitHubReleaseParams = @{
+            Tag             = $script:PrefixedVersion
+            Name            = $script:PrefixedVersion
+            Description     = $script:ReleaseNotes
+            GitHubToken     = $GitHubReleaseToken
+            RepositoryName  = $GitHubRepoName
+            RepositoryOwner = $GitHubRepoOwner
+            Draft           = $true
+        }
+        try
+        {
+            $ReleaseResponse = New-GitHubRelease @GitHubReleaseParams
+        }
+        catch
+        {
+            throw "Failed to create draft GitHub release.`n$($_.Exception.Message)"
+        }
+    }
+    else
+    {
+        Write-Verbose 'GitHub not targeted, skipping draft release creation...'
+    }
+
+    if ('DockerHub' -in $PublishTo)
+    {
+        Write-Build White 'Publishing to DockerHub'
+        try
+        {
+            exec { docker login -u $DockerHubUsername -p $DockerHubToken }
+            exec { docker tag "${ImageName}:latest" "${DockerHubUsername}/${ImageName}:$script:ReleaseVersion" }
+            exec { docker tag "${ImageName}:latest" "${DockerHubUsername}/${ImageName}:latest" }
+            exec { docker push "${DockerHubUsername}/${ImageName}:$script:ReleaseVersion" }
+            exec { docker push "${DockerHubUsername}/${ImageName}:latest" }
+        }
+        catch
+        {
+            throw "Failed to publish to DockerHub.`n$($_.Exception.Message)"
+        }
+    }
+    else
+    {
+        Write-Verbose 'DockerHub not targeted, skipping...'
+    }
+
+    if ('GHCR' -in $PublishTo)
+    {
+        Write-Build White 'Publishing to GitHub Container Registry'
+        $GHCRImage = "ghcr.io/$($GitHubRepoOwner.ToLower())/${ImageName}"
+        try
+        {
+            exec { docker login ghcr.io -u $GitHubRepoOwner -p $GHCRToken }
+            exec { docker tag "${ImageName}:latest" "${GHCRImage}:$script:ReleaseVersion" }
+            exec { docker tag "${ImageName}:latest" "${GHCRImage}:latest" }
+            exec { docker push "${GHCRImage}:$script:ReleaseVersion" }
+            exec { docker push "${GHCRImage}:latest" }
+        }
+        catch
+        {
+            throw "Failed to publish to GHCR.`n$($_.Exception.Message)"
+        }
+    }
+    else
+    {
+        Write-Verbose 'GHCR not targeted, skipping...'
+    }
+
+    if ('GitHub' -in $PublishTo)
+    {
+        Write-Build White "Publishing release $script:PrefixedVersion"
+        try
+        {
+            Update-GitHubRelease `
+                -ReleaseId       $ReleaseResponse.id `
+                -RepositoryName  $GitHubRepoName `
+                -RepositoryOwner $GitHubRepoOwner `
+                -Token           $GitHubReleaseToken `
+                -Draft           $false `
+                -ErrorAction     'Stop'
+        }
+        catch
+        {
+            throw "Failed to publish GitHub release.`n$($_.Exception.Message)"
+        }
+    }
+}
+
+task StageRelease CheckStagingParameters, SetStagingVariables, CreatePullRequest, {
+    $BuildMessage = @"
+The release has been successfully staged and a pull request has been created.
+Please review the changes at $script:PRLink and merge if they look good.
+"@
+    Write-Build Green $BuildMessage
+}
+
+task DryRun SetReleaseVariables, CheckPublishingParameters, GetReleaseHistory, Build, Lint, Test, {}
+
+task Release CheckPublishingParameters, SetReleaseVariables, PublishRelease, {}

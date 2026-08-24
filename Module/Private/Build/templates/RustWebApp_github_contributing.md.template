@@ -1,0 +1,23 @@
+# Contributing
+
+## Prerequisites
+
+- PowerShell 6 or later
+- .NET SDK
+- Rust stable toolchain
+- Node.js and npm
+- Docker
+
+## Build and test
+
+Run the complete local validation pipeline from the repository root:
+
+```powershell
+pwsh ./.build/build.ps1 -Build BuildTestAndCheck -Verbose
+```
+
+The build starts and removes its own temporary PostgreSQL and application containers.
+
+## Pull requests
+
+Keep each pull request focused and use a Conventional Commits title.
