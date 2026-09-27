@@ -6,6 +6,8 @@
     rather than a single project type. 'Core' is always included automatically.
     This cmdlet works out what's missing/different compared to what the requested components expect and, if
     it's safe to do so, creates/updates those files on a dedicated branch.
+    A file the manifest owns that has been manually edited since it was last generated is reported as a
+    conflict and stops the whole run, before any files are written, unless '-Force' is passed.
 .PARAMETER RepositoryPath
     The path to the repository to initialise. Defaults to the current directory.
 .PARAMETER Components
@@ -95,6 +97,12 @@ function Initialize-BrownserveRepository
         catch
         {
             throw "Failed to get repository state.`n$($_.Exception.Message)"
+        }
+
+        if ($RepositoryState.ConflictedFiles.Count -gt 0)
+        {
+            $ConflictSummary = ($RepositoryState.ConflictedFiles | ForEach-Object { "$($_.Path): $($_.Reason)" }) -join "`n"
+            throw "The following files have been modified since they were last generated and would be overwritten:`n$ConflictSummary`nUse the '-Force' switch to overwrite them."
         }
 
         # Only proceed if we have no missing files or changes

@@ -21,7 +21,7 @@ Initialize-BrownserveRepository [[-RepositoryPath] <String>] -Components <String
 
 ## DESCRIPTION
 
-Repositories are described by a set of components (e.g. 'PowerShellModule', 'RustBinary', 'ContainerImage') rather than a single project type. 'Core' is always included automatically. This cmdlet works out what's missing/different compared to what the requested components expect and, if it's safe to do so, creates/updates those files on a dedicated branch.
+Repositories are described by a set of components (e.g. 'PowerShellModule', 'RustBinary', 'ContainerImage') rather than a single project type. 'Core' is always included automatically. This cmdlet works out what's missing/different compared to what the requested components expect and, if it's safe to do so, creates/updates those files on a dedicated branch. A file the manifest owns that has been manually edited since it was last generated is reported as a conflict and stops the whole run, before any files are written, unless '-Force' is passed.
 
 ## EXAMPLES
 

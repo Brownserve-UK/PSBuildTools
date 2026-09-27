@@ -11,5 +11,121 @@
     {
       "Name": "AstroDocs"
     }
-  ]
+  ],
+  "Files": {
+    ".build/_init.ps1": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:516daaf0ff726023ae2518fe61d0ca6ab0f2512929d0be137dd87ec6ce8596cc"
+    },
+    ".build/build.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:4b48ae3fc9f8360d9ecca9cce533984372db2a95e6f6d14d1bb988e1f7b07435"
+    },
+    ".build/tasks/build_tasks.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:fb39f326f793cfc0db09764d4107a43b61a393eb91c4d23b0e319281b3c801ef"
+    },
+    ".build/tests/Skills.Tests.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:d9ef091bda4a892e68f16bd86d4569972fcb6bdfa9ccc1013fa1adcf75961b55"
+    },
+    ".config/dotnet-tools.json": {
+      "Ownership": "Seeded",
+      "Component": "Core"
+    },
+    ".editorconfig": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:49890aac2a26887fc8f1ef2dac1f44a7000156c75d97c27a2e0ee87785e3f522"
+    },
+    ".github/CONTRIBUTING.md": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:ae084e2c76ab594a1f12af28e89d6bbddf415afa43e792842dd8d7a4356bb312"
+    },
+    ".github/dependabot.yml": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:78a982ccd181bec92e3d7dc6a8d85002976d98e13019fb4ab4b348b8c5ecbca7"
+    },
+    ".github/pull_request_template.md": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:9cbd809f0a9eec6619a361855112568a43f55ecc90ce7ea1c0709a5cb3ee6148"
+    },
+    ".github/workflows/builds.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:bbbfa831d0d8fb18eac8f429090c51a95e8a8a6e57bd076ce2a4098a8f237bd3"
+    },
+    ".github/workflows/label-pr.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:9b41c473c5df0d8a382ed83e57573eed55ddd5e0903a676a93f27028a4ef0749"
+    },
+    ".github/workflows/release.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:3ac7d3e8391f95e299c8d0187f16e2eee5f292cedb7289f2cb67da25f4631bbf"
+    },
+    ".github/workflows/stage-release.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:386215711449d9889c25e4c4c0949ab8fc806f419efc7c60522d9ab32f27a8c4"
+    },
+    ".gitignore": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:c6463f701c2a8dc6e9b44b69a2e107b0f744777b32fac9563e14feb45cb102d2"
+    },
+    ".markdownlint.json": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:a8981893e623ea6f569156bbca76f096e776a642b53d07f89e45136926c2816a"
+    },
+    ".vscode/extensions.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:8071c2154a22cca10f0a188d5b11812ece9d235c9bfcc414b7867557ea9d7474"
+    },
+    ".vscode/settings.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:f79dd664e624a6eda7b993f1a93580ae4881b49ea65ed468122ab6e9380d3ef9"
+    },
+    "CHANGELOG.md": {
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
+    },
+    "LICENSE": {
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
+    },
+    "nuget.config": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:e6f4904e508d73e3d5e54f87768dbadb6676d5cccc9f4ed21e9f61643c3f81af"
+    },
+    "pages/astro.config.mjs": {
+      "Ownership": "Seeded",
+      "Component": "AstroDocs"
+    },
+    "pages/package.json": {
+      "Ownership": "Seeded",
+      "Component": "AstroDocs"
+    },
+    "pages/src/pages/index.astro": {
+      "Ownership": "Seeded",
+      "Component": "AstroDocs"
+    },
+    "paket.dependencies": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:98dbd7b3f83a423d1a5485120e8f0701f334649ab26a9da37f729bc68730b3c1"
+    }
+  }
 }

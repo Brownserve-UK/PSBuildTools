@@ -572,6 +572,73 @@ enum BrownserveRepoProjectType
     Generic
 }
 
+<#
+    The three ways Compare-BrownserveRepository can own a file it generates:
+      - Managed: whole file compare, a manual edit is a conflict unless -Force is passed.
+      - Seeded: created if missing, never touched again.
+      - Merged: only our own contribution (a marker section or a set of structured keys) is
+        compared and replaced, manual content is preserved.
+#>
+enum BrownserveFileOwnership
+{
+    Managed
+    Seeded
+    Merged
+}
+
+<#
+.DESCRIPTION
+    Represents a single file that Compare-BrownserveRepository has planned to create or update,
+    together with the ownership mode that governs how manual edits to it are treated.
+    'MarkerSection' names the marker-delimited section a 'Merged' file's generated content lives in
+    (e.g. '.gitignore's manually defined ignores), and 'StructuredContributions' records the
+    generator's contributed keys/values for a structured 'Merged' file (e.g. VS Code settings).
+#>
+class BrownserveManagedFile
+{
+    [string]$Path
+    [string[]]$Content
+    [string]$LineEnding = 'LF'
+    [BrownserveFileOwnership]$Ownership
+    [string]$Component
+    [string]$MarkerSection
+    [hashtable]$StructuredContributions
+
+    BrownserveManagedFile([hashtable]$Hashtable)
+    {
+        $RequiredKeys = @('Path', 'Ownership')
+        foreach ($Key in $RequiredKeys)
+        {
+            if (!$Hashtable.ContainsKey($Key) -or $null -eq $Hashtable[$Key])
+            {
+                throw "Hashtable missing key '$Key'"
+            }
+        }
+        $this.Path = $Hashtable.Path
+        $this.Ownership = $Hashtable.Ownership
+        if ($Hashtable.Content)
+        {
+            $this.Content = $Hashtable.Content
+        }
+        if ($Hashtable.LineEnding)
+        {
+            $this.LineEnding = $Hashtable.LineEnding
+        }
+        if ($Hashtable.Component)
+        {
+            $this.Component = $Hashtable.Component
+        }
+        if ($Hashtable.MarkerSection)
+        {
+            $this.MarkerSection = $Hashtable.MarkerSection
+        }
+        if ($Hashtable.StructuredContributions)
+        {
+            $this.StructuredContributions = $Hashtable.StructuredContributions
+        }
+    }
+}
+
 ## Repository component classes
 
 <#

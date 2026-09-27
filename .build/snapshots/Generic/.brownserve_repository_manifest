@@ -4,5 +4,46 @@
     "Brownserve.PSBuildTools": "3.4.5"
   },
   "CICD": "GitHubActions",
-  "Components": []
+  "Components": [],
+  "Files": {
+    ".build/_init.ps1": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:8677a42a2102a52f2970cd93c6a87f86e10d4482a6d1c66b37b9d0a84293410e"
+    },
+    ".config/dotnet-tools.json": {
+      "Ownership": "Seeded",
+      "Component": "Core"
+    },
+    ".editorconfig": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:3eb9cdafb3faacc793a790648e586e66530b99734af622c8a895790e20f8dfa9"
+    },
+    ".gitignore": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:d4f7cdd9b64447c2425230a8600b7b1492afad941370326ceed7fcca9a47fcca"
+    },
+    ".vscode/extensions.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:b673878e6d73d39d940030e73dac21b70aa2c2568867f607a334ee43063a6903"
+    },
+    ".vscode/settings.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:3a7da74673942dc08c81429fd32598520d4ac0d0c803e194f926eaab943477e0"
+    },
+    "nuget.config": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:e6f4904e508d73e3d5e54f87768dbadb6676d5cccc9f4ed21e9f61643c3f81af"
+    },
+    "paket.dependencies": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:8626132ba106a3ffe632b190c3b29e1ebdb4a743859309c6a8a8b2fd6b5c780a"
+    }
+  }
 }

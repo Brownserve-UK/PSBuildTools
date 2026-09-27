@@ -916,49 +916,11 @@ function Compare-BrownserveRepository
 
         try
         {
-            $NewManifest = New-BrownserveRepositoryManifest `
-                -Components $Components `
-                -ComponentOptions $ComponentOptions `
-                -Definitions $ComponentDefinitions `
-                -GeneratedByVersion $BrownserveModuleVersions['Brownserve.PSBuildTools'] `
-                -ErrorAction 'Stop'
-            $NewManifestJSON = ConvertTo-Json $NewManifest -Depth 100 -ErrorAction 'Stop' | Format-BrownserveContent
-            if ($CurrentManifest)
-            {
-                Write-Verbose 'Checking for changes to repository manifest'
-                $CurrentManifestJSON = ConvertTo-Json $CurrentManifest -Depth 100 -ErrorAction 'Stop' | Format-BrownserveContent
-                $ManifestCompare = Compare-Object `
-                    -ReferenceObject $CurrentManifestJSON.Content `
-                    -DifferenceObject $NewManifestJSON.Content `
-                    -SyncWindow 1 `
-                    -ErrorAction 'Stop'
-                if ($ManifestCompare)
-                {
-                    Write-Verbose 'Changes detected in repository manifest'
-                    $ChangedFiles += [pscustomobject]@{
-                        Path       = $ManifestPath
-                        Content    = $NewManifestJSON.Content
-                        LineEnding = 'LF'
-                    }
-                }
-            }
-            else
-            {
-                Write-Verbose 'No existing repository manifest found, will create a new one.'
-                $MissingFiles += [pscustomobject]@{
-                    Path       = $ManifestPath
-                    Content    = $NewManifestJSON.Content
-                    LineEnding = 'LF'
-                }
-            }
-        }
-        catch
-        {
-            throw "Failed to process '$ManifestPath'.`n$($_.Exception.Message)"
-        }
-        try
-        {
             $NewNugetConfig = Get-BrownserveContent -Path $NugetConfigTempPath -ErrorAction 'Stop'
+            if ($NewNugetConfig.Content.Count -gt 0 -and $NewNugetConfig.Content[-1] -ne '')
+            {
+                $NewNugetConfig.Content += ''
+            }
             if ((Test-Path $NugetConfigPath))
             {
                 Write-Verbose 'Checking for changes to nuget.config'
@@ -1832,6 +1794,7 @@ function Compare-BrownserveRepository
                 $MissingDirectories += [pscustomobject]@{ Path = $BuildTestsDirectory }
             }
 
+            $PesterTestFileRecords = @()
             foreach ($TestSpec in $PesterTestsParams)
             {
                 $PesterTestPath = Join-Path $BuildTestsDirectory $TestSpec.FileName
@@ -1849,6 +1812,7 @@ function Compare-BrownserveRepository
                         Substitutions     = $TestSpec.Substitutions
                     }
                     $NewPesterTestContent = New-BrownserveContentFromTemplate @TestSplatParams | Format-BrownserveContent
+                    $PesterTestFileRecords += @{ Path = $PesterTestPath; Content = $NewPesterTestContent.Content }
                 }
                 catch
                 {
@@ -2101,7 +2065,6 @@ function Compare-BrownserveRepository
             }
         }
 
-        # Return an object that contains all the information we've gathered
         if ($IncludeDependabot)
         {
             $DependabotGitHubDirectory = Join-Path $RepositoryPath '.github'
@@ -2152,9 +2115,205 @@ function Compare-BrownserveRepository
             }
         }
 
+        $FilesMap = [ordered]@{}
+        $ConflictedFiles = @()
+        $RemovedFiles = @()
+
+        $CurrentManifestFiles = @{}
+        if ($CurrentManifest -and $CurrentManifest.Files)
+        {
+            $CurrentManifestFiles = $CurrentManifest.Files
+        }
+
+        $FileClassifications = @()
+        $FileClassifications += [pscustomobject]@{ Path = $NugetConfigPath; Ownership = [BrownserveFileOwnership]::Managed; Component = 'Core'; Content = $NewNugetConfig.Content }
+        $FileClassifications += [pscustomobject]@{ Path = $dotnetToolsPath; Ownership = [BrownserveFileOwnership]::Seeded; Component = 'Core'; Content = $null }
+        $FileClassifications += [pscustomobject]@{ Path = $InitPath; Ownership = [BrownserveFileOwnership]::Merged; Component = 'Core'; Content = $NewInitScriptContent.Content }
+        $FileClassifications += [pscustomobject]@{ Path = $GitIgnorePath; Ownership = [BrownserveFileOwnership]::Merged; Component = 'Core'; Content = $NewGitIgnoresContent.Content }
+        $FileClassifications += [pscustomobject]@{ Path = $VSCodeExtensionsFilePath; Ownership = [BrownserveFileOwnership]::Merged; Component = 'Core'; Content = $VSCodeWorkspaceExtensionIDsJSON.Content }
+        $FileClassifications += [pscustomobject]@{ Path = $VSCodeWorkspaceSettingsFilePath; Ownership = [BrownserveFileOwnership]::Merged; Component = 'Core'; Content = $VSCodeWorkspaceSettingsJSON.Content }
+
+        if ($NewPaketDependenciesContent)
+        {
+            $FileClassifications += [pscustomobject]@{ Path = $PaketDependenciesPath; Ownership = [BrownserveFileOwnership]::Merged; Component = 'Core'; Content = $NewPaketDependenciesContent.Content }
+        }
+        if ($Devcontainer)
+        {
+            $FileClassifications += [pscustomobject]@{ Path = $DevcontainerPath; Ownership = [BrownserveFileOwnership]::Managed; Component = 'Core'; Content = $Devcontainer.Devcontainer.Content }
+            $FileClassifications += [pscustomobject]@{ Path = $DockerfilePath; Ownership = [BrownserveFileOwnership]::Managed; Component = 'Core'; Content = $Devcontainer.Dockerfile.Content }
+        }
+        if ($NewEditorConfigContent)
+        {
+            $FileClassifications += [pscustomobject]@{ Path = $EditorConfigPath; Ownership = [BrownserveFileOwnership]::Merged; Component = 'Core'; Content = $NewEditorConfigContent.Content }
+        }
+        if ($IncludeChangelog)
+        {
+            $FileClassifications += [pscustomobject]@{ Path = $ChangelogPath; Ownership = [BrownserveFileOwnership]::Seeded; Component = 'ReleaseLifecycle'; Content = $null }
+        }
+        if ($LicenseType)
+        {
+            $FileClassifications += [pscustomobject]@{ Path = $LicensePath; Ownership = [BrownserveFileOwnership]::Seeded; Component = 'ReleaseLifecycle'; Content = $null }
+        }
+        if ($IncludeMarkdownlint)
+        {
+            $FileClassifications += [pscustomobject]@{ Path = $MarkdownlintConfigPath; Ownership = [BrownserveFileOwnership]::Managed; Component = 'ReleaseLifecycle'; Content = $NewMarkdownlintContent.Content }
+        }
+        if ($ModuleInfo)
+        {
+            $FileClassifications += [pscustomobject]@{ Path = $ModuleInfoPath; Ownership = [BrownserveFileOwnership]::Managed; Component = 'PowerShellModule'; Content = $NewModuleInfoContent.Content }
+        }
+        if ($IncludeWorkflows)
+        {
+            foreach ($WorkflowFile in $WorkflowFiles)
+            {
+                $FileClassifications += [pscustomobject]@{ Path = $WorkflowFile.Path; Ownership = [BrownserveFileOwnership]::Managed; Component = 'ReleaseLifecycle'; Content = $WorkflowFile.Content.Content }
+            }
+        }
+        if ($IncludeLabelPR)
+        {
+            $FileClassifications += [pscustomobject]@{ Path = $LabelPRWorkflowPath; Ownership = [BrownserveFileOwnership]::Managed; Component = 'ReleaseLifecycle'; Content = $NewLabelPRWorkflowContent.Content }
+        }
+        if ($IncludeContributing)
+        {
+            $FileClassifications += [pscustomobject]@{ Path = $ContributingPath; Ownership = [BrownserveFileOwnership]::Managed; Component = 'ReleaseLifecycle'; Content = $NewContributingContent.Content }
+        }
+        if ($IncludePRTemplate)
+        {
+            $FileClassifications += [pscustomobject]@{ Path = $PRTemplatePath; Ownership = [BrownserveFileOwnership]::Managed; Component = 'ReleaseLifecycle'; Content = $NewPRTemplateContent.Content }
+        }
+        if ($IncludeBuildScripts)
+        {
+            foreach ($BuildFile in $BuildFiles)
+            {
+                $FileClassifications += [pscustomobject]@{ Path = $BuildFile.Path; Ownership = [BrownserveFileOwnership]::Managed; Component = 'ReleaseLifecycle'; Content = $BuildFile.Content.Content }
+            }
+        }
+        if ($IncludePesterTests)
+        {
+            foreach ($PesterTestFileRecord in $PesterTestFileRecords)
+            {
+                $FileClassifications += [pscustomobject]@{ Path = $PesterTestFileRecord.Path; Ownership = [BrownserveFileOwnership]::Managed; Component = 'ReleaseLifecycle'; Content = $PesterTestFileRecord.Content }
+            }
+        }
+        if ($IncludeInstallScripts)
+        {
+            foreach ($InstallFile in $InstallFiles)
+            {
+                $FileClassifications += [pscustomobject]@{ Path = $InstallFile.Path; Ownership = [BrownserveFileOwnership]::Managed; Component = 'RustBinary'; Content = $InstallFile.Content.Content }
+            }
+        }
+        if ($IncludeMkDocs)
+        {
+            foreach ($MkDocsFile in $MkDocsFiles)
+            {
+                $FileClassifications += [pscustomobject]@{ Path = $MkDocsFile.Path; Ownership = [BrownserveFileOwnership]::Managed; Component = 'MkDocs'; Content = $MkDocsFile.Content.Content }
+            }
+        }
+        if ($IncludeAstroDocs)
+        {
+            foreach ($AstroFile in $AstroFiles)
+            {
+                $FileClassifications += [pscustomobject]@{ Path = $AstroFile.Path; Ownership = [BrownserveFileOwnership]::Seeded; Component = 'AstroDocs'; Content = $null }
+            }
+        }
+        if ($IncludeDependabot)
+        {
+            $FileClassifications += [pscustomobject]@{ Path = $DependabotPath; Ownership = [BrownserveFileOwnership]::Managed; Component = 'Core'; Content = $NewDependabotContent.Content }
+        }
+
+        foreach ($Classification in $FileClassifications)
+        {
+            $RelativePath = [System.IO.Path]::GetRelativePath($RepositoryPath, $Classification.Path) -replace '\\', '/'
+
+            if ($Classification.Ownership -eq [BrownserveFileOwnership]::Seeded)
+            {
+                $FilesMap[$RelativePath] = [ordered]@{
+                    Ownership = $Classification.Ownership.ToString()
+                    Component = $Classification.Component
+                }
+                continue
+            }
+
+            $NewHash = Get-BrownserveManagedFileHash -Content $Classification.Content
+            $Record = [ordered]@{
+                Ownership = $Classification.Ownership.ToString()
+                Component = $Classification.Component
+                Hash      = $NewHash
+            }
+
+            if ($Classification.Ownership -eq [BrownserveFileOwnership]::Managed -and $CurrentManifestFiles.ContainsKey($RelativePath))
+            {
+                $Recorded = $CurrentManifestFiles[$RelativePath]
+                if ($Recorded.Ownership -eq 'Managed' -and $Recorded.Hash -and (Test-Path $Classification.Path))
+                {
+                    $DiskContent = (Get-BrownserveContent -Path $Classification.Path -ErrorAction 'Stop').Content
+                    $DiskHash = Get-BrownserveManagedFileHash -Content $DiskContent
+                    if (($DiskHash -ne $Recorded.Hash) -and ($DiskHash -ne $NewHash) -and !$Force)
+                    {
+                        $ConflictedFiles += [pscustomobject]@{
+                            Path   = $Classification.Path
+                            Reason = 'The file has been modified since it was last generated and would be overwritten.'
+                        }
+                        $ChangedFiles = @($ChangedFiles | Where-Object { $_.Path -ne $Classification.Path })
+                        $MissingFiles = @($MissingFiles | Where-Object { $_.Path -ne $Classification.Path })
+                        $Record['Hash'] = $Recorded.Hash
+                    }
+                }
+            }
+
+            $FilesMap[$RelativePath] = $Record
+        }
+
+        try
+        {
+            $NewManifest = New-BrownserveRepositoryManifest `
+                -Components $Components `
+                -ComponentOptions $ComponentOptions `
+                -Definitions $ComponentDefinitions `
+                -GeneratedByVersion $BrownserveModuleVersions['Brownserve.PSBuildTools'] `
+                -Files $FilesMap `
+                -ErrorAction 'Stop'
+            $NewManifestJSON = ConvertTo-Json $NewManifest -Depth 100 -ErrorAction 'Stop' | Format-BrownserveContent
+            if ($CurrentManifest)
+            {
+                Write-Verbose 'Checking for changes to repository manifest'
+                $CurrentManifestJSON = ConvertTo-Json $CurrentManifest -Depth 100 -ErrorAction 'Stop' | Format-BrownserveContent
+                $ManifestCompare = Compare-Object `
+                    -ReferenceObject $CurrentManifestJSON.Content `
+                    -DifferenceObject $NewManifestJSON.Content `
+                    -SyncWindow 1 `
+                    -ErrorAction 'Stop'
+                if ($ManifestCompare)
+                {
+                    Write-Verbose 'Changes detected in repository manifest'
+                    $ChangedFiles += [pscustomobject]@{
+                        Path       = $ManifestPath
+                        Content    = $NewManifestJSON.Content
+                        LineEnding = 'LF'
+                    }
+                }
+            }
+            else
+            {
+                Write-Verbose 'No existing repository manifest found, will create a new one.'
+                $MissingFiles += [pscustomobject]@{
+                    Path       = $ManifestPath
+                    Content    = $NewManifestJSON.Content
+                    LineEnding = 'LF'
+                }
+            }
+        }
+        catch
+        {
+            throw "Failed to process '$ManifestPath'.`n$($_.Exception.Message)"
+        }
+
+        # Return an object that contains all the information we've gathered
         $Return = [pscustomobject]@{
             MissingFiles       = $MissingFiles
             ChangedFiles       = $ChangedFiles
+            ConflictedFiles    = $ConflictedFiles
+            RemovedFiles       = $RemovedFiles
             MissingDirectories = $MissingDirectories
         }
         Return $Return

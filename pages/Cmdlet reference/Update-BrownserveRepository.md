@@ -20,7 +20,7 @@ Update-BrownserveRepository [[-RepositoryPath] <String>] [-Owner <String>] [-For
 
 ## DESCRIPTION
 
-This cmdlet can be used after a repository has been initialised using the `Initialize-BrownserveRepository` cmdlet to keep the projects tooling and settings up to date. It reads the repository's components from its `.brownserve_repository_manifest`, automatically migrating a legacy (v1), project-type based manifest to the v2, component based format.
+This cmdlet can be used after a repository has been initialised using the `Initialize-BrownserveRepository` cmdlet to keep the projects tooling and settings up to date. It reads the repository's components from its `.brownserve_repository_manifest`, automatically migrating a legacy (v1), project-type based manifest to the v2, component based format. A file the manifest owns that has been manually edited since it was last generated is reported as a conflict and stops the whole run, before any files are written, unless `-Force` is passed.
 
 ## EXAMPLES
 

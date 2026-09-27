@@ -5,6 +5,8 @@
     Reads the repository's '.brownserve_repository_manifest' to work out which components it's configured with.
     A v1 (legacy, project-type based) manifest is migrated automatically to the v2, component based format,
     carrying over the working-copy setting for PowerShell module repositories where appropriate.
+    A file the manifest owns that has been manually edited since it was last generated is reported as a
+    conflict and stops the whole run, before any files are written, unless '-Force' is passed.
 .PARAMETER RepositoryPath
     The path to the repository to update. Defaults to the current directory.
 .PARAMETER Owner
@@ -145,6 +147,12 @@ function Update-BrownserveRepository
         catch
         {
             throw "Failed to get repository state.`n$($_.Exception.Message)"
+        }
+
+        if ($RepositoryState.ConflictedFiles.Count -gt 0)
+        {
+            $ConflictSummary = ($RepositoryState.ConflictedFiles | ForEach-Object { "$($_.Path): $($_.Reason)" }) -join "`n"
+            throw "The following files have been modified since they were last generated and would be overwritten:`n$ConflictSummary`nUse the '-Force' switch to overwrite them."
         }
 
         # Only proceed if we have no missing files or changes

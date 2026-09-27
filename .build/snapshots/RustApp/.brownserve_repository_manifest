@@ -8,5 +8,129 @@
     {
       "Name": "RustBinary"
     }
-  ]
+  ],
+  "Files": {
+    ".build/_init.ps1": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:6afd3a54d72254f51d997740facc11c6abefe88958a6d0c9a0f91e41587333f6"
+    },
+    ".build/build.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:db8dd8d58966193e1edf6991866ff13fecb6c083463276160670d0812d3916c5"
+    },
+    ".build/tasks/build_tasks.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:173f979ffe3214628f6e607424ee5d78a3d7a29999c1d60a1990590f16df9ab1"
+    },
+    ".build/tests/Basic.Binary.Tests.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:a6d8f0aba21d09b565d8e8d84c19359ce32275a18b710631e7380e74f7d034d6"
+    },
+    ".config/dotnet-tools.json": {
+      "Ownership": "Seeded",
+      "Component": "Core"
+    },
+    ".devcontainer/devcontainer.json": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:638b9ee9e20d11b72d0d750ae291a0d08913d4ae4e663059d98fdc89a9f58317"
+    },
+    ".devcontainer/Dockerfile": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:197a28b84f8a4bc479976d660055a1a56f3b3b4f15ee3e5bc55fcd7ad86a136e"
+    },
+    ".editorconfig": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:d8813a16e16b4432446f1cdd535885b899d198fbbc29f5e83f719bfb752bf555"
+    },
+    ".github/CONTRIBUTING.md": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:81e11e405caca1d2852843b8e039bbff1f261f0b828424f081b43fadca5fd23b"
+    },
+    ".github/dependabot.yml": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:69aa61a4819a5e31f0127ebf5a488de46033db00821a234e658999d308a288bd"
+    },
+    ".github/pull_request_template.md": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:d50da8d0e157b0de2d1ab923a03f77535c7541244b5473df3b1abb425e2be00e"
+    },
+    ".github/workflows/builds.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:fc1e85e590babbea0775fac1b7a42495811fd97a721a3481605093cf9bc4b00e"
+    },
+    ".github/workflows/label-pr.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:9b41c473c5df0d8a382ed83e57573eed55ddd5e0903a676a93f27028a4ef0749"
+    },
+    ".github/workflows/release.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:4b0a80802d91d5f762723922187ffed0843d5d8abcd1e0b046a7929aac00f263"
+    },
+    ".github/workflows/stage-release.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:dee4adcdbd0b87f32d4365cfa34ec9d9e8ed950a7f3a90b1b11a8d33f649adee"
+    },
+    ".gitignore": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:18f5b99e79fd6c37ab3582e2a264b096db0c908f67f9b5898793c2962d145540"
+    },
+    ".markdownlint.json": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:a8981893e623ea6f569156bbca76f096e776a642b53d07f89e45136926c2816a"
+    },
+    ".vscode/extensions.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:2a13b87c9d27da8628d1c5dbadef8cff59c81c8778cf60423cde73ce2ee77b17"
+    },
+    ".vscode/settings.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:f79dd664e624a6eda7b993f1a93580ae4881b49ea65ed468122ab6e9380d3ef9"
+    },
+    "CHANGELOG.md": {
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
+    },
+    "LICENSE": {
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
+    },
+    "nuget.config": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:e6f4904e508d73e3d5e54f87768dbadb6676d5cccc9f4ed21e9f61643c3f81af"
+    },
+    "paket.dependencies": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:f0473ecab2fcd34ccf3f6427cddde9b91d463202c36557d9c8718feb1f3536ac"
+    },
+    "scripts/install.ps1": {
+      "Ownership": "Managed",
+      "Component": "RustBinary",
+      "Hash": "sha256:4e3dcc8fa2cdb1c8b6d239b724cce9ddb69492db3d1b459ac471ed329bf82061"
+    },
+    "scripts/install.sh": {
+      "Ownership": "Managed",
+      "Component": "RustBinary",
+      "Hash": "sha256:f0ab7cdfc3a63c71e4b7f0ba273c121826a938680cff5d2189a6ef8b27a009ae"
+    }
+  }
 }

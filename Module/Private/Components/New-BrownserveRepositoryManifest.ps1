@@ -6,6 +6,9 @@
     purely via another component's 'Requires'), and only options whose value differs from that option's
     default. A 'PowerShellModule' component's 'ModuleInfo' option is never recorded here, it lives in
     '.build/ModuleInfo.json' instead.
+    'Files' becomes the manifest's 'Files' map: keys are repo-relative paths with forward slashes, values
+    record each file's 'Ownership', owning 'Component' and, for 'Managed'/'Merged' files, its 'Hash'. Keys
+    are sorted so the rendered manifest is deterministic.
 #>
 function New-BrownserveRepositoryManifest
 {
@@ -30,7 +33,12 @@ function New-BrownserveRepositoryManifest
         # The currently loaded version of Brownserve.PSBuildTools
         [Parameter(Mandatory = $true)]
         [string]
-        $GeneratedByVersion
+        $GeneratedByVersion,
+
+        # The managed file ownership records to include in the manifest's 'Files' map, keyed by relative path
+        [Parameter(Mandatory = $false)]
+        [hashtable]
+        $Files = @{}
     )
     process
     {
@@ -91,11 +99,18 @@ function New-BrownserveRepositoryManifest
             $ManifestComponents += $Entry
         }
 
+        $SortedFiles = [ordered]@{}
+        foreach ($Key in ($Files.Keys | Sort-Object))
+        {
+            $SortedFiles[$Key] = $Files[$Key]
+        }
+
         return [ordered]@{
             ManifestVersion = '2.0.0'
             GeneratedBy     = [ordered]@{ 'Brownserve.PSBuildTools' = $GeneratedByVersion }
             CICD            = 'GitHubActions'
             Components      = $ManifestComponents
+            Files           = $SortedFiles
         }
     }
 }

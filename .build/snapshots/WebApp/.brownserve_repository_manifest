@@ -8,5 +8,119 @@
     {
       "Name": "ContainerImage"
     }
-  ]
+  ],
+  "Files": {
+    ".build/_init.ps1": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:6afd3a54d72254f51d997740facc11c6abefe88958a6d0c9a0f91e41587333f6"
+    },
+    ".build/build.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:1646b2821d6d6c42f49c61657b898f4fc5e25fe0dbaf3fd00cd6488e90111f27"
+    },
+    ".build/tasks/build_tasks.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:7225c9819e79af0deacdcfe42b38bf0cb25a3b522168f87e81f0ab334f2902bb"
+    },
+    ".build/tests/Basic.Container.Tests.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:7bc9f0ee0bfe8740cd1a6de2608a2fd498336f3eae0df9d4bf7a61b4949820d7"
+    },
+    ".config/dotnet-tools.json": {
+      "Ownership": "Seeded",
+      "Component": "Core"
+    },
+    ".devcontainer/devcontainer.json": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:8e7417b92eecf54f47adbf723b5157c74bd32193591492250e381d5b0bca6e36"
+    },
+    ".devcontainer/Dockerfile": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:31bf39cf66f11ec179bf77a805695480c8e0f0112a7d226c2b9c8c774ad16ea9"
+    },
+    ".editorconfig": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:5817aa3d5381dce14b0b39075b15891c9530adeac651355b0c1221dd7720c32f"
+    },
+    ".github/CONTRIBUTING.md": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:dbcbb731a98b85c860bc0bdbaa66681e4685cc064ac1062b239b8882e8705f12"
+    },
+    ".github/dependabot.yml": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:ce2c913598dac034d59d398a3656605ac1693a327cf3b98046116e222f8bc198"
+    },
+    ".github/pull_request_template.md": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:bf9452583561ee0affcd2b244547db5a00e00b79319cc69ed257074e6802ce50"
+    },
+    ".github/workflows/builds.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:7282fcfe3437e5820f91bd04ac0e6effd17bb92325ea21af3dbb78877e2b9ac9"
+    },
+    ".github/workflows/label-pr.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:9b41c473c5df0d8a382ed83e57573eed55ddd5e0903a676a93f27028a4ef0749"
+    },
+    ".github/workflows/release.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:0327215c9cb4d7f5e2c72aef6ea167ca3b78d07d0d81dfb072a957b3abd9d6fb"
+    },
+    ".github/workflows/stage-release.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:c7b2a83c78771a0c2c14f8eda198451d779f59b08282b8a593d915d58b95fdbc"
+    },
+    ".gitignore": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:73b9f1371218d7f468b4527f92ac7f522dcb59d39ea92cb41156d78511ba850f"
+    },
+    ".markdownlint.json": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:a8981893e623ea6f569156bbca76f096e776a642b53d07f89e45136926c2816a"
+    },
+    ".vscode/extensions.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:61cd4a46084ac0152edab4cb4a1755c56d2e9b71b324d627d9931f907e187d25"
+    },
+    ".vscode/settings.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:f79dd664e624a6eda7b993f1a93580ae4881b49ea65ed468122ab6e9380d3ef9"
+    },
+    "CHANGELOG.md": {
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
+    },
+    "LICENSE": {
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
+    },
+    "nuget.config": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:e6f4904e508d73e3d5e54f87768dbadb6676d5cccc9f4ed21e9f61643c3f81af"
+    },
+    "paket.dependencies": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:1683d1046df50de34d8063c41fc8cbe9dc8133d668c8c671420518577e2341f1"
+    }
+  }
 }
