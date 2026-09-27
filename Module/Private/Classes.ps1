@@ -601,8 +601,10 @@ class BrownserveManagedFile
     [string]$LineEnding = 'LF'
     [BrownserveFileOwnership]$Ownership
     [string]$Component
-    [string]$MarkerSection
-    [hashtable]$StructuredContributions
+    [hashtable]$MarkerSection
+    $StructuredContributions
+    [bool]$Conflict = $false
+    [string]$ConflictReason
 
     BrownserveManagedFile([hashtable]$Hashtable)
     {
@@ -635,6 +637,14 @@ class BrownserveManagedFile
         if ($Hashtable.StructuredContributions)
         {
             $this.StructuredContributions = $Hashtable.StructuredContributions
+        }
+        if ($Hashtable.ContainsKey('Conflict'))
+        {
+            $this.Conflict = [bool]$Hashtable.Conflict
+        }
+        if ($Hashtable.ConflictReason)
+        {
+            $this.ConflictReason = $Hashtable.ConflictReason
         }
     }
 }

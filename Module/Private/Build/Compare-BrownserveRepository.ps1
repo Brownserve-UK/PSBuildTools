@@ -183,6 +183,16 @@ function Compare-BrownserveRepository
                 throw "Failed to read repository manifest file.`n$($_.Exception.Message)"
             }
         }
+        $CurrentManifestFiles = @{}
+        if ($CurrentManifest -and $CurrentManifest.Files)
+        {
+            $CurrentManifestFiles = $CurrentManifest.Files
+        }
+
+        function Test-BrownserveRecordedAsMerged([string]$RelativePath)
+        {
+            $CurrentManifestFiles.ContainsKey($RelativePath) -and $CurrentManifestFiles[$RelativePath].Ownership -eq 'Merged'
+        }
 
         <#
             Because we don't want to make any changes to the repository until we're sure we can do so safely,
@@ -243,6 +253,10 @@ function Compare-BrownserveRepository
             However it's also entirely possible that these files were created before we started using this cmdlet and
             they may not be in a format we can parse, if this is the case we'll add them to the list of unparsable files.
         #>
+        $GitIgnoreRelativePath = [System.IO.Path]::GetRelativePath($RepositoryPath, $GitIgnorePath) -replace '\\', '/'
+        $PaketDependenciesRelativePath = [System.IO.Path]::GetRelativePath($RepositoryPath, $PaketDependenciesPath) -replace '\\', '/'
+        $InitRelativePath = [System.IO.Path]::GetRelativePath($RepositoryPath, $InitPath) -replace '\\', '/'
+
         if (Test-Path $GitIgnorePath)
         {
             Write-Verbose 'Parsing existing .gitignore file.'
@@ -251,9 +265,14 @@ function Compare-BrownserveRepository
                 $CurrentGitIgnores = Get-BrownserveContent -Path $GitIgnorePath -ErrorAction 'Stop'
                 $ManualGitIgnores = $CurrentGitIgnores |
                     Select-BrownserveContent -After '## Manually defined ignores: ##' -FailIfNotFound
+                $DiskGeneratedGitIgnores = (Split-BrownserveContentAtMarker -Content $CurrentGitIgnores.Content -Marker '## Manually defined ignores: ##' -ErrorAction 'Stop').Before
             }
             catch
             {
+                if (Test-BrownserveRecordedAsMerged $GitIgnoreRelativePath)
+                {
+                    throw "The generated section of '$GitIgnorePath' is damaged and can't be parsed.`n$($_.Exception.Message)"
+                }
                 $UnParsableFiles += $GitIgnorePath
             }
         }
@@ -263,11 +282,17 @@ function Compare-BrownserveRepository
             Write-Verbose 'Parsing existing paket.dependencies file.'
             try
             {
-                $ManualPaketEntries = Get-BrownserveContent -Path $PaketDependenciesPath |
+                $CurrentPaketContent = Get-BrownserveContent -Path $PaketDependenciesPath -ErrorAction 'Stop'
+                $ManualPaketEntries = $CurrentPaketContent |
                     Select-BrownserveContent -After '## Manually defined dependencies: ##' -FailIfNotFound
+                $DiskGeneratedPaket = (Split-BrownserveContentAtMarker -Content $CurrentPaketContent.Content -Marker '## Manually defined dependencies: ##' -ErrorAction 'Stop').Before
             }
             catch
             {
+                if (Test-BrownserveRecordedAsMerged $PaketDependenciesRelativePath)
+                {
+                    throw "The generated section of '$PaketDependenciesPath' is damaged and can't be parsed.`n$($_.Exception.Message)"
+                }
                 $UnParsableFiles += $PaketDependenciesPath
             }
         }
@@ -283,9 +308,16 @@ function Compare-BrownserveRepository
                         -After '### Start user defined _init steps' `
                         -Before '### End user defined _init steps' `
                         -FailIfNotFound
+                $DiskGeneratedInitBefore = (Split-BrownserveContentAtMarker -Content $CurrentInitContent.Content -Marker '### Start user defined _init steps' -ErrorAction 'Stop').Before
+                $DiskGeneratedInitAfter = (Split-BrownserveContentAtMarker -Content $CurrentInitContent.Content -Marker '### End user defined _init steps' -ErrorAction 'Stop').After
+                $DiskGeneratedInit = @($DiskGeneratedInitBefore) + @($DiskGeneratedInitAfter)
             }
             catch
             {
+                if (Test-BrownserveRecordedAsMerged $InitRelativePath)
+                {
+                    throw "The generated section of '$InitPath' is damaged and can't be parsed.`n$($_.Exception.Message)"
+                }
                 $UnParsableFiles += $InitPath
             }
         }
@@ -646,15 +678,6 @@ function Compare-BrownserveRepository
             }
         }
 
-        if ($UnParsableFiles.Count -gt 0 -and !$Force)
-        {
-            <#
-                Throw here, this allows us to give the user a list of files that need to be manually checked.
-                Then the user can either modify the files themselves or pass -Force to this cmdlet to overwrite them.
-            #>
-            throw "The following files already exist in the repository but are in a format that can't be parsed:`n$($UnParsableFiles -join "`n")"
-        }
-
         if ($DockerfileName)
         {
             $DevcontainerParams = @{
@@ -663,11 +686,56 @@ function Compare-BrownserveRepository
             }
         }
 
+        $VSCodeExtensionsRelativePath = '.vscode/extensions.json'
+        $VSCodeSettingsRelativePath = '.vscode/settings.json'
+        $DiskVSCodeExtensionIDs = @($VSCodeWorkspaceExtensionIDs)
+        $DiskVSCodeSettings = @{}
+        if ($VSCodeWorkspaceSettings.Count -gt 0)
+        {
+            $DiskVSCodeSettings = $VSCodeWorkspaceSettings
+        }
+        $ExtensionsBaseline = @()
+        if ($CurrentManifestFiles.ContainsKey($VSCodeExtensionsRelativePath) -and $CurrentManifestFiles[$VSCodeExtensionsRelativePath].Baseline -and $CurrentManifestFiles[$VSCodeExtensionsRelativePath].Baseline.recommendations)
+        {
+            $ExtensionsBaseline = @($CurrentManifestFiles[$VSCodeExtensionsRelativePath].Baseline.recommendations)
+        }
+        $SettingsBaseline = @{}
+        if ($CurrentManifestFiles.ContainsKey($VSCodeSettingsRelativePath) -and $CurrentManifestFiles[$VSCodeSettingsRelativePath].Baseline)
+        {
+            $SettingsBaseline = $CurrentManifestFiles[$VSCodeSettingsRelativePath].Baseline
+        }
+        $ExtensionsConflict = $false
+        $ExtensionsConflictReason = $null
+        $SettingsConflict = $false
+        $SettingsConflictReason = $null
+
         if ($VSCodeExtensions.Count -gt 0)
         {
-            # Extract the list of extension ID's we want to install in this repo and clean up any duplicates
-            $VSCodeWorkspaceExtensionIDs += $VSCodeExtensions.ExtensionID
-            $VSCodeWorkspaceExtensionIDs = $VSCodeWorkspaceExtensionIDs | Select-Object -Unique
+            $OursExtensionIDs = @($VSCodeExtensions.ExtensionID | Select-Object -Unique)
+            try
+            {
+                $ExtensionsMergeResult = Merge-BrownserveSetContribution `
+                    -Disk $DiskVSCodeExtensionIDs `
+                    -Baseline $ExtensionsBaseline `
+                    -Ours $OursExtensionIDs `
+                    -Force:$Force `
+                    -ErrorAction 'Stop'
+            }
+            catch
+            {
+                throw "Failed to merge VS Code recommended extensions.`n$($_.Exception.Message)"
+            }
+            if ($ExtensionsMergeResult.Conflict)
+            {
+                $ExtensionsConflict = $true
+                $ExtensionsConflictReason = "The following recommended VS Code extensions have been removed since they were last generated: $($ExtensionsMergeResult.ConflictItems -join ', ')"
+                $VSCodeWorkspaceExtensionIDs = $DiskVSCodeExtensionIDs
+            }
+            else
+            {
+                $VSCodeWorkspaceExtensionIDs = $ExtensionsMergeResult.Merged
+            }
+            $ExtensionsBaseline = @($OursExtensionIDs | Sort-Object)
 
             <#
                 Due to the way we store the VS Code settings, they end up getting read out as an array
@@ -691,46 +759,35 @@ function Compare-BrownserveRepository
             {
                 throw "Failed to convert VS Code extension settings to hashtable.`n$($_.Exception.Message)"
             }
-            <#
-                Check to see if the repository already has any VS Code settings - it affects the order of the hash merge
-                Our Merge-Hashtable cmdlet will overwrite the keys of the base object with the input object if there is a clash
-                if -Force has been passed then the user is happy to overwrite any settings that already exist in the repo.
-                If not we should try and preserve them by using the repo settings as the input object
-            #>
-            if ($VSCodeWorkspaceSettings.Count -gt 0)
+
+            try
             {
-                $MergeParams = @{
-                    BaseObject  = $VSCodeWorkspaceSettings
-                    InputObject = $VSCodeExtensionSettings
-                }
-                if (!$Force)
-                {
-                    $MergeParams = @{
-                        BaseObject  = $VSCodeExtensionSettings
-                        InputObject = $VSCodeWorkspaceSettings
-                    }
-                }
-                try
-                {
-                    $VSCodeWorkspaceSettings = Merge-Hashtable `
-                        @MergeParams `
-                        -Deep `
-                        -ErrorAction 'Stop'
-                }
-                catch
-                {
-                    throw "Failed to merge repository VS code settings.`n$($_.Exception.Message)"
-                }
+                $SettingsMergeResult = Merge-BrownserveKeyedContribution `
+                    -Disk $DiskVSCodeSettings `
+                    -Baseline $SettingsBaseline `
+                    -Ours $VSCodeExtensionSettings `
+                    -Force:$Force `
+                    -ErrorAction 'Stop'
+            }
+            catch
+            {
+                throw "Failed to merge repository VS code settings.`n$($_.Exception.Message)"
+            }
+            if ($SettingsMergeResult.Conflict)
+            {
+                $SettingsConflict = $true
+                $SettingsConflictReason = "The following VS Code settings have been modified since they were last generated: $($SettingsMergeResult.ConflictKeys -join ', ')"
+                $VSCodeWorkspaceSettings = $DiskVSCodeSettings
             }
             else
             {
-                $VSCodeWorkspaceSettings = $VSCodeExtensionSettings
+                <#
+                    Once we've merged the settings we like to ensure that they are sorted alphabetically.
+                    This ensures that the settings file is easier to read and also makes it easier to spot any discrepancies.
+                #>
+                $VSCodeWorkspaceSettings = ConvertTo-SortedHashtable $SettingsMergeResult.Merged
             }
-            <#
-                Once we've merged the settings we like to ensure that they are sorted alphabetically.
-                This ensures that the settings file is easier to read and also makes it easier to spot any discrepancies.
-            #>
-            $VSCodeWorkspaceSettings = ConvertTo-SortedHashtable $VSCodeWorkspaceSettings
+            $SettingsBaseline = ConvertTo-SortedHashtable $VSCodeExtensionSettings
         }
 
         # Create the _init script as that will always be required
@@ -742,6 +799,28 @@ function Compare-BrownserveRepository
         {
             throw "Failed to generate _init.ps1 content.`n$($_.Exception.Message)"
         }
+        try
+        {
+            $NewGeneratedInitBefore = (Split-BrownserveContentAtMarker -Content $NewInitScriptContent.Content -Marker '### Start user defined _init steps' -ErrorAction 'Stop').Before
+            $NewGeneratedInitAfter = (Split-BrownserveContentAtMarker -Content $NewInitScriptContent.Content -Marker '### End user defined _init steps' -ErrorAction 'Stop').After
+            $NewGeneratedInit = @($NewGeneratedInitBefore) + @($NewGeneratedInitAfter)
+        }
+        catch
+        {
+            throw "Failed to extract the generated section of the _init.ps1 template.`n$($_.Exception.Message)"
+        }
+        $InitConflict = $false
+        $InitConflictReason = $null
+        $InitRecordedHash = $null
+        if ($CurrentManifestFiles.ContainsKey($InitRelativePath))
+        {
+            $InitRecordedHash = $CurrentManifestFiles[$InitRelativePath].Hash
+        }
+        if ((Test-BrownserveMarkerConflict -DiskGenerated $DiskGeneratedInit -RecordedHash $InitRecordedHash -NewGenerated $NewGeneratedInit) -and !$Force)
+        {
+            $InitConflict = $true
+            $InitConflictReason = 'The generated section of _init.ps1 has been modified since it was last generated and would be overwritten.'
+        }
 
         # The .gitignore file should always be required too
         try
@@ -751,6 +830,19 @@ function Compare-BrownserveRepository
         catch
         {
             throw "Failed to generate .gitignore file.`n$($_.Exception.Message)"
+        }
+        $NewGeneratedGitIgnores = (Split-BrownserveContentAtMarker -Content $NewGitIgnoresContent.Content -Marker '## Manually defined ignores: ##' -ErrorAction 'Stop').Before
+        $GitIgnoreConflict = $false
+        $GitIgnoreConflictReason = $null
+        $GitIgnoreRecordedHash = $null
+        if ($CurrentManifestFiles.ContainsKey($GitIgnoreRelativePath))
+        {
+            $GitIgnoreRecordedHash = $CurrentManifestFiles[$GitIgnoreRelativePath].Hash
+        }
+        if ((Test-BrownserveMarkerConflict -DiskGenerated $DiskGeneratedGitIgnores -RecordedHash $GitIgnoreRecordedHash -NewGenerated $NewGeneratedGitIgnores) -and !$Force)
+        {
+            $GitIgnoreConflict = $true
+            $GitIgnoreConflictReason = 'The generated section of .gitignore has been modified since it was last generated and would be overwritten.'
         }
 
         # Again the nuget.config file will always be needed
@@ -803,37 +895,88 @@ function Compare-BrownserveRepository
             throw "Failed to generate dotnet tools manifest.`n$($_.Exception.Message)"
         }
 
+        $DotnetToolsRelativePath = '.config/dotnet-tools.json'
+        $DotnetToolsBaseline = @{}
+        if ($CurrentManifestFiles.ContainsKey($DotnetToolsRelativePath) -and $CurrentManifestFiles[$DotnetToolsRelativePath].Baseline)
+        {
+            $DotnetToolsBaseline = $CurrentManifestFiles[$DotnetToolsRelativePath].Baseline
+        }
+        $DotnetToolsConflict = $false
+        $DotnetToolsConflictReason = $null
+        $GeneratedDotnetTools = Get-Content -Path $dotnetToolsTempPath -Raw -ErrorAction 'Stop' | ConvertFrom-Json -Depth 100 -AsHashtable
+        $OursDotnetTools = @{}
+        foreach ($ToolName in $GeneratedDotnetTools.tools.Keys)
+        {
+            $OursDotnetTools[$ToolName] = $GeneratedDotnetTools.tools[$ToolName]
+        }
+
         if (Test-Path $dotnetToolsPath)
         {
             try
             {
                 $ExistingDotnetTools = Get-Content -Path $dotnetToolsPath -Raw -ErrorAction 'Stop' | ConvertFrom-Json -Depth 100 -AsHashtable
-                $GeneratedDotnetTools = Get-Content -Path $dotnetToolsTempPath -Raw -ErrorAction 'Stop' | ConvertFrom-Json -Depth 100 -AsHashtable
-                $MergedDotnetTools = [ordered]@{}
-                foreach ($ToolName in ($ExistingDotnetTools.tools.Keys | Sort-Object))
+                if (!$ExistingDotnetTools.ContainsKey('tools'))
                 {
-                    $MergedDotnetTools[$ToolName] = $ExistingDotnetTools.tools[$ToolName]
+                    throw "Missing 'tools' key"
                 }
-                foreach ($ToolName in ($GeneratedDotnetTools.tools.Keys | Sort-Object))
-                {
-                    $MergedDotnetTools[$ToolName] = $GeneratedDotnetTools.tools[$ToolName]
-                }
-                $MergedDotnetToolsManifest = [ordered]@{
-                    version = $ExistingDotnetTools.version
-                    isRoot  = $ExistingDotnetTools.isRoot
-                    tools   = $MergedDotnetTools
-                }
-                $NewDotnetToolsContent = $MergedDotnetToolsManifest | ConvertTo-Json -Depth 100 -ErrorAction 'Stop' | Format-BrownserveContent
             }
             catch
             {
-                $NewDotnetToolsContent = Get-BrownserveContent -Path $dotnetToolsPath -ErrorAction 'Stop'
+                if (Test-BrownserveRecordedAsMerged $DotnetToolsRelativePath)
+                {
+                    throw "The '$dotnetToolsPath' file is damaged and can't be parsed.`n$($_.Exception.Message)"
+                }
+                $UnParsableFiles += $dotnetToolsPath
+                $ExistingDotnetTools = $null
+            }
+
+            if ($ExistingDotnetTools)
+            {
+                $DiskDotnetTools = @{}
+                foreach ($ToolName in $ExistingDotnetTools.tools.Keys)
+                {
+                    $DiskDotnetTools[$ToolName] = $ExistingDotnetTools.tools[$ToolName]
+                }
+
+                $DotnetToolsMergeResult = Merge-BrownserveKeyedContribution `
+                    -Disk $DiskDotnetTools `
+                    -Baseline $DotnetToolsBaseline `
+                    -Ours $OursDotnetTools `
+                    -Force:$Force `
+                    -ErrorAction 'Stop'
+
+                if ($DotnetToolsMergeResult.Conflict)
+                {
+                    $DotnetToolsConflict = $true
+                    $DotnetToolsConflictReason = "The following dotnet tools have been modified since they were last generated: $($DotnetToolsMergeResult.ConflictKeys -join ', ')"
+                    $NewDotnetToolsContent = Get-BrownserveContent -Path $dotnetToolsPath -ErrorAction 'Stop'
+                }
+                else
+                {
+                    $SortedTools = [ordered]@{}
+                    foreach ($ToolName in ($DotnetToolsMergeResult.Merged.Keys | Sort-Object))
+                    {
+                        $SortedTools[$ToolName] = $DotnetToolsMergeResult.Merged[$ToolName]
+                    }
+                    $MergedDotnetToolsManifest = [ordered]@{
+                        version = $ExistingDotnetTools.version
+                        isRoot  = $ExistingDotnetTools.isRoot
+                        tools   = $SortedTools
+                    }
+                    $NewDotnetToolsContent = $MergedDotnetToolsManifest | ConvertTo-Json -Depth 100 -ErrorAction 'Stop' | Format-BrownserveContent
+                }
             }
         }
-        else
+        if (!$NewDotnetToolsContent)
         {
             $NewDotnetToolsContent = [pscustomobject]@{ Content = $dotnetToolsGeneratedLines }
         }
+        $SortedOursDotnetTools = [ordered]@{}
+        foreach ($ToolName in ($OursDotnetTools.Keys | Sort-Object))
+        {
+            $SortedOursDotnetTools[$ToolName] = $OursDotnetTools[$ToolName]
+        }
+        $DotnetToolsBaseline = $SortedOursDotnetTools
 
         # Paket may or may not be required
         if ($PaketParams)
@@ -845,6 +988,19 @@ function Compare-BrownserveRepository
             catch
             {
                 throw "Failed to generate paket.dependencies file.`n$($_.Exception.Message)"
+            }
+            $NewGeneratedPaket = (Split-BrownserveContentAtMarker -Content $NewPaketDependenciesContent.Content -Marker '## Manually defined dependencies: ##' -ErrorAction 'Stop').Before
+            $PaketConflict = $false
+            $PaketConflictReason = $null
+            $PaketRecordedHash = $null
+            if ($CurrentManifestFiles.ContainsKey($PaketDependenciesRelativePath))
+            {
+                $PaketRecordedHash = $CurrentManifestFiles[$PaketDependenciesRelativePath].Hash
+            }
+            if ((Test-BrownserveMarkerConflict -DiskGenerated $DiskGeneratedPaket -RecordedHash $PaketRecordedHash -NewGenerated $NewGeneratedPaket) -and !$Force)
+            {
+                $PaketConflict = $true
+                $PaketConflictReason = 'The generated section of paket.dependencies has been modified since it was last generated and would be overwritten.'
             }
         }
 
@@ -861,33 +1017,178 @@ function Compare-BrownserveRepository
             }
         }
 
+        $EditorConfigRelativePath = [System.IO.Path]::GetRelativePath($RepositoryPath, $EditorConfigPath) -replace '\\', '/'
+        $EditorConfigBaseline = @{}
+        if ($CurrentManifestFiles.ContainsKey($EditorConfigRelativePath) -and $CurrentManifestFiles[$EditorConfigRelativePath].Baseline)
+        {
+            $EditorConfigBaseline = $CurrentManifestFiles[$EditorConfigRelativePath].Baseline
+        }
+        $EditorConfigConflict = $false
+        $EditorConfigConflictReason = $null
+
         if ($EditorConfigParams)
         {
             # Try to preserve any manual changes that may have been made to the editorconfig file
+            $DiskEditorConfigSections = @()
             if (Test-Path $EditorConfigPath)
             {
                 try
                 {
                     $ManualEditorConfig = Read-BrownserveEditorConfig -Path $EditorConfigPath -ErrorAction 'Stop'
+                    $EditorConfigDiskContent = (Get-BrownserveContent -Path $EditorConfigPath -ErrorAction 'Stop').Content
+                    $DiskGeneratedEditorConfigLines = (Split-BrownserveContentAtMarker -Content $EditorConfigDiskContent -Marker '# MANUAL CHANGES BELOW THIS LINE WILL BE PRESERVED' -ErrorAction 'Stop').Before
+                    $DiskEditorConfigSections = ConvertFrom-BrownserveEditorConfigText -Content $DiskGeneratedEditorConfigLines
                 }
                 catch
                 {
-                    # Let this silently fail and just try and create the editorconfig anyways
-                    # (If we've got here then -Force has been passed so we should overwrite any existing editorconfig file)
+                    if (Test-BrownserveRecordedAsMerged $EditorConfigRelativePath)
+                    {
+                        throw "The generated section of '$EditorConfigPath' is damaged and can't be parsed.`n$($_.Exception.Message)"
+                    }
+                    $UnParsableFiles += $EditorConfigPath
                 }
             }
             if ($ManualEditorConfig)
             {
                 $EditorConfigParams.Add('ManualSection', $ManualEditorConfig)
             }
+
+            $DiskEditorConfigFlat = @{}
+            foreach ($Sec in $DiskEditorConfigSections)
+            {
+                foreach ($PropName in $Sec.Properties.Keys)
+                {
+                    $DiskEditorConfigFlat["$($Sec.Section)::$PropName"] = $Sec.Properties[$PropName]
+                }
+            }
+            $OursEditorConfigFlat = [ordered]@{}
+            foreach ($Sec in $FinalEditorConfig)
+            {
+                foreach ($Prop in $Sec.Properties)
+                {
+                    $OursEditorConfigFlat["$($Sec.FilePath)::$($Prop.Name)"] = "$($Prop.Value)".ToLower()
+                }
+            }
+
             try
             {
-                $NewEditorConfigContent = New-BrownserveEditorConfig @EditorConfigParams -ErrorAction 'Stop'
+                $EditorConfigMergeResult = Merge-BrownserveKeyedContribution `
+                    -Disk $DiskEditorConfigFlat `
+                    -Baseline $EditorConfigBaseline `
+                    -Ours $OursEditorConfigFlat `
+                    -Force:$Force `
+                    -ErrorAction 'Stop'
             }
             catch
             {
-                throw "Failed to create .editorconfig file content.`n$($_.Exception.Message)"
+                throw "Failed to merge .editorconfig contributions.`n$($_.Exception.Message)"
             }
+
+            if ($EditorConfigMergeResult.Conflict)
+            {
+                $EditorConfigConflict = $true
+                $ReadableConflictKeys = $EditorConfigMergeResult.ConflictKeys | ForEach-Object { $_ -replace '::', ': ' }
+                $EditorConfigConflictReason = "The following .editorconfig settings have been modified since they were last generated: $($ReadableConflictKeys -join ', ')"
+                if (Test-Path $EditorConfigPath)
+                {
+                    $NewEditorConfigContent = Get-BrownserveContent -Path $EditorConfigPath -ErrorAction 'Stop'
+                }
+                else
+                {
+                    $NewEditorConfigContent = [pscustomobject]@{ Content = @() }
+                }
+            }
+            elseif (@(Compare-Object -ReferenceObject @($OursEditorConfigFlat.Keys) -DifferenceObject @($EditorConfigMergeResult.Merged.Keys)).Count -eq 0)
+            {
+                try
+                {
+                    $NewEditorConfigContent = New-BrownserveEditorConfig @EditorConfigParams -ErrorAction 'Stop'
+                }
+                catch
+                {
+                    throw "Failed to create .editorconfig file content.`n$($_.Exception.Message)"
+                }
+            }
+            else
+            {
+                $SectionOrder = [System.Collections.Generic.List[string]]::new()
+                $SectionProps = @{}
+                foreach ($Sec in $FinalEditorConfig)
+                {
+                    if (!$SectionOrder.Contains($Sec.FilePath))
+                    {
+                        $SectionOrder.Add($Sec.FilePath)
+                        $SectionProps[$Sec.FilePath] = [System.Collections.Generic.List[string]]::new()
+                    }
+                    foreach ($Prop in $Sec.Properties)
+                    {
+                        $Key = "$($Sec.FilePath)::$($Prop.Name)"
+                        if ($EditorConfigMergeResult.Merged.Contains($Key) -and !$SectionProps[$Sec.FilePath].Contains($Prop.Name))
+                        {
+                            $SectionProps[$Sec.FilePath].Add($Prop.Name)
+                        }
+                    }
+                }
+                foreach ($Sec in $DiskEditorConfigSections)
+                {
+                    foreach ($PropName in $Sec.Properties.Keys)
+                    {
+                        $Key = "$($Sec.Section)::$PropName"
+                        if ($EditorConfigMergeResult.Merged.Contains($Key))
+                        {
+                            if (!$SectionOrder.Contains($Sec.Section))
+                            {
+                                $SectionOrder.Add($Sec.Section)
+                                $SectionProps[$Sec.Section] = [System.Collections.Generic.List[string]]::new()
+                            }
+                            if (!$SectionProps[$Sec.Section].Contains($PropName))
+                            {
+                                $SectionProps[$Sec.Section].Add($PropName)
+                            }
+                        }
+                    }
+                }
+                $ReconstructedLines = [System.Collections.Generic.List[string]]::new()
+                $ReconstructedLines.Add('# EditorConfig Helps Developers Define and Maintain Consistent Coding Styles Between Different Editors and IDEs.')
+                $ReconstructedLines.Add('# For more information about the file format, see http://EditorConfig.org.')
+                $ReconstructedLines.Add('')
+                $ReconstructedLines.Add('# WARNING: THIS FILE IS MANAGED BY A TOOL, MANUAL CHANGES MAY BE LOST UNLESS IN THE DEDICATED SECTION BELOW')
+                $ReconstructedLines.Add('')
+                $ReconstructedLines.Add('# AUTOGENERATED EDITORCONFIG STARTS HERE')
+                $ReconstructedLines.Add('')
+                if ($EditorConfigParams.IncludeRoot)
+                {
+                    $ReconstructedLines.Add('# top-most EditorConfig file')
+                    $ReconstructedLines.Add('root = true')
+                    $ReconstructedLines.Add('')
+                }
+                for ($i = 0; $i -lt $SectionOrder.Count; $i++)
+                {
+                    $Sec = $SectionOrder[$i]
+                    $ReconstructedLines.Add("[$Sec]")
+                    foreach ($PropName in $SectionProps[$Sec])
+                    {
+                        $ReconstructedLines.Add("$PropName = $($EditorConfigMergeResult.Merged["${Sec}::${PropName}"])")
+                    }
+                    if ($i -lt $SectionOrder.Count - 1)
+                    {
+                        $ReconstructedLines.Add('')
+                    }
+                }
+                $ReconstructedLines.Add('')
+                $ReconstructedLines.Add('# MANUAL CHANGES BELOW THIS LINE WILL BE PRESERVED')
+                if ($ManualEditorConfig)
+                {
+                    $ManualEditorConfig | ForEach-Object { $ReconstructedLines.Add($_) }
+                }
+                $NewEditorConfigContent = $ReconstructedLines.ToArray() | Format-BrownserveContent
+            }
+            $SortedEditorConfigBaseline = [ordered]@{}
+            foreach ($FlatKey in ($OursEditorConfigFlat.Keys | Sort-Object))
+            {
+                $SortedEditorConfigBaseline[$FlatKey] = $OursEditorConfigFlat[$FlatKey]
+            }
+            $EditorConfigBaseline = $SortedEditorConfigBaseline
         }
 
         $FinalPermanentPaths.GetEnumerator() | ForEach-Object {
@@ -957,24 +1258,33 @@ function Compare-BrownserveRepository
             }
         }
         $ManagedFiles.Add([BrownserveManagedFile]@{
-                Path      = $dotnetToolsPath
-                Ownership = [BrownserveFileOwnership]::Merged
-                Component = 'Core'
-                Content   = $NewDotnetToolsContent.Content
+                Path                    = $dotnetToolsPath
+                Ownership               = [BrownserveFileOwnership]::Merged
+                Component               = 'Core'
+                Content                 = $NewDotnetToolsContent.Content
+                StructuredContributions = $DotnetToolsBaseline
+                Conflict                = $DotnetToolsConflict
+                ConflictReason          = $DotnetToolsConflictReason
             })
 
         $ManagedFiles.Add([BrownserveManagedFile]@{
-                Path      = $InitPath
-                Ownership = [BrownserveFileOwnership]::Merged
-                Component = 'Core'
-                Content   = $NewInitScriptContent.Content
+                Path           = $InitPath
+                Ownership      = [BrownserveFileOwnership]::Merged
+                Component      = 'Core'
+                Content        = $NewInitScriptContent.Content
+                MarkerSection  = @{ Generated = $NewGeneratedInit }
+                Conflict       = $InitConflict
+                ConflictReason = $InitConflictReason
             })
 
         $ManagedFiles.Add([BrownserveManagedFile]@{
-                Path      = $GitIgnorePath
-                Ownership = [BrownserveFileOwnership]::Merged
-                Component = 'Core'
-                Content   = $NewGitIgnoresContent.Content
+                Path           = $GitIgnorePath
+                Ownership      = [BrownserveFileOwnership]::Merged
+                Component      = 'Core'
+                Content        = $NewGitIgnoresContent.Content
+                MarkerSection  = @{ Generated = $NewGeneratedGitIgnores }
+                Conflict       = $GitIgnoreConflict
+                ConflictReason = $GitIgnoreConflictReason
             })
 
         # Ensure the VS Code directory exists
@@ -997,10 +1307,13 @@ function Compare-BrownserveRepository
             throw "Failed to process '$VSCodeExtensionsFilePath'.`n$($_.Exception.Message)"
         }
         $ManagedFiles.Add([BrownserveManagedFile]@{
-                Path      = $VSCodeExtensionsFilePath
-                Ownership = [BrownserveFileOwnership]::Merged
-                Component = 'Core'
-                Content   = $VSCodeWorkspaceExtensionIDsJSON.Content
+                Path                    = $VSCodeExtensionsFilePath
+                Ownership               = [BrownserveFileOwnership]::Merged
+                Component               = 'Core'
+                Content                 = $VSCodeWorkspaceExtensionIDsJSON.Content
+                StructuredContributions = @{ recommendations = $ExtensionsBaseline }
+                Conflict                = $ExtensionsConflict
+                ConflictReason          = $ExtensionsConflictReason
             })
 
         try
@@ -1015,19 +1328,25 @@ function Compare-BrownserveRepository
             throw "Failed to process '$VSCodeWorkspaceSettingsFilePath'.`n$($_.Exception.Message)"
         }
         $ManagedFiles.Add([BrownserveManagedFile]@{
-                Path      = $VSCodeWorkspaceSettingsFilePath
-                Ownership = [BrownserveFileOwnership]::Merged
-                Component = 'Core'
-                Content   = $VSCodeWorkspaceSettingsJSON.Content
+                Path                    = $VSCodeWorkspaceSettingsFilePath
+                Ownership               = [BrownserveFileOwnership]::Merged
+                Component               = 'Core'
+                Content                 = $VSCodeWorkspaceSettingsJSON.Content
+                StructuredContributions = $SettingsBaseline
+                Conflict                = $SettingsConflict
+                ConflictReason          = $SettingsConflictReason
             })
 
         if ($NewPaketDependenciesContent)
         {
             $ManagedFiles.Add([BrownserveManagedFile]@{
-                    Path      = $PaketDependenciesPath
-                    Ownership = [BrownserveFileOwnership]::Merged
-                    Component = 'Core'
-                    Content   = $NewPaketDependenciesContent.Content
+                    Path           = $PaketDependenciesPath
+                    Ownership      = [BrownserveFileOwnership]::Merged
+                    Component      = 'Core'
+                    Content        = $NewPaketDependenciesContent.Content
+                    MarkerSection  = @{ Generated = $NewGeneratedPaket }
+                    Conflict       = $PaketConflict
+                    ConflictReason = $PaketConflictReason
                 })
         }
 
@@ -1057,10 +1376,13 @@ function Compare-BrownserveRepository
         if ($NewEditorConfigContent)
         {
             $ManagedFiles.Add([BrownserveManagedFile]@{
-                    Path      = $EditorConfigPath
-                    Ownership = [BrownserveFileOwnership]::Merged
-                    Component = 'Core'
-                    Content   = $NewEditorConfigContent.Content
+                    Path                    = $EditorConfigPath
+                    Ownership               = [BrownserveFileOwnership]::Merged
+                    Component               = 'Core'
+                    Content                 = $NewEditorConfigContent.Content
+                    StructuredContributions = $EditorConfigBaseline
+                    Conflict                = $EditorConfigConflict
+                    ConflictReason          = $EditorConfigConflictReason
                 })
         }
 
@@ -1570,53 +1892,70 @@ function Compare-BrownserveRepository
                     throw "Failed to process '$($AstroFile.Path)'.`n$($_.Exception.Message)"
                 }
 
-                if ($AstroFile.Ownership -eq [BrownserveFileOwnership]::Merged -and (Test-Path $AstroFile.Path))
+                $PackageJsonConflict = $false
+                $PackageJsonConflictReason = $null
+                $PackageJsonBaseline = @{}
+                if ($AstroFile.Ownership -eq [BrownserveFileOwnership]::Merged)
                 {
-                    try
+                    $PackageJsonRelativePath = [System.IO.Path]::GetRelativePath($RepositoryPath, $AstroFile.Path) -replace '\\', '/'
+                    $DiskPackageJsonBaseline = @{}
+                    if ($CurrentManifestFiles.ContainsKey($PackageJsonRelativePath) -and $CurrentManifestFiles[$PackageJsonRelativePath].Baseline)
                     {
-                        $ExistingPackageJson = Get-Content -Path $AstroFile.Path -Raw -ErrorAction 'Stop' | ConvertFrom-Json -Depth 100 -AsHashtable
-                        $GeneratedPackageJson = ($NewAstroContent.Content -join "`n") | ConvertFrom-Json -Depth 100 -AsHashtable
-                        $MergedPackageJson = [ordered]@{}
-                        foreach ($Key in $ExistingPackageJson.Keys)
-                        {
-                            $MergedPackageJson[$Key] = $ExistingPackageJson[$Key]
-                        }
-                        foreach ($Key in $GeneratedPackageJson.Keys)
-                        {
-                            if ($Key -in @('scripts', 'dependencies'))
-                            {
-                                $MergedNested = [ordered]@{}
-                                if ($ExistingPackageJson.ContainsKey($Key))
-                                {
-                                    foreach ($NestedKey in ($ExistingPackageJson[$Key].Keys | Sort-Object))
-                                    {
-                                        $MergedNested[$NestedKey] = $ExistingPackageJson[$Key][$NestedKey]
-                                    }
-                                }
-                                foreach ($NestedKey in ($GeneratedPackageJson[$Key].Keys | Sort-Object))
-                                {
-                                    $MergedNested[$NestedKey] = $GeneratedPackageJson[$Key][$NestedKey]
-                                }
-                                $MergedPackageJson[$Key] = $MergedNested
-                            }
-                            else
-                            {
-                                $MergedPackageJson[$Key] = $GeneratedPackageJson[$Key]
-                            }
-                        }
-                        $NewAstroContent = $MergedPackageJson | ConvertTo-Json -Depth 100 -ErrorAction 'Stop' | Format-BrownserveContent
+                        $DiskPackageJsonBaseline = $CurrentManifestFiles[$PackageJsonRelativePath].Baseline
                     }
-                    catch
+                    $GeneratedPackageJson = ($NewAstroContent.Content -join "`n") | ConvertFrom-Json -Depth 100 -AsHashtable
+                    $OursPackageJsonFlat = ConvertTo-BrownservePackageJsonFlatMap -PackageJson $GeneratedPackageJson
+
+                    if (Test-Path $AstroFile.Path)
                     {
-                        $NewAstroContent = Get-BrownserveContent -Path $AstroFile.Path -ErrorAction 'Stop'
+                        try
+                        {
+                            $ExistingPackageJson = Get-Content -Path $AstroFile.Path -Raw -ErrorAction 'Stop' | ConvertFrom-Json -Depth 100 -AsHashtable
+                        }
+                        catch
+                        {
+                            if (Test-BrownserveRecordedAsMerged $PackageJsonRelativePath)
+                            {
+                                throw "The '$($AstroFile.Path)' file is damaged and can't be parsed.`n$($_.Exception.Message)"
+                            }
+                            $UnParsableFiles += $AstroFile.Path
+                            $ExistingPackageJson = $null
+                        }
                     }
+
+                    if ($ExistingPackageJson)
+                    {
+                        $DiskPackageJsonFlat = ConvertTo-BrownservePackageJsonFlatMap -PackageJson $ExistingPackageJson
+                        $PackageJsonMergeResult = Merge-BrownserveKeyedContribution `
+                            -Disk $DiskPackageJsonFlat `
+                            -Baseline $DiskPackageJsonBaseline `
+                            -Ours $OursPackageJsonFlat `
+                            -Force:$Force `
+                            -ErrorAction 'Stop'
+
+                        if ($PackageJsonMergeResult.Conflict)
+                        {
+                            $PackageJsonConflict = $true
+                            $PackageJsonConflictReason = "The following package.json contributions have been modified since they were last generated: $($PackageJsonMergeResult.ConflictKeys -join ', ')"
+                            $NewAstroContent = Get-BrownserveContent -Path $AstroFile.Path -ErrorAction 'Stop'
+                        }
+                        else
+                        {
+                            $MergedPackageJson = ConvertFrom-BrownservePackageJsonFlatMap -FlatMap $PackageJsonMergeResult.Merged
+                            $NewAstroContent = $MergedPackageJson | ConvertTo-Json -Depth 100 -ErrorAction 'Stop' | Format-BrownserveContent
+                        }
+                    }
+                    $PackageJsonBaseline = $OursPackageJsonFlat
                 }
 
                 $ManagedFiles.Add([BrownserveManagedFile]@{
-                        Path      = $AstroFile.Path
-                        Ownership = $AstroFile.Ownership
-                        Component = 'AstroDocs'
-                        Content   = $NewAstroContent.Content
+                        Path                    = $AstroFile.Path
+                        Ownership               = $AstroFile.Ownership
+                        Component               = 'AstroDocs'
+                        Content                 = $NewAstroContent.Content
+                        StructuredContributions = $PackageJsonBaseline
+                        Conflict                = $PackageJsonConflict
+                        ConflictReason          = $PackageJsonConflictReason
                     })
             }
         }
@@ -1649,10 +1988,9 @@ function Compare-BrownserveRepository
                 })
         }
 
-        $CurrentManifestFiles = @{}
-        if ($CurrentManifest -and $CurrentManifest.Files)
+        if ($UnParsableFiles.Count -gt 0 -and !$Force)
         {
-            $CurrentManifestFiles = $CurrentManifest.Files
+            throw "The following files already exist in the repository but are in a format that can't be parsed:`n$($UnParsableFiles -join "`n")"
         }
 
         try

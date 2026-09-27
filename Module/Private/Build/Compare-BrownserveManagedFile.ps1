@@ -6,17 +6,22 @@
     This is the one place 'Compare-BrownserveRepository' hands off to once it's finished generating content for
     every file the requested components produce. For each file:
       - 'Seeded' files are only ever created, never compared or overwritten once they exist.
-      - 'Managed' and 'Merged' files are compared whole-file against disk. A 'Managed' file whose disk hash differs
-        from both the previously recorded hash and the newly generated content is a conflict unless '-Force' is
-        passed. 'Merged' files are never conflict-checked here, their generation already merges manual content in
-        (marker sections, structured keys), so whatever they generate is what gets written.
+      - 'Managed' files are compared whole-file against disk. A disk hash that differs from both the
+        previously recorded hash and the newly generated content is a conflict unless '-Force' is passed.
+      - 'Merged' files have already had their marker-section or structured-key conflicts resolved by
+        'Compare-BrownserveRepository' (which has the marker/structure knowledge and the '-Force' switch to
+        hand to each merger), and simply arrive here with '$File.Conflict' set when an unresolved conflict
+        remains. When it's not set, the file's 'Content' is written like any other, and the manifest 'Hash' is
+        taken from 'MarkerSection.Generated' (a marker file's generated section only) when present, or from
+        the whole file otherwise. 'StructuredContributions', when present, is recorded as the file's 'Baseline'.
     Once every generated file has been classified, any path recorded in the previous manifest's 'Files' map that
     the current set of components no longer produces is handled as a removal:
       - 'Managed': removed if its disk hash still matches the recorded hash. A modified file is a conflict unless
         '-Force' is passed, in which case it's removed anyway.
       - 'Seeded': left alone on disk, its manifest entry is simply dropped.
-      - 'Merged': left alone on disk and its manifest entry is carried forward unchanged, because removing our
-        contribution from a merged file is a later piece of work.
+      - 'Merged': our unchanged contributions are stripped from the file using its recorded 'Baseline', leaving
+        manual content and content added by other components in place. If nothing is left but empty structure,
+        the file is deleted. File types this cmdlet doesn't recognise are left entirely alone, matching before.
 #>
 function Compare-BrownserveManagedFile
 {
@@ -74,11 +79,35 @@ function Compare-BrownserveManagedFile
                 continue
             }
 
-            $NewHash = Get-BrownserveManagedFileHash -Content $File.Content
+            if ($File.Conflict)
+            {
+                $ConflictedFiles += [pscustomobject]@{
+                    Path   = $File.Path
+                    Reason = $File.ConflictReason
+                }
+                if ($CurrentManifestFiles.ContainsKey($RelativePath))
+                {
+                    $FilesMap[$RelativePath] = $CurrentManifestFiles[$RelativePath]
+                }
+                continue
+            }
+
+            if ($File.MarkerSection -and $File.MarkerSection.ContainsKey('Generated'))
+            {
+                $NewHash = Get-BrownserveManagedFileHash -Content $File.MarkerSection.Generated
+            }
+            else
+            {
+                $NewHash = Get-BrownserveManagedFileHash -Content $File.Content
+            }
             $Record = [ordered]@{
                 Ownership = $File.Ownership.ToString()
                 Component = $File.Component
                 Hash      = $NewHash
+            }
+            if ($File.StructuredContributions)
+            {
+                $Record['Baseline'] = $File.StructuredContributions
             }
 
             if (!$Exists)
@@ -154,8 +183,36 @@ function Compare-BrownserveManagedFile
                 }
                 'Merged'
                 {
-                    $RemovedFiles += [pscustomobject]@{ Path = $AbsolutePath; Action = 'merged contributions not removed' }
-                    $FilesMap[$Key] = $Recorded
+                    $RemovalResult = Remove-BrownserveMergedFileContribution `
+                        -Path $AbsolutePath `
+                        -RelativePath $Key `
+                        -Recorded $Recorded `
+                        -ErrorAction 'Stop'
+                    switch ($RemovalResult.Action)
+                    {
+                        'Unrecognized'
+                        {
+                            $RemovedFiles += [pscustomobject]@{ Path = $AbsolutePath; Action = 'merged contributions not removed' }
+                            $FilesMap[$Key] = $Recorded
+                        }
+                        'NoChange'
+                        {
+                            $RemovedFiles += [pscustomobject]@{ Path = $AbsolutePath; Action = 'merged contributions already removed' }
+                        }
+                        'Delete'
+                        {
+                            $RemovedFiles += [pscustomobject]@{ Path = $AbsolutePath; Action = 'Removed' }
+                        }
+                        'Update'
+                        {
+                            $RemovedFiles += [pscustomobject]@{ Path = $AbsolutePath; Action = 'Stripped' }
+                            $ChangedFiles += [pscustomobject]@{
+                                Path       = $AbsolutePath
+                                Content    = $RemovalResult.Content
+                                LineEnding = 'LF'
+                            }
+                        }
+                    }
                 }
                 default
                 {

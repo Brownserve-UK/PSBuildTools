@@ -9,32 +9,68 @@
     ".build/_init.ps1": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:8677a42a2102a52f2970cd93c6a87f86e10d4482a6d1c66b37b9d0a84293410e"
+      "Hash": "sha256:b7d6bf2c5608cd3acf988aef38d9bb5dc5bc25aad9f71da4365a7eb19c35b1e4"
     },
     ".config/dotnet-tools.json": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:88ebbef17b5ab0eda52132bcdce0f7211c722706ae146e1a185a1565251f09f4"
+      "Hash": "sha256:88ebbef17b5ab0eda52132bcdce0f7211c722706ae146e1a185a1565251f09f4",
+      "Baseline": {
+        "paket": {
+          "version": "8.0.3",
+          "commands": [
+            "paket"
+          ]
+        }
+      }
     },
     ".editorconfig": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:3eb9cdafb3faacc793a790648e586e66530b99734af622c8a895790e20f8dfa9"
+      "Hash": "sha256:3eb9cdafb3faacc793a790648e586e66530b99734af622c8a895790e20f8dfa9",
+      "Baseline": {
+        "*::end_of_line": "lf",
+        "*::indent_size": "2",
+        "*::indent_style": "space",
+        "*::insert_final_newline": "true"
+      }
     },
     ".gitignore": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:d4f7cdd9b64447c2425230a8600b7b1492afad941370326ceed7fcca9a47fcca"
+      "Hash": "sha256:722f20cac49d9964bc4387a38ba3bc99af350a5a09e3af9ae585a20a9fcb0434"
     },
     ".vscode/extensions.json": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:b673878e6d73d39d940030e73dac21b70aa2c2568867f607a334ee43063a6903"
+      "Hash": "sha256:b673878e6d73d39d940030e73dac21b70aa2c2568867f607a334ee43063a6903",
+      "Baseline": {
+        "recommendations": [
+          "streetsidesoftware.code-spell-checker"
+        ]
+      }
     },
     ".vscode/settings.json": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:3a7da74673942dc08c81429fd32598520d4ac0d0c803e194f926eaab943477e0"
+      "Hash": "sha256:3a7da74673942dc08c81429fd32598520d4ac0d0c803e194f926eaab943477e0",
+      "Baseline": {
+        "cSpell.language": "en,en-GB",
+        "cSpell.words": [
+          "Brownserve",
+          "paket",
+          "Teamcity",
+          "TMPDIR",
+          "Choco",
+          "CICD",
+          "dedupe",
+          "devcontainer",
+          "mrkdwn",
+          "nugetconfig",
+          "nupkg",
+          "yzhang"
+        ]
+      }
     },
     "nuget.config": {
       "Ownership": "Managed",
@@ -44,7 +80,7 @@
     "paket.dependencies": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:8626132ba106a3ffe632b190c3b29e1ebdb4a743859309c6a8a8b2fd6b5c780a"
+      "Hash": "sha256:4385551d2292dc67e9c4d5a9512a4eccef43d0e6260996f758d7178146cc80f5"
     }
   }
 }

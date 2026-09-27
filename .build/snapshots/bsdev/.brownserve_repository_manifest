@@ -21,7 +21,7 @@
     ".build/_init.ps1": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:6afd3a54d72254f51d997740facc11c6abefe88958a6d0c9a0f91e41587333f6"
+      "Hash": "sha256:1ac2a08c84a09b39c9c9b710e09ed1a3ed3dfe42d79cc2cb32d19f9c56b64066"
     },
     ".build/build.ps1": {
       "Ownership": "Managed",
@@ -41,7 +41,15 @@
     ".config/dotnet-tools.json": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:88ebbef17b5ab0eda52132bcdce0f7211c722706ae146e1a185a1565251f09f4"
+      "Hash": "sha256:88ebbef17b5ab0eda52132bcdce0f7211c722706ae146e1a185a1565251f09f4",
+      "Baseline": {
+        "paket": {
+          "version": "8.0.3",
+          "commands": [
+            "paket"
+          ]
+        }
+      }
     },
     ".devcontainer/devcontainer.json": {
       "Ownership": "Managed",
@@ -56,7 +64,29 @@
     ".editorconfig": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:c1570bc7db6a101aa5d07f73efd09b168d687a85b7756caeaca941528ef8cee0"
+      "Hash": "sha256:c1570bc7db6a101aa5d07f73efd09b168d687a85b7756caeaca941528ef8cee0",
+      "Baseline": {
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::charset": "utf-8",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::end_of_line": "lf",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::indent_size": "4",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::indent_style": "space",
+        "{Dockerfile,*.Dockerfile,Dockerfile_*,*.sh}::charset": "utf-8",
+        "{Dockerfile,*.Dockerfile,Dockerfile_*,*.sh}::end_of_line": "lf",
+        "{Dockerfile,*.Dockerfile,Dockerfile_*,*.sh}::indent_size": "4",
+        "{Dockerfile,*.Dockerfile,Dockerfile_*,*.sh}::indent_style": "space",
+        "*::end_of_line": "lf",
+        "*::indent_size": "2",
+        "*::indent_style": "space",
+        "*::insert_final_newline": "true",
+        "*.rs::charset": "utf-8",
+        "*.rs::end_of_line": "lf",
+        "*.rs::indent_size": "4",
+        "*.rs::indent_style": "space",
+        "*.toml::charset": "utf-8",
+        "*.toml::end_of_line": "lf",
+        "*.toml::indent_size": "2",
+        "*.toml::indent_style": "space"
+      }
     },
     ".github/CONTRIBUTING.md": {
       "Ownership": "Managed",
@@ -96,7 +126,7 @@
     ".gitignore": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:72cd5ec5f6a661eedbd97cd498710f74f52817749ae80f38cc31b32c5ca6b5c0"
+      "Hash": "sha256:be7e50fa17bec12742055377c4e11697461eaee6650af70edd934abebfb969a7"
     },
     ".markdownlint.json": {
       "Ownership": "Managed",
@@ -106,12 +136,47 @@
     ".vscode/extensions.json": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:3b7581b1cc6d249be4d667078096f01887a5ce2ab4c705c4afa4af1a252b37fd"
+      "Hash": "sha256:3b7581b1cc6d249be4d667078096f01887a5ce2ab4c705c4afa4af1a252b37fd",
+      "Baseline": {
+        "recommendations": [
+          "DavidAnson.vscode-markdownlint",
+          "EditorConfig.EditorConfig",
+          "ms-azuretools.vscode-docker",
+          "ms-vscode.powershell",
+          "rust-lang.rust-analyzer",
+          "streetsidesoftware.code-spell-checker",
+          "tamasfe.even-better-toml"
+        ]
+      }
     },
     ".vscode/settings.json": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:f79dd664e624a6eda7b993f1a93580ae4881b49ea65ed468122ab6e9380d3ef9"
+      "Hash": "sha256:f79dd664e624a6eda7b993f1a93580ae4881b49ea65ed468122ab6e9380d3ef9",
+      "Baseline": {
+        "cSpell.language": "en,en-GB",
+        "cSpell.words": [
+          "Brownserve",
+          "paket",
+          "Teamcity",
+          "TMPDIR",
+          "Choco",
+          "CICD",
+          "dedupe",
+          "devcontainer",
+          "mrkdwn",
+          "nugetconfig",
+          "nupkg",
+          "yzhang"
+        ],
+        "powershell.codeFormatting.autoCorrectAliases": true,
+        "powershell.codeFormatting.pipelineIndentationStyle": "IncreaseIndentationAfterEveryPipeline",
+        "powershell.codeFormatting.preset": "Allman",
+        "powershell.codeFormatting.trimWhitespaceAroundPipe": true,
+        "powershell.codeFormatting.useConstantStrings": true,
+        "powershell.codeFormatting.useCorrectCasing": true,
+        "powershell.helpCompletion": "Disabled"
+      }
     },
     "CHANGELOG.md": {
       "Ownership": "Seeded",
@@ -129,7 +194,7 @@
     "paket.dependencies": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:f0473ecab2fcd34ccf3f6427cddde9b91d463202c36557d9c8718feb1f3536ac"
+      "Hash": "sha256:8a0c5d5163f8d0b8cce1d4c6c15f83cc77dda9c43c0873221b983923493ac3bb"
     },
     "scripts/install.ps1": {
       "Ownership": "Managed",

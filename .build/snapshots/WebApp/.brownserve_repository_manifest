@@ -13,7 +13,7 @@
     ".build/_init.ps1": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:6afd3a54d72254f51d997740facc11c6abefe88958a6d0c9a0f91e41587333f6"
+      "Hash": "sha256:1ac2a08c84a09b39c9c9b710e09ed1a3ed3dfe42d79cc2cb32d19f9c56b64066"
     },
     ".build/build.ps1": {
       "Ownership": "Managed",
@@ -33,7 +33,15 @@
     ".config/dotnet-tools.json": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:88ebbef17b5ab0eda52132bcdce0f7211c722706ae146e1a185a1565251f09f4"
+      "Hash": "sha256:88ebbef17b5ab0eda52132bcdce0f7211c722706ae146e1a185a1565251f09f4",
+      "Baseline": {
+        "paket": {
+          "version": "8.0.3",
+          "commands": [
+            "paket"
+          ]
+        }
+      }
     },
     ".devcontainer/devcontainer.json": {
       "Ownership": "Managed",
@@ -48,7 +56,17 @@
     ".editorconfig": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:5817aa3d5381dce14b0b39075b15891c9530adeac651355b0c1221dd7720c32f"
+      "Hash": "sha256:5817aa3d5381dce14b0b39075b15891c9530adeac651355b0c1221dd7720c32f",
+      "Baseline": {
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::charset": "utf-8",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::end_of_line": "lf",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::indent_size": "4",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::indent_style": "space",
+        "*::end_of_line": "lf",
+        "*::indent_size": "2",
+        "*::indent_style": "space",
+        "*::insert_final_newline": "true"
+      }
     },
     ".github/CONTRIBUTING.md": {
       "Ownership": "Managed",
@@ -88,7 +106,7 @@
     ".gitignore": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:73b9f1371218d7f468b4527f92ac7f522dcb59d39ea92cb41156d78511ba850f"
+      "Hash": "sha256:cb454b2ad07f248015323fc54fe43cd7df2e58fcde589bca94cf593476688445"
     },
     ".markdownlint.json": {
       "Ownership": "Managed",
@@ -98,12 +116,45 @@
     ".vscode/extensions.json": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:61cd4a46084ac0152edab4cb4a1755c56d2e9b71b324d627d9931f907e187d25"
+      "Hash": "sha256:61cd4a46084ac0152edab4cb4a1755c56d2e9b71b324d627d9931f907e187d25",
+      "Baseline": {
+        "recommendations": [
+          "DavidAnson.vscode-markdownlint",
+          "EditorConfig.EditorConfig",
+          "ms-azuretools.vscode-docker",
+          "ms-vscode.powershell",
+          "streetsidesoftware.code-spell-checker"
+        ]
+      }
     },
     ".vscode/settings.json": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:f79dd664e624a6eda7b993f1a93580ae4881b49ea65ed468122ab6e9380d3ef9"
+      "Hash": "sha256:f79dd664e624a6eda7b993f1a93580ae4881b49ea65ed468122ab6e9380d3ef9",
+      "Baseline": {
+        "cSpell.language": "en,en-GB",
+        "cSpell.words": [
+          "Brownserve",
+          "paket",
+          "Teamcity",
+          "TMPDIR",
+          "Choco",
+          "CICD",
+          "dedupe",
+          "devcontainer",
+          "mrkdwn",
+          "nugetconfig",
+          "nupkg",
+          "yzhang"
+        ],
+        "powershell.codeFormatting.autoCorrectAliases": true,
+        "powershell.codeFormatting.pipelineIndentationStyle": "IncreaseIndentationAfterEveryPipeline",
+        "powershell.codeFormatting.preset": "Allman",
+        "powershell.codeFormatting.trimWhitespaceAroundPipe": true,
+        "powershell.codeFormatting.useConstantStrings": true,
+        "powershell.codeFormatting.useCorrectCasing": true,
+        "powershell.helpCompletion": "Disabled"
+      }
     },
     "CHANGELOG.md": {
       "Ownership": "Seeded",
@@ -121,7 +172,7 @@
     "paket.dependencies": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:1683d1046df50de34d8063c41fc8cbe9dc8133d668c8c671420518577e2341f1"
+      "Hash": "sha256:1c8f7a7582f7b0501e80ac6b739386a6a033ed0ce171634819af6a12eb4d236b"
     }
   }
 }

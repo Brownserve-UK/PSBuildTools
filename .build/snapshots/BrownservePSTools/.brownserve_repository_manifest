@@ -20,7 +20,7 @@
     ".build/_init.ps1": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:0d96eaab1c46faae83c86549809510de6187ad680c431fc699f540210dc1094e"
+      "Hash": "sha256:3b4014ce17df3c717af5a3a5f706765a213fdfa2f1383feabb5f1dcc4d537958"
     },
     ".build/build.ps1": {
       "Ownership": "Managed",
@@ -44,7 +44,15 @@
     ".config/dotnet-tools.json": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:88ebbef17b5ab0eda52132bcdce0f7211c722706ae146e1a185a1565251f09f4"
+      "Hash": "sha256:88ebbef17b5ab0eda52132bcdce0f7211c722706ae146e1a185a1565251f09f4",
+      "Baseline": {
+        "paket": {
+          "version": "8.0.3",
+          "commands": [
+            "paket"
+          ]
+        }
+      }
     },
     ".devcontainer/devcontainer.json": {
       "Ownership": "Managed",
@@ -59,7 +67,17 @@
     ".editorconfig": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:5817aa3d5381dce14b0b39075b15891c9530adeac651355b0c1221dd7720c32f"
+      "Hash": "sha256:5817aa3d5381dce14b0b39075b15891c9530adeac651355b0c1221dd7720c32f",
+      "Baseline": {
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::charset": "utf-8",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::end_of_line": "lf",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::indent_size": "4",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::indent_style": "space",
+        "*::end_of_line": "lf",
+        "*::indent_size": "2",
+        "*::indent_style": "space",
+        "*::insert_final_newline": "true"
+      }
     },
     ".github/CONTRIBUTING.md": {
       "Ownership": "Managed",
@@ -99,7 +117,7 @@
     ".gitignore": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:d4f7cdd9b64447c2425230a8600b7b1492afad941370326ceed7fcca9a47fcca"
+      "Hash": "sha256:722f20cac49d9964bc4387a38ba3bc99af350a5a09e3af9ae585a20a9fcb0434"
     },
     ".markdownlint.json": {
       "Ownership": "Managed",
@@ -109,12 +127,69 @@
     ".vscode/extensions.json": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:3fb77d354dddb014e8565a023bd2cbb78ea4ee7adebe1be53db5411725f10625"
+      "Hash": "sha256:3fb77d354dddb014e8565a023bd2cbb78ea4ee7adebe1be53db5411725f10625",
+      "Baseline": {
+        "recommendations": [
+          "DavidAnson.vscode-markdownlint",
+          "EditorConfig.EditorConfig",
+          "ms-vscode.powershell",
+          "streetsidesoftware.code-spell-checker",
+          "yzhang.markdown-all-in-one"
+        ]
+      }
     },
     ".vscode/settings.json": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:8502d350e8331c1ac9fe2fc03efe76553bdac9863a5ffc6d2ec0b8cd5416b8de"
+      "Hash": "sha256:8502d350e8331c1ac9fe2fc03efe76553bdac9863a5ffc6d2ec0b8cd5416b8de",
+      "Baseline": {
+        "cSpell.language": "en,en-GB",
+        "cSpell.words": [
+          "Brownserve",
+          "paket",
+          "Teamcity",
+          "TMPDIR",
+          "Choco",
+          "CICD",
+          "dedupe",
+          "devcontainer",
+          "mrkdwn",
+          "nugetconfig",
+          "nupkg",
+          "yzhang",
+          "Allman",
+          "Cmdlets",
+          "Dont",
+          "hashtable",
+          "hashtables",
+          "imatch",
+          "LASTEXITCODE",
+          "MAML",
+          "Mddhhmm",
+          "notcontains",
+          "notlike",
+          "notmatch",
+          "pscustomobject",
+          "PSGALLERY",
+          "PSMODULE",
+          "psobject",
+          "pstools",
+          "pwsh"
+        ],
+        "markdown.extension.toc.omittedFromToc": {
+          "README.md": [
+            "# Overview"
+          ]
+        },
+        "markdown.extension.toc.updateOnSave": false,
+        "powershell.codeFormatting.autoCorrectAliases": true,
+        "powershell.codeFormatting.pipelineIndentationStyle": "IncreaseIndentationAfterEveryPipeline",
+        "powershell.codeFormatting.preset": "Allman",
+        "powershell.codeFormatting.trimWhitespaceAroundPipe": true,
+        "powershell.codeFormatting.useConstantStrings": true,
+        "powershell.codeFormatting.useCorrectCasing": true,
+        "powershell.helpCompletion": "Disabled"
+      }
     },
     "CHANGELOG.md": {
       "Ownership": "Seeded",
@@ -143,7 +218,7 @@
     "paket.dependencies": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:5883e84a8131c1beff43a204b62cdcb918ba1bc469ca1cdc735dc9872fc88e91"
+      "Hash": "sha256:e82baf588bae67ac9b7206b2cf9af472d8c0cc3de991f2ed9544e405ce0f5621"
     },
     "requirements.txt": {
       "Ownership": "Managed",

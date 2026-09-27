@@ -240,6 +240,137 @@ Describe 'Compare-BrownserveRepository file ownership' {
         $MergedContent.dependencies.astro | Should -Not -BeNullOrEmpty
     }
 
+    It 'merges .vscode/settings.json: a user setting survives, an edit to a generated setting conflicts, and -Force replaces it' {
+        $First = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath
+        Publish-BrownserveCompareResult -Result $First
+
+        $SettingsPath = Join-Path (Join-Path $script:RepositoryPath '.vscode') 'settings.json'
+        $ExistingSettings = Get-Content -Path $SettingsPath -Raw | ConvertFrom-Json -Depth 100 -AsHashtable
+        $ExistingSettings['editor.tabSize'] = 4
+        $ExistingSettings['cSpell.language'] = 'en'
+        ($ExistingSettings | ConvertTo-Json -Depth 100) | Set-Content -Path $SettingsPath -NoNewline
+
+        $Second = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath
+        $Second.ConflictedFiles.Path | Should -Contain $SettingsPath
+        $Second.ChangedFiles.Path | Should -Not -Contain $SettingsPath
+
+        $Forced = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath -Force
+        $Forced.ConflictedFiles.Path | Should -Not -Contain $SettingsPath
+        Publish-BrownserveCompareResult -Result $Forced
+        $ForcedSettings = Get-Content -Path $SettingsPath -Raw | ConvertFrom-Json -Depth 100 -AsHashtable
+        $ForcedSettings.'editor.tabSize' | Should -Be 4
+        $ForcedSettings.'cSpell.language' | Should -Not -Be 'en'
+    }
+
+    It 'merges .vscode/extensions.json: a user-added extension survives, removing a recommended one conflicts, and -Force re-adds it' {
+        $First = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath
+        Publish-BrownserveCompareResult -Result $First
+
+        $ExtensionsPath = Join-Path (Join-Path $script:RepositoryPath '.vscode') 'extensions.json'
+        $ExistingExtensions = Get-Content -Path $ExtensionsPath -Raw | ConvertFrom-Json -Depth 100 -AsHashtable
+        $OurExtension = $ExistingExtensions.recommendations | Select-Object -First 1
+        $ExistingExtensions.recommendations = @($ExistingExtensions.recommendations | Where-Object { $_ -ne $OurExtension }) + @('example.user-added-extension')
+        ($ExistingExtensions | ConvertTo-Json -Depth 100) | Set-Content -Path $ExtensionsPath -NoNewline
+
+        $Second = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath
+        $Second.ConflictedFiles.Path | Should -Contain $ExtensionsPath
+
+        $Forced = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath -Force
+        $Forced.ConflictedFiles.Path | Should -Not -Contain $ExtensionsPath
+        Publish-BrownserveCompareResult -Result $Forced
+        $ForcedExtensions = Get-Content -Path $ExtensionsPath -Raw | ConvertFrom-Json -Depth 100 -AsHashtable
+        $ForcedExtensions.recommendations | Should -Contain $OurExtension
+        $ForcedExtensions.recommendations | Should -Contain 'example.user-added-extension'
+    }
+
+    It 'merges .editorconfig: a user section survives, an edit to a generated property conflicts, and -Force replaces it' {
+        $First = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath
+        Publish-BrownserveCompareResult -Result $First
+
+        $EditorConfigPath = Join-Path $script:RepositoryPath '.editorconfig'
+        $Original = Get-Content -Path $EditorConfigPath
+        $Modified = $Original -replace '^indent_style = space$', 'indent_style = tab'
+        Set-Content -Path $EditorConfigPath -Value $Modified
+
+        $Second = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath
+        $Second.ConflictedFiles.Path | Should -Contain $EditorConfigPath
+
+        $Forced = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath -Force
+        $Forced.ConflictedFiles.Path | Should -Not -Contain $EditorConfigPath
+    }
+
+    It 'preserves a manual .gitignore, paket.dependencies and _init.ps1 entry without -Force, and conflicts on a generated-section edit' {
+        $First = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath
+        Publish-BrownserveCompareResult -Result $First
+
+        $GitIgnorePath = Join-Path $script:RepositoryPath '.gitignore'
+        Add-Content -Path $GitIgnorePath -Value 'ScoresOnTheDoors.manual.ignore'
+
+        $PaketPath = Join-Path $script:RepositoryPath 'paket.dependencies'
+        Add-Content -Path $PaketPath -Value 'nuget SomeManualPackage'
+
+        $InitPath = Join-Path (Join-Path $script:RepositoryPath '.build') '_init.ps1'
+        $InitContent = Get-Content -Path $InitPath
+        $StartLine = ($InitContent | Select-String -Pattern '### Start user defined _init steps' -SimpleMatch).LineNumber
+        $NewInitContent = $InitContent[0..($StartLine - 1)] + '$Global:ManualStep = $true' + $InitContent[$StartLine..($InitContent.Count - 1)]
+        Set-Content -Path $InitPath -Value $NewInitContent
+
+        $Second = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath
+        $Second.ConflictedFiles.Path | Should -Not -Contain $GitIgnorePath
+        $Second.ConflictedFiles.Path | Should -Not -Contain $PaketPath
+        $Second.ConflictedFiles.Path | Should -Not -Contain $InitPath
+
+        $GitIgnoreLine = Get-Content -Path $GitIgnorePath
+        $GitIgnoreLine = $GitIgnoreLine -replace '^# This file is created by a tool.*$', '# manually edited generated section'
+        Set-Content -Path $GitIgnorePath -Value $GitIgnoreLine
+
+        $Third = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath
+        $Third.ConflictedFiles.Path | Should -Contain $GitIgnorePath
+
+        $Forced = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath -Force
+        $Forced.ConflictedFiles.Path | Should -Not -Contain $GitIgnorePath
+    }
+
+    It 'fails before writing anything when a file the manifest records as Merged has a damaged structure, even with -Force' {
+        $First = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath
+        Publish-BrownserveCompareResult -Result $First
+
+        $ToolsPath = Join-Path (Join-Path $script:RepositoryPath '.config') 'dotnet-tools.json'
+        Set-Content -Path $ToolsPath -Value 'not valid json {{{' -NoNewline
+
+        { Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath } | Should -Throw
+        { Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath -Force } | Should -Throw
+    }
+
+    It 'refuses an unrecorded unparsable dotnet-tools.json without -Force, and replaces it with -Force' {
+        $ToolsConfigDirectory = Join-Path $script:RepositoryPath '.config'
+        New-Item -Path $ToolsConfigDirectory -ItemType Directory -Force | Out-Null
+        $ToolsPath = Join-Path $ToolsConfigDirectory 'dotnet-tools.json'
+        Set-Content -Path $ToolsPath -Value 'not valid json {{{' -NoNewline
+
+        { Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath } | Should -Throw
+
+        $Forced = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath -Force
+        @(@($Forced.ChangedFiles.Path) + @($Forced.MissingFiles.Path)) | Should -Contain $ToolsPath
+    }
+
+    It 'establishes a baseline without conflicts for a structured file the manifest recorded before Baselines existed' {
+        $First = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath
+        Publish-BrownserveCompareResult -Result $First
+
+        $ManifestPath = Join-Path $script:RepositoryPath '.brownserve_repository_manifest'
+        $Manifest = Get-Content -Path $ManifestPath -Raw | ConvertFrom-Json -Depth 100 -AsHashtable
+        $Manifest.Files.'.vscode/settings.json'.Remove('Baseline')
+        ($Manifest | ConvertTo-Json -Depth 100) | Set-Content -Path $ManifestPath -NoNewline
+
+        $Second = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath
+        $Second.ConflictedFiles.Count | Should -Be 0
+
+        Publish-BrownserveCompareResult -Result $Second
+        $SecondManifest = Get-BrownserveManifestContentFromResult -Result $Second -ManifestPath $ManifestPath
+        $SecondManifest.Files.'.vscode/settings.json'.Baseline | Should -Not -BeNullOrEmpty
+    }
+
     It 'removes unchanged Managed files owned by a dropped component, conflicts on a modified one, and -Force removes it while Merged/Seeded files are preserved' {
         $First = Invoke-BrownserveCompare -RepositoryPath $script:RepositoryPath -Components @('DirectoryArchive', 'AstroDocs') -ComponentOptions @{ DirectoryArchive = @{ Path = 'skills' } }
         Publish-BrownserveCompareResult -Result $First
@@ -259,8 +390,7 @@ Describe 'Compare-BrownserveRepository file ownership' {
         ($Second.RemovedFiles | Where-Object { $_.Path -eq $AstroConfigPath }).Action | Should -Be 'Removed'
         $Second.ConflictedFiles.Path | Should -Not -Contain $AstroConfigPath
 
-        # package.json is Merged, so our contribution to it is left alone (that's a later slice)
-        ($Second.RemovedFiles | Where-Object { $_.Path -eq $PackageJsonPath }).Action | Should -Be 'merged contributions not removed'
+        ($Second.RemovedFiles | Where-Object { $_.Path -eq $PackageJsonPath }).Action | Should -Be 'Removed'
         Test-Path $PackageJsonPath | Should -Be $true
 
         # index.astro is Seeded, so it's left alone entirely and simply drops out of the manifest
@@ -268,7 +398,7 @@ Describe 'Compare-BrownserveRepository file ownership' {
         Test-Path $IndexAstroPath | Should -Be $true
         $SecondManifest = Get-BrownserveManifestContentFromResult -Result $Second -ManifestPath $ManifestPath
         $SecondManifest.Files.ContainsKey('pages/src/pages/index.astro') | Should -Be $false
-        $SecondManifest.Files.ContainsKey('pages/package.json') | Should -Be $true
+        $SecondManifest.Files.ContainsKey('pages/package.json') | Should -Be $false
 
         # Now modify astro.config.mjs by hand and confirm removing it becomes a conflict, resolved by -Force
         Add-Content -Path $AstroConfigPath -Value '// manual edit'
