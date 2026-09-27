@@ -60,5 +60,15 @@
             "comment": "Docker build output and cache.",
             "item": ".docker/"
         }
+    ],
+    "SkillsRepo": [
+        {
+            "comment": "Node dependencies and Astro build output/cache for the documentation site.",
+            "item": [
+                "node_modules/",
+                "pages/dist/",
+                "pages/.astro/"
+            ]
+        }
     ]
 }

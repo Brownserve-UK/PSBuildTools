@@ -568,6 +568,7 @@ enum BrownserveRepoProjectType
     WebApp
     RustApp
     bsdev
+    SkillsRepo
     Generic
 }
 
