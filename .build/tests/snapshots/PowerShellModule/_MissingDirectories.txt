@@ -1,0 +1,11 @@
+.build
+.build/tasks
+.build/tests
+.config
+.devcontainer
+.github
+.github/workflows
+.vscode
+Module
+pages
+pages/Cmdlet reference

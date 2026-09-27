@@ -1,0 +1,4 @@
+.build
+.build/tasks
+.config
+.vscode
