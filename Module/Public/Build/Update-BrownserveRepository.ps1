@@ -128,6 +128,7 @@ function Update-BrownserveRepository
                 PackageAliasConfigFile     = $PackageAliasConfigFile
                 EditorConfigConfigFile     = $EditorConfigConfigFile
                 RepoName                  = $RepoName
+                Force                     = $Force
                 ErrorAction               = 'Stop'
             }
             if ($ModuleInfo)

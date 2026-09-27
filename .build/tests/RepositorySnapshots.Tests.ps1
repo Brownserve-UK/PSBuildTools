@@ -60,15 +60,6 @@ Describe 'Compare-BrownserveRepository snapshots' -ForEach (Get-RepositorySnapsh
                     New-Item -Path $DestDir -ItemType Directory -Force | Out-Null
                 }
                 $ContentToWrite = $ActualFiles[$RelativePath]
-                if ($RelativePath -eq '.brownserve_repository_manifest')
-                {
-                    $ManifestData = $ContentToWrite | ConvertFrom-Json -AsHashtable
-                    $OrderedManifest = [ordered]@{
-                        RepositoryType  = $ManifestData.RepositoryType
-                        ManifestVersion = $ManifestData.ManifestVersion
-                    }
-                    $ContentToWrite = (($OrderedManifest | ConvertTo-Json -Depth 100) -replace "`r`n", "`n") + "`n"
-                }
                 [System.IO.File]::WriteAllText($DestPath, $ContentToWrite, [System.Text.UTF8Encoding]::new($false))
             }
             [System.IO.File]::WriteAllText($DirectoriesManifestPath, (($ActualDirectories -join "`n") + "`n"), [System.Text.UTF8Encoding]::new($false))
@@ -104,18 +95,6 @@ Describe 'Compare-BrownserveRepository snapshots' -ForEach (Get-RepositorySnapsh
                 $ExpectedContent = ''
             }
             $ActualContent = $ActualFiles[$RelativePath]
-
-            if (($RelativePath -eq '.brownserve_repository_manifest') -and ($ExpectedContent -ne $ActualContent))
-            {
-                $ExpectedManifest = $ExpectedContent | ConvertFrom-Json -AsHashtable
-                $ActualManifest = $ActualContent | ConvertFrom-Json -AsHashtable
-                $ManifestKeysMatch = @(Compare-Object $ExpectedManifest.Keys $ActualManifest.Keys).Count -eq 0
-                $ManifestValuesMatch = $ManifestKeysMatch -and -not ($ExpectedManifest.Keys | Where-Object { $ExpectedManifest[$_] -ne $ActualManifest[$_] })
-                if ($ManifestValuesMatch)
-                {
-                    continue
-                }
-            }
 
             if ($ExpectedContent -ne $ActualContent)
             {

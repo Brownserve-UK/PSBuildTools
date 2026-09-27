@@ -599,6 +599,7 @@ class PaketDependencyRule
 {
     [string]$Source
     [string]$PackageName
+    [string]$Version
 
     PaketDependencyRule([hashtable]$Hashtable)
     {
@@ -613,6 +614,10 @@ class PaketDependencyRule
             {
                 $this.$Key = $Hashtable.$Key
             }
+        }
+        if ($Hashtable.Version)
+        {
+            $this.Version = $Hashtable.Version
         }
     }
 
@@ -629,6 +634,10 @@ class PaketDependencyRule
             {
                 $this.$Key = $Object.$Key
             }
+        }
+        if ($Object.Version)
+        {
+            $this.Version = $Object.Version
         }
     }
 }

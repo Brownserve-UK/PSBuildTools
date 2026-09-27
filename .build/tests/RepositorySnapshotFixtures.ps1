@@ -142,6 +142,17 @@ function Set-RepositorySnapshotMocks
 
     Mock Assert-Command -ModuleName Brownserve.PSBuildTools { }
 
+    Mock Get-BrownserveLoadedModuleVersion -ModuleName Brownserve.PSBuildTools {
+        param($Name)
+        switch ($Name)
+        {
+            'Brownserve.PSCommon' { return '1.2.3' }
+            'Brownserve.PSSourceControl' { return '2.3.4' }
+            'Brownserve.PSBuildTools' { return '3.4.5' }
+            default { throw "Unexpected module name '$Name'" }
+        }
+    }
+
     if (!(Get-Command 'dotnet' -ErrorAction SilentlyContinue))
     {
         InModuleScope Brownserve.PSBuildTools {
