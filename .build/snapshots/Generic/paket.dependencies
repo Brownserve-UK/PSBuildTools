@@ -1,0 +1,13 @@
+# This file is managed by a tool, manual changes will be lost unless added to the designated section below
+source https://api.nuget.org/v3/index.json
+
+## Auto generated dependencies: ##
+# Brownserve modules used to build and test this module
+nuget Brownserve.PSCommon = 1.2.3
+nuget Brownserve.PSSourceControl = 2.3.4
+nuget Brownserve.PSBuildTools = 3.4.5
+
+# Invoke-Build is used to run our builds
+nuget Invoke-Build
+
+## Manually defined dependencies: ##

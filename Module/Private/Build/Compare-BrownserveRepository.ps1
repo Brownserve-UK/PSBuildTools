@@ -130,6 +130,19 @@ function Compare-BrownserveRepository
         {
             throw "Failed to import configuration data.`n$($_.Exception.Message)"
         }
+
+        try
+        {
+            $BrownserveModuleVersions = @{
+                'Brownserve.PSCommon'        = Get-BrownserveLoadedModuleVersion -Name 'Brownserve.PSCommon' -ErrorAction 'Stop'
+                'Brownserve.PSSourceControl' = Get-BrownserveLoadedModuleVersion -Name 'Brownserve.PSSourceControl' -ErrorAction 'Stop'
+                'Brownserve.PSBuildTools'    = Get-BrownserveLoadedModuleVersion -Name 'Brownserve.PSBuildTools' -ErrorAction 'Stop'
+            }
+        }
+        catch
+        {
+            throw "Failed to resolve the loaded version of a Brownserve module.`n$($_.Exception.Message)"
+        }
     }
     process
     {
@@ -358,6 +371,14 @@ function Compare-BrownserveRepository
 
         # Set-up the paket dependency that are common to all our projects
         $DefaultPaketDependencies = $PaketDependenciesConfig.Defaults
+        $DefaultPaketDependencies | ForEach-Object {
+            $_.Rule | ForEach-Object {
+                if ($BrownserveModuleVersions.ContainsKey($_.PackageName))
+                {
+                    $_ | Add-Member -MemberType 'NoteProperty' -Name 'Version' -Value $BrownserveModuleVersions[$_.PackageName] -Force
+                }
+            }
+        }
 
         # Careful -AsHashtable makes key names case sensitive when converted from JSON! (defaults != Defaults)
         $DefaultVSCodeExtensions = $VSCodeExtensionsConfig.Defaults
@@ -367,7 +388,7 @@ function Compare-BrownserveRepository
         $DefaultEditorConfig = $EditorConfigConfig.Defaults
 
         # We don't use a config file to create the manifest file as it's a simple object
-        $NewManifest = [System.Management.Automation.OrderedHashtable]@{
+        $NewManifest = [ordered]@{
             RepositoryType  = $ProjectType.ToString()
             ManifestVersion = '1.0.0'
         }
@@ -881,13 +902,11 @@ function Compare-BrownserveRepository
 
         if ($UnParsableFiles.Count -gt 0 -and !$Force)
         {
-            {
-                <#
-                    Throw here, this allows us to give the user a list of files that need to be manually checked.
-                    Then the user can either modify the files themselves or pass -Force to this cmdlet to overwrite them.
-                #>
-                throw "The following files already exist in the repository but are in a format that can't be parsed:`n$($UnParsableFiles -join "`n")"
-            }
+            <#
+                Throw here, this allows us to give the user a list of files that need to be manually checked.
+                Then the user can either modify the files themselves or pass -Force to this cmdlet to overwrite them.
+            #>
+            throw "The following files already exist in the repository but are in a format that can't be parsed:`n$($UnParsableFiles -join "`n")"
         }
 
         if ($DockerfileName)
