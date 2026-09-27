@@ -24,9 +24,8 @@
       "Hash": "sha256:74c2e9b957060f1a13675cdcbeca0d83747541249cfa7e20a1f3c53ae304342a"
     },
     ".build/ModuleInfo.json": {
-      "Ownership": "Managed",
-      "Component": "PowerShellModule",
-      "Hash": "sha256:ab9debe05693f81d58effec4f7b2622a9b4486e046de41cfb81ca91069c38c1b"
+      "Ownership": "Seeded",
+      "Component": "PowerShellModule"
     },
     ".build/tasks/build_tasks.ps1": {
       "Ownership": "Managed",
@@ -39,8 +38,9 @@
       "Hash": "sha256:4b2df005f4e9db585645c9a530c37ed6f81f085c6247e798e03281fa99cd81ba"
     },
     ".config/dotnet-tools.json": {
-      "Ownership": "Seeded",
-      "Component": "Core"
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:88ebbef17b5ab0eda52132bcdce0f7211c722706ae146e1a185a1565251f09f4"
     },
     ".devcontainer/devcontainer.json": {
       "Ownership": "Managed",

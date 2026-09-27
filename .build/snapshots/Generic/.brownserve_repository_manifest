@@ -12,8 +12,9 @@
       "Hash": "sha256:8677a42a2102a52f2970cd93c6a87f86e10d4482a6d1c66b37b9d0a84293410e"
     },
     ".config/dotnet-tools.json": {
-      "Ownership": "Seeded",
-      "Component": "Core"
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:88ebbef17b5ab0eda52132bcdce0f7211c722706ae146e1a185a1565251f09f4"
     },
     ".editorconfig": {
       "Ownership": "Merged",

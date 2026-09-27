@@ -155,8 +155,10 @@ function Update-BrownserveRepository
             throw "The following files have been modified since they were last generated and would be overwritten:`n$ConflictSummary`nUse the '-Force' switch to overwrite them."
         }
 
-        # Only proceed if we have no missing files or changes
-        if (($RepositoryState.MissingFiles.Count -gt 0) -or ($RepositoryState.ChangedFiles.Count -gt 0))
+        $FilesToRemove = @($RepositoryState.RemovedFiles | Where-Object { $_.Action -eq 'Removed' })
+
+        # Only proceed if we have no missing files, changes or removals
+        if (($RepositoryState.MissingFiles.Count -gt 0) -or ($RepositoryState.ChangedFiles.Count -gt 0) -or ($FilesToRemove.Count -gt 0))
         {
             Write-Debug "Changed files: $(($RepositoryState.ChangedFiles | Select-Object -ExpandProperty Path) -join "`n")"
             if ($RepositoryState.MissingFiles.Count -gt 0)
@@ -224,54 +226,17 @@ function Update-BrownserveRepository
                 }
             }
 
-            # Start by creating any missing directories, they may be needed for the files we're about to create
-            foreach ($Directory in $RepositoryState.MissingDirectories)
+            try
             {
-                Write-Verbose "Creating directory '$Directory.Path)'"
-                try
-                {
-                    New-Item `
-                        -Path $Directory.Path `
-                        -ItemType 'Directory' `
-                        -ErrorAction 'Stop' | Out-Null
-                }
-                catch
-                {
-                    throw "Failed to create directory '$($Directory.Path)'.`n$($_.Exception.Message)"
-                }
+                Set-BrownserveRepositoryState `
+                    -RepositoryPath $RepositoryPath `
+                    -RepositoryState $RepositoryState `
+                    -Force:$Force `
+                    -ErrorAction 'Stop'
             }
-
-            # Create any missing files
-            foreach ($File in $RepositoryState.MissingFiles)
+            catch
             {
-                Write-Verbose "Creating file '$($File.Path)'"
-                try
-                {
-                    New-Item `
-                        -Path $File.Path `
-                        -ItemType 'File' `
-                        -ErrorAction 'Stop' | Out-Null
-
-                    $File | Set-BrownserveContent -ErrorAction 'Stop'
-                }
-                catch
-                {
-                    throw "Failed to create file '$($File.Path)'.`n$($_.Exception.Message)"
-                }
-            }
-
-            # Update any changed files
-            foreach ($File in $RepositoryState.ChangedFiles)
-            {
-                Write-Verbose "Updating file '$($File.Path)'"
-                try
-                {
-                    $File | Set-BrownserveContent -ErrorAction 'Stop'
-                }
-                catch
-                {
-                    throw "Failed to update file '$($File.Path)'.`n$($_.Exception.Message)"
-                }
+                throw "Failed to apply repository changes.`n$($_.Exception.Message)"
             }
         }
         else

@@ -34,8 +34,9 @@
       "Hash": "sha256:d9ef091bda4a892e68f16bd86d4569972fcb6bdfa9ccc1013fa1adcf75961b55"
     },
     ".config/dotnet-tools.json": {
-      "Ownership": "Seeded",
-      "Component": "Core"
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:88ebbef17b5ab0eda52132bcdce0f7211c722706ae146e1a185a1565251f09f4"
     },
     ".editorconfig": {
       "Ownership": "Merged",
@@ -111,12 +112,14 @@
       "Hash": "sha256:e6f4904e508d73e3d5e54f87768dbadb6676d5cccc9f4ed21e9f61643c3f81af"
     },
     "pages/astro.config.mjs": {
-      "Ownership": "Seeded",
-      "Component": "AstroDocs"
+      "Ownership": "Managed",
+      "Component": "AstroDocs",
+      "Hash": "sha256:fd49b0d5bdf5e6479e5390a77d8f8bb61fa188c2892d5bbb5363d425d87194c2"
     },
     "pages/package.json": {
-      "Ownership": "Seeded",
-      "Component": "AstroDocs"
+      "Ownership": "Merged",
+      "Component": "AstroDocs",
+      "Hash": "sha256:0cd4ae4b5e0a17bfef92c6832ba1fdfaba78e6cc9c54c17c3af2783d0b0aeb95"
     },
     "pages/src/pages/index.astro": {
       "Ownership": "Seeded",

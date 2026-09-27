@@ -31,8 +31,9 @@
       "Hash": "sha256:7bc9f0ee0bfe8740cd1a6de2608a2fd498336f3eae0df9d4bf7a61b4949820d7"
     },
     ".config/dotnet-tools.json": {
-      "Ownership": "Seeded",
-      "Component": "Core"
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:88ebbef17b5ab0eda52132bcdce0f7211c722706ae146e1a185a1565251f09f4"
     },
     ".devcontainer/devcontainer.json": {
       "Ownership": "Managed",
