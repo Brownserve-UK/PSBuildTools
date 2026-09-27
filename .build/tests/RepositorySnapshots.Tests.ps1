@@ -8,7 +8,7 @@ BeforeAll {
     Remove-Module Brownserve.PSBuildTools -ErrorAction SilentlyContinue -Verbose:$false
     Join-Path $global:BrownserveBuiltModuleDirectory 'Brownserve.PSBuildTools.psd1' | Import-Module -Force -Verbose:$false
 
-    $script:SnapshotsRoot = Join-Path $PSScriptRoot 'snapshots'
+    $script:SnapshotsRoot = Join-Path (Split-Path $PSScriptRoot -Parent) 'snapshots'
     $script:UpdateSnapshots = $env:BROWNSERVE_UPDATE_SNAPSHOTS -eq '1'
 }
 

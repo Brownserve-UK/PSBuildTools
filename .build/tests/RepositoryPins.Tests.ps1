@@ -183,7 +183,7 @@ Describe 'Update-BrownserveRepository forwards -Force' {
 
             Update-BrownserveRepository -RepositoryPath $RepositoryPath -Force -ErrorAction 'Stop'
 
-            Assert-MockCalled Compare-BrownserveRepository -Times 1 -ParameterFilter { $Force -eq $true }
+            Should -Invoke Compare-BrownserveRepository -Times 1 -Exactly -ParameterFilter { $Force -eq $true }
         }
     }
 
@@ -202,7 +202,7 @@ Describe 'Update-BrownserveRepository forwards -Force' {
 
             Update-BrownserveRepository -RepositoryPath $RepositoryPath -ErrorAction 'Stop'
 
-            Assert-MockCalled Compare-BrownserveRepository -Times 1 -ParameterFilter { $Force -eq $false }
+            Should -Invoke Compare-BrownserveRepository -Times 1 -Exactly -ParameterFilter { $Force -eq $false }
         }
     }
 }

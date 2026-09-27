@@ -4,7 +4,7 @@
 .SYNOPSIS
     Regenerates the committed snapshots used by 'RepositorySnapshots.Tests.ps1'.
 .DESCRIPTION
-    Deletes every snapshot directory under '.build/tests/snapshots/' and rewrites them from scratch by running 'RepositorySnapshots.Tests.ps1'
+    Deletes every snapshot directory under '.build/snapshots/' and rewrites them from scratch by running 'RepositorySnapshots.Tests.ps1'
     with the BROWNSERVE_UPDATE_SNAPSHOTS environment variable set.
     This reuses the exact same fixtures and mocks as the tests themselves (both are defined in
     'RepositorySnapshotFixtures.ps1'), so the snapshots and the tests that verify them can never drift apart.
@@ -19,7 +19,7 @@ param ()
 
 $ErrorActionPreference = 'Stop'
 
-$SnapshotsRoot = Join-Path $PSScriptRoot 'snapshots'
+$SnapshotsRoot = Join-Path (Split-Path $PSScriptRoot -Parent) 'snapshots'
 $TestFilePath = Join-Path $PSScriptRoot 'RepositorySnapshots.Tests.ps1'
 
 if (Test-Path $SnapshotsRoot)
