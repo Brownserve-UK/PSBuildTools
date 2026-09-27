@@ -1,0 +1,6 @@
+import { defineConfig } from 'astro/config';
+
+export default defineConfig({
+  site: 'https://###OWNER_LOWER###.github.io',
+  base: '/###REPO_NAME###',
+});

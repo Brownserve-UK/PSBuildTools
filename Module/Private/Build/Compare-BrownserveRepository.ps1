@@ -158,6 +158,7 @@ function Compare-BrownserveRepository
         $IncludeBuildScripts = $false
         $IncludePesterTests = $false
         $IncludeInstallScripts = $false
+        $IncludeAstroDocs = $false
         $BuildScriptUseWorkingCopyOption = $false
 
         <#
@@ -777,6 +778,86 @@ function Compare-BrownserveRepository
                         TemplateDirectory = $TemplatesDirectory
                         TemplateName      = 'rustapp_install.ps1.template'
                         Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
+                    }
+                }
+            }
+            'SkillsRepo'
+            {
+                Write-Debug 'SkillsRepo selected'
+                $ExtraPermanentPaths   = $RepositoryPathsConfig.SkillsRepo.PermanentPaths
+                $ExtraEphemeralPaths   = $RepositoryPathsConfig.SkillsRepo.EphemeralPaths
+                $ExtraPaketDeps        = $PaketDependenciesConfig.SkillsRepo
+                $ExtraGitIgnores       = $GitIgnoreConfig.SkillsRepo
+                $ExtraVSCodeExtensions = $VSCodeExtensionsConfig.SkillsRepo
+                $ExtraPackageAliases   = $PackageAliasConfig.SkillsRepo
+                $ExtraEditorConfig     = $EditorConfigConfig.SkillsRepo
+                $IncludeChangelog      = $true
+                $InitParams = @{
+                    IncludeModuleLoader   = $false
+                    IncludePowerShellYaml = $false
+                    IncludePlatyPS        = $false
+                    IncludeBuildTestTools = $true
+                }
+                $LicenseType         = 'MIT'
+                $IncludeWorkflows    = $true
+                $IncludeMarkdownlint = $true
+                $IncludeDependabot   = $true
+                $IncludeLabelPR      = $true
+                $IncludeContributing = $true
+                $IncludePRTemplate   = $true
+                $IncludeBuildScripts = $true
+                $IncludePesterTests  = $true
+                $IncludeAstroDocs    = $true
+                $PesterTestsParams   = @(
+                    @{
+                        FileName          = 'Skills.Tests.ps1'
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'skillsrepo_skills_tests.ps1.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                )
+                $DependabotParams = @{
+                    Updates = @(
+                        @{ Ecosystem = 'github-actions'; Directory = '/';      Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } },
+                        @{ Ecosystem = 'npm';            Directory = '/pages'; Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } }
+                    )
+                }
+                $ContributingParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'SkillsRepo_github_contributing.md.template'
+                }
+                $PRTemplateParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'SkillsRepo_github_pull_request_template.md.template'
+                    Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
+                }
+                $WorkflowTemplateParams = @{
+                    Builds = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'skillsrepo_github_builds.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                    StageRelease = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'webapp_github_stage-release.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                    Release = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'skillsrepo_github_release.yaml.template'
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                }
+                $BuildScriptTemplateParams = @{
+                    BuildScript = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'skillsrepo_build_script.ps1.template'
+                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
+                    }
+                    BuildTasks = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = 'skillsrepo_build_tasks.ps1.template'
+                        Substitutions     = @{ REPO_NAME = '' }
                     }
                 }
             }
@@ -2277,6 +2358,62 @@ function Compare-BrownserveRepository
     }
     end
     {
+        if ($IncludeAstroDocs)
+        {
+            if (-not $RepoName)
+            {
+                $RepoName = Split-Path $RepositoryPath -Leaf
+            }
+            $AstroDirectory      = Join-Path $RepositoryPath 'pages'
+            $AstroSrcDirectory   = Join-Path $AstroDirectory 'src'
+            $AstroPagesDirectory = Join-Path $AstroSrcDirectory 'pages'
+
+            foreach ($Dir in @($AstroDirectory, $AstroSrcDirectory, $AstroPagesDirectory))
+            {
+                if (!(Test-Path $Dir) -and ($MissingDirectories.Path -notcontains $Dir))
+                {
+                    $MissingDirectories += [pscustomobject]@{ Path = $Dir }
+                }
+            }
+
+            $AstroSubstitutions = @{
+                REPO_NAME   = $RepoName
+                OWNER_LOWER = $Owner.ToLower()
+            }
+            $AstroFiles = @(
+                @{ Path = (Join-Path $AstroDirectory 'package.json');        TemplateName = 'skillsrepo_astro_package.json.template' },
+                @{ Path = (Join-Path $AstroDirectory 'astro.config.mjs');    TemplateName = 'skillsrepo_astro_config.mjs.template' },
+                @{ Path = (Join-Path $AstroPagesDirectory 'index.astro');    TemplateName = 'skillsrepo_astro_index.astro.template' }
+            )
+
+            foreach ($AstroFile in $AstroFiles)
+            {
+                if (Test-Path $AstroFile.Path)
+                {
+                    Write-Verbose "'$($AstroFile.Path)' already exists, we only scaffold Astro files so leaving it alone."
+                    continue
+                }
+                try
+                {
+                    $NewAstroContent = New-BrownserveContentFromTemplate `
+                        -TemplateDirectory $TemplatesDirectory `
+                        -TemplateName $AstroFile.TemplateName `
+                        -Substitutions $AstroSubstitutions `
+                        -ErrorAction 'Stop' | Format-BrownserveContent
+                    Write-Verbose "No existing file found at '$($AstroFile.Path)', will create a new one."
+                    $MissingFiles += [pscustomobject]@{
+                        Path       = $AstroFile.Path
+                        Content    = $NewAstroContent.Content
+                        LineEnding = 'LF'
+                    }
+                }
+                catch
+                {
+                    throw "Failed to process '$($AstroFile.Path)'.`n$($_.Exception.Message)"
+                }
+            }
+        }
+
         # Return an object that contains all the information we've gathered
         if ($IncludeDependabot)
         {

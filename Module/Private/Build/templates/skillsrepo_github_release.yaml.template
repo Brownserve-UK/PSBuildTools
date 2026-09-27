@@ -1,0 +1,98 @@
+---
+name: release
+on:
+  workflow_dispatch:
+    inputs:
+      publish_to:
+        description: 'Where to publish the release to'
+        required: true
+        default: '"GitHub"'
+        type: string
+
+permissions: {}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # Step 1: Generate a short-lived token from the GitHub App
+      - name: generate-app-token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          app-id: ${{ secrets.BROWNSERVE_CI_APP_ID }}
+          private-key: ${{ secrets.BROWNSERVE_CI_APP_PRIVATE_KEY }}
+      # Step 2: Checkout the repo
+      - name: checkout-repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          path: ###REPO_NAME###
+      # Step 3: Run the build script
+      - name: run-build-script
+        shell: pwsh
+        env:
+          GitHubToken: ${{ steps.app-token.outputs.token }}
+        run: |
+            $Params = @{
+              BranchName = $env:GITHUB_REF
+              GitHubRepoName = '###REPO_NAME###'
+              Build = 'Release'
+              GitHubReleaseToken = $env:GitHubToken
+              PublishTo = ${{ inputs.publish_to }}
+              Verbose = $true
+            }
+            ./###REPO_NAME###/.build/build.ps1 @Params
+      # Step 4: Push a notification to Slack
+      - name: notify-slack
+        shell: pwsh
+        if: ${{ always() }}
+        env:
+          BUILD_NOTIFICATION_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_BUILD }}
+          BUILD_BRANCH: ${{ github.ref }}
+        run: |
+            ./###REPO_NAME###/.build/_init.ps1
+            Send-BuildNotification `
+              -BuildName ${{ github.job }} `
+              -BuildStatus ${{ job.status }} `
+              -Webhook $env:BUILD_NOTIFICATION_WEBHOOK `
+              -RepoBranch $env:BUILD_BRANCH `
+              -RepoName $global:BrownserveRepoName
+
+  deploy-docs:
+    name: Deploy documentation
+    needs: [release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write  # needed to push to the gh-pages branch
+    steps:
+      # Step 1: Checkout the repo
+      - name: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+      # Step 2: Install Node.js (Astro requires 22.12 or newer)
+      - name: setup-node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      # Step 3: Build the Astro site
+      - name: build-docs
+        working-directory: pages
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+      # Step 4: Push the built site to the gh-pages branch
+      - name: deploy-docs
+        working-directory: pages/dist
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          touch .nojekyll
+          git init --initial-branch=gh-pages
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+          git commit --message 'docs: deploy documentation site'
+          git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" gh-pages

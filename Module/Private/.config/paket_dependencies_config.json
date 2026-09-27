@@ -72,5 +72,15 @@
                 "PackageName": "Pester"
             }
         }
+    ],
+    "SkillsRepo":
+    [
+        {
+            "comment": "Pester is used to validate the skills and test the build scripts",
+            "rule": {
+                "source": "nuget",
+                "PackageName": "Pester"
+            }
+        }
     ]
 }
