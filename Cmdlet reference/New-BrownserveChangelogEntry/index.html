@@ -1564,7 +1564,7 @@ All other PRs with a 'breaking' label
 appear only in Breaking Changes.</p>
 <h2 id="examples">EXAMPLES<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <h3 id="example-1-automatically-generate-a-changelog-entry">Example 1: Automatically generate a changelog entry<a class="headerlink" href="#example-1-automatically-generate-a-changelog-entry" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">New-BrownserveChangelogEntry</span> <span class="n">-RepositoryOwner</span> <span class="s2">&quot;Brownserve-UK&quot;</span> <span class="n">-RepositoryName</span> <span class="s2">&quot;Brownserve.PSTools&quot;</span> <span class="n">-Version</span> <span class="n">1</span><span class="p">.</span><span class="n">0</span><span class="p">.</span><span class="n">0</span> <span class="n">-Auto</span> <span class="n">-GitHubToken</span> <span class="nv">$GitHubToken</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">New-BrownserveChangelogEntry</span> <span class="n">-RepositoryOwner</span> <span class="s2">"Brownserve-UK"</span> <span class="n">-RepositoryName</span> <span class="s2">"Brownserve.PSTools"</span> <span class="n">-Version</span> <span class="n">1</span><span class="p">.</span><span class="n">0</span><span class="p">.</span><span class="n">0</span> <span class="n">-Auto</span> <span class="n">-GitHubToken</span> <span class="nv">$GitHubToken</span>
 </code></pre></div>
 <p>This would generate a changelog entry for version 1.0.0 of the Brownserve.PSTools repository, automatically populating the features, bugfixes and known issues</p>
 <h2 id="parameters">PARAMETERS<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
@@ -1624,7 +1624,7 @@ appear only in Breaking Changes.</p>
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
 <a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="nt">Required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">False</span>
 <a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="nt">Position</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="nt">Default value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(Join-Path $PWD &#39;CHANGELOG.md&#39;)</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="nt">Default value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(Join-Path $PWD 'CHANGELOG.md')</span>
 <a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="nt">Accept pipeline input</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True (ByPropertyName)</span>
 <a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="nt">Accept wildcard characters</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
 </code></pre></div>

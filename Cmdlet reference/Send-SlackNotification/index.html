@@ -1595,30 +1595,30 @@
 <p>This cmdlet will send a message to a given Slack webhook, complex messages are formed using the legacy <a href="https://api.slack.com/reference/messaging/attachments">attachments</a> method (though limited support for block kit is supported via the <code>-UpperBlocks</code> parameter)</p>
 <h2 id="examples">EXAMPLES<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <h3 id="example-1-simple-message">Example 1: Simple message<a class="headerlink" href="#example-1-simple-message" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">Send-SlackNotification</span> <span class="n">-Message</span> <span class="s2">&quot;This is a test&quot;</span> <span class="n">-Webhook</span> <span class="s2">&quot;https://mywebhook&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">Send-SlackNotification</span> <span class="n">-Message</span> <span class="s2">"This is a test"</span> <span class="n">-Webhook</span> <span class="s2">"https://mywebhook"</span>
 </code></pre></div>
 <p>Would send the message "This is a test" to the given Slack webhook</p>
 <h3 id="example-2-more-complex-message">Example 2: More complex message<a class="headerlink" href="#example-2-more-complex-message" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">Send-SlackNotification</span> <span class="n">-Message</span> <span class="s2">&quot;This is a test&quot;</span> <span class="n">-Webhook</span> <span class="s2">&quot;https://mywebhook&quot;</span> <span class="n">-Color</span> <span class="s2">&quot;#FF0000&quot;</span> <span class="n">-Title</span> <span class="s2">&quot;This is a title&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">Send-SlackNotification</span> <span class="n">-Message</span> <span class="s2">"This is a test"</span> <span class="n">-Webhook</span> <span class="s2">"https://mywebhook"</span> <span class="n">-Color</span> <span class="s2">"#FF0000"</span> <span class="n">-Title</span> <span class="s2">"This is a title"</span>
 </code></pre></div>
 <p>This would send the message "This is a test" to the given Slack webhook, the left hand side of the message would feature a red bar and "This is a title" would be displayed in large text at the top of the message</p>
 <h3 id="example-3-custom-sections">Example 3: Custom sections<a class="headerlink" href="#example-3-custom-sections" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">$SubBlocks</span> <span class="p">=</span> <span class="p">@(</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="p">@{</span>                                                                                          
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>        <span class="nb">type </span><span class="p">=</span> <span class="s2">&quot;section&quot;</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>        <span class="nb">type </span><span class="p">=</span> <span class="s2">"section"</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>        <span class="n">fields</span> <span class="p">=</span> <span class="p">@(</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>            <span class="p">@{</span> 
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>                <span class="nb">type </span><span class="p">=</span> <span class="s2">&quot;mrkdwn&quot;</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>                <span class="n">text</span> <span class="p">=</span> <span class="s2">&quot;Bottom Left?&quot;</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>                <span class="nb">type </span><span class="p">=</span> <span class="s2">"mrkdwn"</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>                <span class="n">text</span> <span class="p">=</span> <span class="s2">"Bottom Left?"</span>
 <a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>            <span class="p">},</span>
 <a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>            <span class="p">@{</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>                <span class="nb">type </span><span class="p">=</span> <span class="s2">&quot;mrkdwn&quot;</span>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>                <span class="n">text</span> <span class="p">=</span> <span class="s2">&quot;Bottom Right?&quot;</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>                <span class="nb">type </span><span class="p">=</span> <span class="s2">"mrkdwn"</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>                <span class="n">text</span> <span class="p">=</span> <span class="s2">"Bottom Right?"</span>
 <a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>            <span class="p">}</span>
 <a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>        <span class="p">)</span>
 <a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    <span class="p">}</span>
 <a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="p">)</span>
-<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="nb">Send-SlackNotification</span> <span class="n">-Message</span> <span class="s2">&quot;This is a test&quot;</span> <span class="n">-Webhook</span> <span class="s2">&quot;https://mywebhook&quot;</span> <span class="n">-Color</span> <span class="s2">&quot;#FF0000&quot;</span> <span class="n">-Title</span> <span class="s2">&quot;This is a title&quot;</span> <span class="n">-SubBlocks</span> <span class="nv">$SubBlocks</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="nb">Send-SlackNotification</span> <span class="n">-Message</span> <span class="s2">"This is a test"</span> <span class="n">-Webhook</span> <span class="s2">"https://mywebhook"</span> <span class="n">-Color</span> <span class="s2">"#FF0000"</span> <span class="n">-Title</span> <span class="s2">"This is a title"</span> <span class="n">-SubBlocks</span> <span class="nv">$SubBlocks</span>
 </code></pre></div>
 <p>In this example we create a set of nested objects containing some additional fields that we wish to append to the message, these are then passed in to the cmdlet with the <code>-SubBlocks</code> parameter</p>
 <h2 id="parameters">PARAMETERS<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>

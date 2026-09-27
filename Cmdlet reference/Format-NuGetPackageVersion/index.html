@@ -1379,11 +1379,11 @@
 <p>Formats a version number to ensure compatibility with NuGet and nuget.org</p>
 <h2 id="examples">EXAMPLES<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <h3 id="example-1-format-for-semver-200-nuget-430">Example 1: Format for SemVer 2.0.0 (NuGet 4.3.0+)<a class="headerlink" href="#example-1-format-for-semver-200-nuget-430" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">Format-NuGetPackageVersion</span> <span class="n">-Version</span> <span class="s1">&#39;0.1.2-rc1+20230825&#39;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">Format-NuGetPackageVersion</span> <span class="n">-Version</span> <span class="s1">'0.1.2-rc1+20230825'</span>
 </code></pre></div>
 <p>This would return the unedited version string that was passed in as it is completely compatible.</p>
 <h3 id="example-2-format-for-semver-100-pre-nuget-400">Example 2: Format for SemVer 1.0.0 (Pre-NuGet 4.0.0)<a class="headerlink" href="#example-2-format-for-semver-100-pre-nuget-400" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">Format-NuGetPackageVersion</span> <span class="n">-Version</span> <span class="s1">&#39;0.1.2-rc1+20230825&#39;</span> <span class="n">-SemanticVersion</span> <span class="s1">&#39;1.0.0&#39;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">Format-NuGetPackageVersion</span> <span class="n">-Version</span> <span class="s1">'0.1.2-rc1+20230825'</span> <span class="n">-SemanticVersion</span> <span class="s1">'1.0.0'</span>
 </code></pre></div>
 <p>This would return concatenate the prerelease and build labels as build labels are not supported.
 Resulting in <code>0.1.2-rc120230825</code> being returned</p>
@@ -1398,7 +1398,7 @@ Prior to NuGet 4.3.0 only SemVer 1.0.0 was supported.</p>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="nt">Required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">False</span>
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="nt">Position</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="nt">Default value</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;2.0.0&#39;</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="nt">Default value</span><span class="p">:</span><span class="w"> </span><span class="s">'2.0.0'</span>
 <a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="nt">Accept pipeline input</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True (ByPropertyName)</span>
 <a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="nt">Accept wildcard characters</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">False</span>
 </code></pre></div>
