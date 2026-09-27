@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Release
 
+## [v0.3.0](https://github.com/Brownserve-UK/PSBuildTools/tree/v0.3.0) (2026-09-27)
+
+### Added
+
+- feat: add `skillsrepo` project type in [#30](https://github.com/Brownserve-UK/PSBuildTools/pull/30) by [@shoddyguard](https://github.com/shoddyguard)
+- feat: ignore `.agents` on repos by default in [#29](https://github.com/Brownserve-UK/PSBuildTools/pull/29) by [@shoddyguard](https://github.com/shoddyguard)
+- feat: add new bsdev repo type in [#25](https://github.com/Brownserve-UK/PSBuildTools/pull/25) by [@shoddyguard](https://github.com/shoddyguard)
+- feat: add new `RustApp` repository type. in [#21](https://github.com/Brownserve-UK/PSBuildTools/pull/21) by [@shoddyguard](https://github.com/shoddyguard)
+
+### Fixed
+
+- fix: ensure webapp has GitHub release guard logic. in [#24](https://github.com/Brownserve-UK/PSBuildTools/pull/24) by [@shoddyguard](https://github.com/shoddyguard)
+- fix: ensure webapp builds are triggered on npm updates in [#20](https://github.com/Brownserve-UK/PSBuildTools/pull/20) by [@shoddyguard](https://github.com/shoddyguard)
+
+### Changed
+
+- refactor: rework the logic of the repository onboarding in [#32](https://github.com/Brownserve-UK/PSBuildTools/pull/32) by [@shoddyguard](https://github.com/shoddyguard)
+
+
 ## [v0.2.0](https://github.com/Brownserve-UK/PSBuildTools/tree/v0.2.0) (2026-06-13)
 
 ### Added
