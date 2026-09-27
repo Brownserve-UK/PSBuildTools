@@ -1,3 +1,22 @@
+<#
+.SYNOPSIS
+    Updates a repository that has already been initialised with 'Initialize-BrownserveRepository'.
+.DESCRIPTION
+    Reads the repository's '.brownserve_repository_manifest' to work out which components it's configured with.
+    A v1 (legacy, project-type based) manifest is migrated automatically to the v2, component based format,
+    carrying over the working-copy setting for PowerShell module repositories where appropriate.
+.PARAMETER RepositoryPath
+    The path to the repository to update. Defaults to the current directory.
+.PARAMETER Owner
+    The owner of the repository, used for licensing and other metadata.
+.PARAMETER Force
+    Forces the recreation of files even if they already exist.
+.PARAMETER RepoName
+    The GitHub repository name, if different from the local directory name.
+.EXAMPLE
+    Update-BrownserveRepository
+    Updates the repository in the current directory.
+#>
 function Update-BrownserveRepository
 {
     [CmdletBinding()]
@@ -22,42 +41,7 @@ function Update-BrownserveRepository
         # Defaults to the leaf name of RepositoryPath if not provided.
         [Parameter(Mandatory = $false)]
         [string]
-        $RepoName,
-
-        # The config file to use for setting our .gitignore content
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $GitIgnoreConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'gitignore_config.json'),
-
-        # The config file to use for setting our .gitignore content
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $PaketDependenciesConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'paket_dependencies_config.json'),
-
-        # The config file to use that stores our permanent/ephemeral path configuration
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $RepositoryPathsConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'repository_paths_config.json'),
-
-        # The config file that stores devcontainer configurations
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $DevcontainerConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'devcontainer_config.json'),
-
-        # The config file that stores VS Code extension configuration
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $VSCodeExtensionsConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'repository_vscode_extensions.json'),
-
-        # The config file that stores any package aliases we'd like to create
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $PackageAliasConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'package_aliases_config.json'),
-
-        # The config file that stores any editorconfig settings we'd like to create
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $EditorConfigConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'editorconfig_config.json')
+        $RepoName
     )
     begin
     {
@@ -76,7 +60,7 @@ function Update-BrownserveRepository
     process
     {
         <#
-            Start by loading our special repository manifest file so we know what type of project we're working with
+            Start by loading our special repository manifest file so we know what components we're working with
         #>
         $RepositoryManifestFile = Join-Path $RepositoryPath '.brownserve_repository_manifest'
         if (!(Test-Path $RepositoryManifestFile))
@@ -85,28 +69,21 @@ function Update-BrownserveRepository
         }
         try
         {
-            $RepositoryType = Get-Content $RepositoryManifestFile -ErrorAction 'Stop' |
-                ConvertFrom-Json |
-                    Select-Object -ExpandProperty RepositoryType
+            $Manifest = Get-Content $RepositoryManifestFile -ErrorAction 'Stop' | ConvertFrom-Json -Depth 100 -AsHashtable
         }
         catch
         {
             throw "Failed to read repository manifest file.`n$($_.Exception.Message)"
         }
-        if ($RepositoryType -in @('PowerShellModule', 'BrownservePSTools'))
+
+        $ModuleInfoPath = Join-Path $RepositoryPath '.build' 'ModuleInfo.json'
+        $ExistingModuleInfo = $null
+        if (Test-Path $ModuleInfoPath)
         {
             try
             {
-                $RepositoryPathsConfig = Read-ConfigurationFromFile $RepositoryPathsConfigFile
-                $BuildDirectory = Join-Path $RepositoryPath ($RepositoryPathsConfig.Defaults.PermanentPaths |
-                    Where-Object { $_.VariableName -eq 'BrownserveRepoBuildDirectory' }).Path
-                $ModuleInfoPath = Join-Path $BuildDirectory 'ModuleInfo.json'
-                if (!(Test-Path $ModuleInfoPath))
-                {
-                    throw "ModuleInfo.json not found at '$ModuleInfoPath'."
-                }
-                $ModuleInfoData = Get-Content $ModuleInfoPath -Raw | ConvertFrom-Json -AsHashtable
-                $ModuleInfo = [BrownservePowerShellModule]$ModuleInfoData
+                $ModuleInfoData = Get-Content $ModuleInfoPath -Raw -ErrorAction 'Stop' | ConvertFrom-Json -AsHashtable
+                $ExistingModuleInfo = [BrownservePowerShellModule]$ModuleInfoData
             }
             catch
             {
@@ -114,26 +91,54 @@ function Update-BrownserveRepository
             }
         }
 
+        if ($Manifest.ManifestVersion -like '2.*')
+        {
+            $Components = @($Manifest.Components | ForEach-Object { $_.Name })
+            $ComponentOptions = @{}
+            foreach ($ManifestComponent in $Manifest.Components)
+            {
+                if ($ManifestComponent.Options)
+                {
+                    $ComponentOptions[$ManifestComponent.Name] = @{} + $ManifestComponent.Options
+                }
+            }
+            if ($Components -contains 'PowerShellModule' -and $ExistingModuleInfo)
+            {
+                if (!$ComponentOptions.ContainsKey('PowerShellModule'))
+                {
+                    $ComponentOptions['PowerShellModule'] = @{}
+                }
+                $ComponentOptions['PowerShellModule']['ModuleInfo'] = $ExistingModuleInfo
+            }
+        }
+        else
+        {
+            Write-Verbose 'Migrating legacy (v1) repository manifest to the v2, component based format.'
+            try
+            {
+                $Migrated = ConvertTo-BrownserveRepoComponentFromLegacyType `
+                    -RepositoryType $Manifest.RepositoryType `
+                    -ModuleInfo $ExistingModuleInfo `
+                    -ErrorAction 'Stop'
+            }
+            catch
+            {
+                throw "Failed to migrate legacy repository manifest.`n$($_.Exception.Message)"
+            }
+            $Components = $Migrated.Components
+            $ComponentOptions = $Migrated.ComponentOptions
+        }
+
         try
         {
             $CompareParams = @{
-                RepositoryPath             = $RepositoryPath
-                ProjectType                = $RepositoryType
-                Owner                      = $Owner
-                GitIgnoreConfigFile        = $GitIgnoreConfigFile
-                PaketDependenciesConfigFile = $PaketDependenciesConfigFile
-                RepositoryPathsConfigFile  = $RepositoryPathsConfigFile
-                DevcontainerConfigFile     = $DevcontainerConfigFile
-                VSCodeExtensionsConfigFile = $VSCodeExtensionsConfigFile
-                PackageAliasConfigFile     = $PackageAliasConfigFile
-                EditorConfigConfigFile     = $EditorConfigConfigFile
-                RepoName                  = $RepoName
-                Force                     = $Force
-                ErrorAction               = 'Stop'
-            }
-            if ($ModuleInfo)
-            {
-                $CompareParams.ModuleInfo = $ModuleInfo
+                RepositoryPath   = $RepositoryPath
+                Components       = $Components
+                ComponentOptions = $ComponentOptions
+                Owner            = $Owner
+                RepoName         = $RepoName
+                Force            = $Force
+                ErrorAction      = 'Stop'
             }
             $RepositoryState = Compare-BrownserveRepository @CompareParams
         }

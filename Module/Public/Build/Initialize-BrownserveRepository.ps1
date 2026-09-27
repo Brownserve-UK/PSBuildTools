@@ -1,3 +1,33 @@
+<#
+.SYNOPSIS
+    Initialises a repository with the files needed for it to be built and released the "Brownserve way".
+.DESCRIPTION
+    Repositories are described by a set of components (e.g. 'PowerShellModule', 'RustBinary', 'ContainerImage')
+    rather than a single project type. 'Core' is always included automatically.
+    This cmdlet works out what's missing/different compared to what the requested components expect and, if
+    it's safe to do so, creates/updates those files on a dedicated branch.
+.PARAMETER RepositoryPath
+    The path to the repository to initialise. Defaults to the current directory.
+.PARAMETER Components
+    The components this repository should be configured with. 'Core' is always included and should not be
+    listed explicitly.
+.PARAMETER ComponentOptions
+    Options for the requested components, keyed by component name. For example, a 'PowerShellModule'
+    repository's metadata is supplied via '@{ PowerShellModule = @{ ModuleInfo = $ModuleInfo } }'.
+.PARAMETER RepoName
+    The GitHub repository name, if different from the local directory name.
+.PARAMETER Owner
+    The owner of the repository, used for licensing and other metadata.
+.PARAMETER Force
+    Forces the recreation of files even if they already exist.
+.EXAMPLE
+    Initialize-BrownserveRepository -Components RustBinary
+    Initialises the current directory as a Rust binary repository.
+.EXAMPLE
+    $ModuleInfo = @{ Name = 'Brownserve.Example'; Description = '...'; GUID = (New-Guid); Tags = @('example') }
+    Initialize-BrownserveRepository -Components PowerShellModule, MkDocs -ComponentOptions @{ PowerShellModule = @{ ModuleInfo = $ModuleInfo } }
+    Initialises the current directory as a PowerShell module repository with MkDocs documentation.
+#>
 function Initialize-BrownserveRepository
 {
     [CmdletBinding()]
@@ -8,16 +38,16 @@ function Initialize-BrownserveRepository
         [string]
         $RepositoryPath = (Get-Location),
 
-        # The type of build that should be installed in this repo
-        [Parameter(Mandatory = $false)]
+        # The components that should be present in this repository, 'Core' is always included automatically
+        [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
-        [BrownserveRepoProjectType]
-        $ProjectType = 'generic',
+        [string[]]
+        $Components,
 
-        # The PowerShell module metadata, required when repo houses a PowerShell module.
+        # Options for the requested components, keyed by component name
         [Parameter(Mandatory = $false)]
-        [BrownservePowerShellModule]
-        $ModuleInfo,
+        [hashtable]
+        $ComponentOptions = @{},
 
         # The GitHub repository name, if different from the local directory name.
         # Defaults to the leaf name of RepositoryPath if not provided.
@@ -33,47 +63,7 @@ function Initialize-BrownserveRepository
         # Forces the recreation of files even if they already exist
         [Parameter(Mandatory = $false)]
         [switch]
-        $Force,
-
-        # The config file to use for setting our .gitignore content
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $GitIgnoreConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'gitignore_config.json'),
-
-        # The config file to use for setting our .gitignore content
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $PaketDependenciesConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'paket_dependencies_config.json'),
-
-        # The config file to use that stores our permanent/ephemeral path configuration
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $RepositoryPathsConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'repository_paths_config.json'),
-
-        # The config file that stores devcontainer configurations
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $DevcontainerConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'devcontainer_config.json'),
-
-        # The config file that stores VS Code extension configuration
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $VSCodeExtensionsConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'repository_vscode_extensions.json'),
-
-        # The config file that stores any package aliases we'd like to create
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $PackageAliasConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'package_aliases_config.json'),
-
-        # The config file that stores any editorconfig settings we'd like to create
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $EditorConfigConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'editorconfig_config.json'),
-
-        # The config file that stores markdownlint settings
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $MarkdownlintConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'markdownlint_config.json')
+        $Force
     )
     begin
     {
@@ -95,18 +85,10 @@ function Initialize-BrownserveRepository
         {
             $RepositoryState = Compare-BrownserveRepository `
                 -RepositoryPath $RepositoryPath `
-                -ProjectType $ProjectType `
+                -Components $Components `
+                -ComponentOptions $ComponentOptions `
                 -Force:$Force `
                 -Owner $Owner `
-                -GitIgnoreConfigFile $GitIgnoreConfigFile `
-                -PaketDependenciesConfigFile $PaketDependenciesConfigFile `
-                -RepositoryPathsConfigFile $RepositoryPathsConfigFile `
-                -DevcontainerConfigFile $DevcontainerConfigFile `
-                -VSCodeExtensionsConfigFile $VSCodeExtensionsConfigFile `
-                -PackageAliasConfigFile $PackageAliasConfigFile `
-                -EditorConfigConfigFile $EditorConfigConfigFile `
-                -MarkdownlintConfigFile $MarkdownlintConfigFile `
-                -ModuleInfo $ModuleInfo `
                 -RepoName $RepoName `
                 -ErrorAction 'Stop'
         }

@@ -3,11 +3,11 @@
     Checks the current state of a repository to see if it is initialised correctly.
 .DESCRIPTION
     This cmdlet is pretty complex as we use it to test the state of a given repository on disk to see if it is
-    correctly initialised depending on the type of project the repository houses.
+    correctly initialised depending on the components the repository has been configured with.
     We don't want to modify any files on disk until we're sure we won't destroy any manual changes that may have
     been made.
     As such this cmdlet will compare the state of the files in the repository to a set of templates that we
-    generate based on the type of project the repository houses, if the repository is missing any files or if
+    generate based on the resolved components, if the repository is missing any files or if
     the files are different to that of the templates then we'll add them to a list of files that need to be
     created or updated and return them to the calling process to be handled.
     Due to the complexities of comparing files with line endings and formatting we make heavy use of the various
@@ -28,16 +28,15 @@ function Compare-BrownserveRepository
         [string]
         $Owner = 'Brownserve-UK',
 
-        # The type of build that should be installed in this repo
+        # The components that should be present in this repository, 'Core' is always included automatically
         [Parameter(Mandatory = $false)]
-        [ValidateNotNullOrEmpty()]
-        [BrownserveRepoProjectType]
-        $ProjectType = 'generic',
+        [string[]]
+        $Components = @(),
 
-        # The PowerShell module metadata, required when ProjectType is 'PowerShellModule' or 'BrownservePSTools'
+        # Options for the requested components, keyed by component name
         [Parameter(Mandatory = $false)]
-        [BrownservePowerShellModule]
-        $ModuleInfo,
+        [hashtable]
+        $ComponentOptions = @{},
 
         # The GitHub repository name, if different from the local directory name.
         # Defaults to the leaf name of RepositoryPath if not provided.
@@ -48,47 +47,7 @@ function Compare-BrownserveRepository
         # Forces the recreation of files even if they already exist
         [Parameter(Mandatory = $false)]
         [switch]
-        $Force,
-
-        # The config file to use for setting our .gitignore content
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $GitIgnoreConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'gitignore_config.json'),
-
-        # The config file to use for setting our .gitignore content
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $PaketDependenciesConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'paket_dependencies_config.json'),
-
-        # The config file to use that stores our permanent/ephemeral path configuration
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $RepositoryPathsConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'repository_paths_config.json'),
-
-        # The config file that stores devcontainer configurations
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $DevcontainerConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'devcontainer_config.json'),
-
-        # The config file that stores VS Code extension configuration
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $VSCodeExtensionsConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'repository_vscode_extensions.json'),
-
-        # The config file that stores any package aliases we'd like to create
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $PackageAliasConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'package_aliases_config.json'),
-
-        # The config file that stores any editorconfig settings we'd like to create
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $EditorConfigConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'editorconfig_config.json'),
-
-        # The config file that stores markdownlint settings
-        [Parameter(Mandatory = $false, DontShow)]
-        [string]
-        $MarkdownlintConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'markdownlint_config.json')
+        $Force
     )
     begin
     {
@@ -112,23 +71,24 @@ function Compare-BrownserveRepository
             throw "$($_.Exception.Message)`nThese tools are required to configure a Brownserve repository."
         }
 
-        # Ensure the config files are valid
         try
         {
-            $GitIgnoreConfig = Read-ConfigurationFromFile $GitIgnoreConfigFile
-            $PaketDependenciesConfig = Read-ConfigurationFromFile $PaketDependenciesConfigFile
-            $RepositoryPathsConfig = Read-ConfigurationFromFile $RepositoryPathsConfigFile
-            $DevcontainerConfig = Read-ConfigurationFromFile $DevcontainerConfigFile
-            $PackageAliasConfig = Read-ConfigurationFromFile $PackageAliasConfigFile
-            # Load VS code extensions as a hashtable so we can easily merge things later on
-            $VSCodeExtensionsConfig = Read-ConfigurationFromFile $VSCodeExtensionsConfigFile -AsHashtable
-            # Load EditorConfig as a hashtable as our [EditorConfigSection] type cannot process psobject's
-            $EditorConfigConfig = Read-ConfigurationFromFile $EditorConfigConfigFile -AsHashtable
-            $MarkdownlintConfig = Read-ConfigurationFromFile $MarkdownlintConfigFile
+            $ComponentDefinitions = Get-BrownserveRepoComponentDefinition -ErrorAction 'Stop'
+            $ResolvedComponents = Resolve-BrownserveRepoComponent -Name $Components -Options $ComponentOptions -ErrorAction 'Stop'
         }
         catch
         {
-            throw "Failed to import configuration data.`n$($_.Exception.Message)"
+            throw "Failed to resolve repository components.`n$($_.Exception.Message)"
+        }
+
+        try
+        {
+            $LegacyProfilesPath = Join-Path $Script:BrownserveRepoComponentsDirectory 'LegacyProfiles.psd1'
+            $LegacyProfiles = Import-PowerShellDataFile -Path $LegacyProfilesPath -ErrorAction 'Stop'
+        }
+        catch
+        {
+            throw "Failed to read legacy profile data.`n$($_.Exception.Message)"
         }
 
         try
@@ -161,18 +121,6 @@ function Compare-BrownserveRepository
         $MissingFiles = @()
         $ChangedFiles = @()
         $MissingDirectories = @()
-        $IncludeChangelog = $false
-        $IncludeWorkflows = $false
-        $IncludeMarkdownlint = $false
-        $IncludeDependabot = $false
-        $IncludeLabelPR = $false
-        $IncludeContributing = $false
-        $IncludePRTemplate = $false
-        $IncludeBuildScripts = $false
-        $IncludePesterTests = $false
-        $IncludeInstallScripts = $false
-        $IncludeAstroDocs = $false
-        $BuildScriptUseWorkingCopyOption = $false
 
         <#
             We type constrain these variables to ensure that we can easily add to them later on.
@@ -182,28 +130,15 @@ function Compare-BrownserveRepository
         [array]$VSCodeWorkspaceExtensionIDs = @()
         $VSCodeWorkspaceSettings = [ordered]@{}
 
-        <#
-            Our config file contains a list of permanent paths that should always be created in a repository.
-            They survive between init's and are not gitignored.
-        #>
-        $DefaultPermanentPaths = $RepositoryPathsConfig.Defaults.PermanentPaths
+        $ResolvedByName = @{}
+        $ResolvedComponents | ForEach-Object { $ResolvedByName[$_.Name] = $_ }
 
         <#
-            Our config file may contain a list of ephemeral paths that get created when the _init script is run.
-            They are deleted between init's and are commonly gitignored.
+            The below paths will always be required regardless of the components we're working with.
         #>
-        $DefaultEphemeralPaths = $RepositoryPathsConfig.Defaults.EphemeralPaths
+        $DefaultPermanentPathsLookup = $ComponentDefinitions['Core'].Data.PermanentPaths
+        $BuildDirectory = Join-Path $RepositoryPath ($DefaultPermanentPathsLookup | Where-Object { $_.VariableName -eq 'BrownserveRepoBuildDirectory' }).Path
 
-        if ($DefaultPermanentPaths.VariableName -notcontains 'BrownserveRepoBuildDirectory')
-        {
-            throw 'BrownserveRepoBuildDirectory path not found in repository paths config file.'
-            #TODO: Should we consider raising this as a warning instead?
-        }
-        $BuildDirectory = Join-Path $RepositoryPath ($DefaultPermanentPaths | Where-Object { $_.VariableName -eq 'BrownserveRepoBuildDirectory' }).Path
-
-        <#
-            The below paths will always be required regardless of the type of repository we're working with.
-        #>
         $ManifestPath = Join-Path $RepositoryPath '.brownserve_repository_manifest'
         $InitPath = Join-Path $BuildDirectory '_init.ps1'
         $PaketDependenciesPath = Join-Path $RepositoryPath 'paket.dependencies'
@@ -212,7 +147,7 @@ function Compare-BrownserveRepository
         $NugetConfigPath = Join-Path $RepositoryPath 'nuget.config'
         $GitIgnorePath = Join-Path $RepositoryPath '.gitignore'
 
-        # These paths may or may not be required depending on the type of repository we're working with
+        # These paths may or may not be required depending on the components we're working with
         $VSCodePath = Join-Path $RepositoryPath '.vscode'
         $VSCodeExtensionsFilePath = Join-Path $VSCodePath 'extensions.json'
         $VSCodeWorkspaceSettingsFilePath = Join-Path $VSCodePath 'settings.json'
@@ -229,8 +164,8 @@ function Compare-BrownserveRepository
         $BuildTasksDirectory = Join-Path $BuildDirectory 'tasks'
 
         <#
-            To help with consistency we store a special manifest file in the repository that contains some basic information
-            about the repository. (Right now we just use it to store the type of repository we're working with.)
+            To help with consistency we store a special manifest file in the repository that contains some basic
+            information about the repository, including which components it's configured with.
         #>
         if ((Test-Path $ManifestPath))
         {
@@ -243,21 +178,7 @@ function Compare-BrownserveRepository
             {
                 throw "Failed to read repository manifest file.`n$($_.Exception.Message)"
             }
-
-            # Check to see if the repository type is the same as the one we're trying to configure, if it's not
-            # then fail unless -Force has been passed.
-            if (($CurrentManifest.RepositoryType -ne $ProjectType) -and !$Force)
-            {
-                throw "Repository type mismatch. Expected '$ProjectType' but repository was previously configured as '$($CurrentManifest.RepositoryType)'.`nUse the '-Force' switch to overwrite the existing configuration."
-            }
-            # Fail if the repository type is not present in the manifest file
-            if (!$CurrentManifest.RepositoryType)
-            {
-                throw 'Repository type not found in manifest file.'
-            }
-            Write-Debug "Repository type found in manifest file: $($CurrentManifest.RepositoryType)"
         }
-
 
         <#
             Because we don't want to make any changes to the repository until we're sure we can do so safely,
@@ -365,539 +286,360 @@ function Compare-BrownserveRepository
             }
         }
 
-        # Build up our default list of gitignore's that we always want to use
-        # TODO: Do we want to make ignoring paket.lock optional?
-        $DefaultGitIgnores = $GitIgnoreConfig.Defaults
+        $GitIgnoreBlocks = @()
+        $CorePaketDependencyBlocks = @()
+        $ComponentPaketDependencyBlocks = @()
+        $PermanentPathEntries = @()
+        $EphemeralPathEntries = @()
+        $CoreVSCodeExtensions = @()
+        $ComponentVSCodeExtensions = @()
+        $PackageAliasEntries = @()
+        $EditorConfigEntries = @()
+        $DependabotExtraUpdates = @()
+        $DockerfileName = $null
+        $ModuleInfo = $null
+        $ReleaseLifecycleData = $null
 
-        # Set-up the paket dependency that are common to all our projects
-        $DefaultPaketDependencies = $PaketDependenciesConfig.Defaults
-        $DefaultPaketDependencies | ForEach-Object {
+        $InitParams = @{
+            IncludeModuleLoader   = $false
+            IncludePowerShellYaml = $false
+            IncludePlatyPS        = $false
+            IncludeBuildTestTools = $false
+        }
+        $IncludeChangelog = $false
+        $LicenseType = $null
+        $IncludeMarkdownlint = $false
+        $IncludeLabelPR = $false
+        $IncludeContributing = $false
+        $IncludePRTemplate = $false
+        $IncludeWorkflows = $false
+        $IncludeBuildScripts = $false
+        $IncludePesterTests = $false
+        $IncludeDependabot = $false
+        $IncludeMkDocs = $false
+        $IncludeAstroDocs = $false
+        $IncludeInstallScripts = $false
+        $BuildScriptUseWorkingCopyOption = $false
+        $DisableGitHubActionsCooldown = $false
+        $PowerShellModuleIncludeLicense = $true
+
+        foreach ($Component in $ResolvedComponents)
+        {
+            $Data = $ComponentDefinitions[$Component.Name].Data
+            switch ($Component.Name)
+            {
+                'Core'
+                {
+                    $GitIgnoreBlocks += $Data.GitIgnores
+                    $CorePaketDependencyBlocks += $Data.PaketDependencies
+                    $PermanentPathEntries += $Data.PermanentPaths
+                    $EphemeralPathEntries += $Data.EphemeralPaths
+                    $CoreVSCodeExtensions += $Data.VSCodeExtensions
+                    $PackageAliasEntries += $Data.PackageAliases
+                    $EditorConfigEntries += $Data.EditorConfig
+                }
+                'ReleaseLifecycle'
+                {
+                    $ReleaseLifecycleData = $Data
+                    $EditorConfigEntries += $Data.EditorConfig
+                    $IncludeChangelog = $Data.IncludeChangelog
+                    $LicenseType = $Data.LicenseType
+                    $IncludeMarkdownlint = $Data.IncludeMarkdownlint
+                    $IncludeLabelPR = $Data.IncludeLabelPR
+                    $IncludeContributing = $Data.IncludeContributing
+                    $IncludePRTemplate = $Data.IncludePRTemplate
+                    $IncludeWorkflows = $Data.IncludeWorkflows
+                    $IncludeBuildScripts = $Data.IncludeBuildScripts
+                    $IncludePesterTests = $Data.IncludePesterTests
+                    $IncludeDependabot = $Data.IncludeDependabot
+                    $InitParams.IncludeBuildTestTools = $true
+                }
+                'PowerShellModule'
+                {
+                    $ModuleInfo = $Component.Options.ModuleInfo
+                    $PermanentPathEntries += $Data.PermanentPaths
+                    $ComponentPaketDependencyBlocks += $Data.PaketDependencies
+                    $ComponentVSCodeExtensions += $Data.VSCodeExtensions
+                    $PackageAliasEntries += $Data.PackageAliases
+                    if (-not $DockerfileName)
+                    {
+                        $DockerfileName = $Data.Devcontainer.Dockerfile
+                    }
+                    $DependabotExtraUpdates += $Data.DependabotExtraUpdates
+                    $InitParams.IncludePowerShellYaml = $true
+                    $InitParams.IncludePlatyPS = $true
+                    $InitParams.IncludeModuleLoader = -not [bool]$Component.Options.UseWorkingCopy
+                    $BuildScriptUseWorkingCopyOption = [bool]$Component.Options.UseWorkingCopy
+                    $DisableGitHubActionsCooldown = [bool]$Component.Options.DisableGitHubActionsCooldown
+                    $PowerShellModuleIncludeLicense = [bool]$Component.Options.IncludeLicense
+                }
+                'RustBinary'
+                {
+                    $PermanentPathEntries += $Data.PermanentPaths
+                    $ComponentPaketDependencyBlocks += $Data.PaketDependencies
+                    $GitIgnoreBlocks += $Data.GitIgnores
+                    $ComponentVSCodeExtensions += $Data.VSCodeExtensions
+                    $EditorConfigEntries += $Data.EditorConfig
+                    if (-not $DockerfileName)
+                    {
+                        $DockerfileName = $Data.Devcontainer.Dockerfile
+                    }
+                    $DependabotExtraUpdates += $Data.DependabotExtraUpdates
+                    $IncludeInstallScripts = [bool]$Data.IncludeInstallScripts
+                }
+                'ContainerImage'
+                {
+                    $PermanentPathEntries += $Data.PermanentPaths
+                    $ComponentPaketDependencyBlocks += $Data.PaketDependencies
+                    if ($Component.Options.IncludeEnvIgnore)
+                    {
+                        $GitIgnoreBlocks += $Data.EnvGitIgnore
+                    }
+                    $GitIgnoreBlocks += $Data.GitIgnores
+                    $ComponentVSCodeExtensions += $Data.VSCodeExtensions
+                    if ($Component.Options.IncludeShellEditorConfig)
+                    {
+                        $EditorConfigEntries += $Data.ShellEditorConfig
+                    }
+                    if (-not $DockerfileName)
+                    {
+                        $DockerfileName = $Data.Devcontainer.Dockerfile
+                    }
+                    $ContainerDependabotDirectory = if ($Component.Options.Context -eq '.') { '/' } else { "/$($Component.Options.Context)" }
+                    $DependabotExtraUpdates += @{ Ecosystem = 'docker'; Directory = $ContainerDependabotDirectory; Interval = 'weekly'; CooldownDays = 30 }
+                }
+                'DirectoryArchive'
+                {
+                    $PermanentPathEntries += $Data.PermanentPaths
+                    $ComponentPaketDependencyBlocks += $Data.PaketDependencies
+                    $GitIgnoreBlocks += $Data.GitIgnores
+                    $ComponentVSCodeExtensions += $Data.VSCodeExtensions
+                    $EditorConfigEntries += $Data.EditorConfig
+                    $SkillsPath = @{} + $Data.PermanentPathTemplate
+                    $SkillsPath.Path = $Component.Options.Path
+                    $PermanentPathEntries += $SkillsPath
+                }
+                'MkDocs'
+                {
+                    $IncludeMkDocs = $true
+                }
+                'AstroDocs'
+                {
+                    $IncludeAstroDocs = $true
+                    $PermanentPathEntries += $Data.PermanentPaths
+                    $DependabotExtraUpdates += $Data.DependabotExtraUpdates
+                }
+            }
+        }
+
+        $SeenPathVariables = @{}
+        $FinalPermanentPaths = @()
+        foreach ($PathEntry in $PermanentPathEntries)
+        {
+            if (!$SeenPathVariables.ContainsKey($PathEntry.VariableName))
+            {
+                $SeenPathVariables[$PathEntry.VariableName] = $true
+                $FinalPermanentPaths += $PathEntry
+            }
+        }
+        $FinalEphemeralPaths = $EphemeralPathEntries
+
+        $InitParams.Add('PermanentPaths', $FinalPermanentPaths)
+        $InitParams.Add('EphemeralPaths', $FinalEphemeralPaths)
+
+        $FinalPackageAliases = $PackageAliasEntries
+        if ($FinalPackageAliases.Count -gt 0)
+        {
+            $InitParams.Add('PackageAliases', $FinalPackageAliases)
+        }
+
+        $FinalGitIgnores = $GitIgnoreBlocks
+        $GitIgnoreParams = @{
+            GitIgnores = $FinalGitIgnores
+        }
+        if ($ManualGitIgnores)
+        {
+            $GitIgnoreParams.Add('ManualGitIgnores', $ManualGitIgnores)
+        }
+
+        $CorePaketDependencyBlocks | ForEach-Object {
             $_.Rule | ForEach-Object {
                 if ($BrownserveModuleVersions.ContainsKey($_.PackageName))
                 {
-                    $_ | Add-Member -MemberType 'NoteProperty' -Name 'Version' -Value $BrownserveModuleVersions[$_.PackageName] -Force
+                    $_['Version'] = $BrownserveModuleVersions[$_.PackageName]
                 }
             }
         }
+        $SeenPaketPackageNames = @{}
+        $FinalPaketDependencies = @()
+        foreach ($Block in ($CorePaketDependencyBlocks + $ComponentPaketDependencyBlocks))
+        {
+            $UnseenRules = @($Block.Rule | Where-Object { !$SeenPaketPackageNames.ContainsKey($_.PackageName) })
+            if ($UnseenRules.Count -eq 0)
+            {
+                continue
+            }
+            $Block.Rule | ForEach-Object { $SeenPaketPackageNames[$_.PackageName] = $true }
+            $FinalPaketDependencies += $Block
+        }
+        $PaketParams = @{
+            PaketDependencies = $FinalPaketDependencies
+        }
+        if ($ManualPaketEntries)
+        {
+            $PaketParams.Add('ManualDependencies', $ManualPaketEntries)
+        }
 
-        # Careful -AsHashtable makes key names case sensitive when converted from JSON! (defaults != Defaults)
-        $DefaultVSCodeExtensions = $VSCodeExtensionsConfig.Defaults
+        $FinalEditorConfig = $EditorConfigEntries
+        $EditorConfigParams = @{
+            IncludeRoot = $true
+            Section     = $FinalEditorConfig
+        }
 
-        $DefaultPackageAliases = $PackageAliasConfig.Defaults
+        if ($CustomInitSteps)
+        {
+            $InitParams.Add('CustomInitSteps', $CustomInitSteps)
+        }
 
-        $DefaultEditorConfig = $EditorConfigConfig.Defaults
+        $VSCodeExtensions = $CoreVSCodeExtensions + $ComponentVSCodeExtensions
 
-        # We don't use a config file to create the manifest file as it's a simple object
-        $NewManifest = [ordered]@{
-            RepositoryType  = $ProjectType.ToString()
-            ManifestVersion = '1.0.0'
+        if ($IncludeDependabot)
+        {
+            $BaseCooldownDays = $ReleaseLifecycleData.DependabotBaseCooldownDays
+            if ($DisableGitHubActionsCooldown)
+            {
+                $BaseCooldownDays = $null
+            }
+            $DependabotUpdatesFinal = @()
+            $BaseUpdate = @{} + $ReleaseLifecycleData.DependabotBaseUpdate
+            if ($BaseCooldownDays)
+            {
+                $BaseUpdate['Cooldown'] = @{ DefaultDays = $BaseCooldownDays }
+            }
+            $DependabotUpdatesFinal += $BaseUpdate
+            foreach ($ExtraUpdate in $DependabotExtraUpdates)
+            {
+                $Update = @{ Ecosystem = $ExtraUpdate.Ecosystem; Directory = $ExtraUpdate.Directory; Interval = $ExtraUpdate.Interval }
+                if ($ExtraUpdate.CooldownDays)
+                {
+                    $Update['Cooldown'] = @{ DefaultDays = $ExtraUpdate.CooldownDays }
+                }
+                $DependabotUpdatesFinal += $Update
+            }
+            $DependabotParams = @{
+                Updates = $DependabotUpdatesFinal
+            }
+        }
+
+        $MarkdownlintConfig = [ordered]@{}
+        foreach ($Rule in $ReleaseLifecycleData.MarkdownlintRules)
+        {
+            $MarkdownlintConfig[$Rule.Name] = $Rule.Value
+        }
+
+        if ($ResolvedByName.ContainsKey('PowerShellModule') -and !$PowerShellModuleIncludeLicense)
+        {
+            $LicenseType = $null
         }
 
         $TemplatesDirectory = Join-Path $PSScriptRoot 'templates'
-
-        switch ($ProjectType)
+        if ($IncludeWorkflows -or $IncludeBuildScripts -or $IncludeContributing -or $IncludePRTemplate -or $IncludePesterTests)
         {
-            <#
-                For a repo that houses a PowerShell module we'll want to include:
-                    - The logic for loading the module as part of the _init script
-                    - PlatyPS for building module documentation
-                    - powershell-yaml for working with CI/CD files
-                    - Invoke-Build/Pester for building and testing the module
-            #>
-            'PowerShellModule'
+            $ProfileComponentNames = @($ResolvedComponents.Name | Where-Object { $_ -in @('PowerShellModule', 'RustBinary', 'ContainerImage', 'DirectoryArchive') } | Sort-Object)
+            $ProfileKey = $ProfileComponentNames -join '+'
+            if (!$LegacyProfiles.ContainsKey($ProfileKey))
             {
-                Write-Debug 'PowerShell Module selected'
-                # Check our configuration files for any special logic when working with PowerShell module repos
-                $DockerfileName = $DevcontainerConfig.PowerShellModule.Dockerfile
-                $ExtraPermanentPaths = $RepositoryPathsConfig.PowerShellModule.PermanentPaths
-                $ExtraEphemeralPaths = $RepositoryPathsConfig.PowerShellModule.EphemeralPaths
-                $ExtraPaketDeps = $PaketDependenciesConfig.PowerShellModule
-                $ExtraGitIgnores = $GitIgnoreConfig.PowerShellModule
-                $ExtraVSCodeExtensions = $VSCodeExtensionsConfig.PowerShellModule
-                $ExtraPackageAliases = $PackageAliasConfig.PowerShellModule
-                $ExtraEditorConfig = $EditorConfigConfig.PowerShellModule
-                $IncludeChangelog = $true
-                $InitParams = @{
-                    IncludeModuleLoader   = $true
-                    IncludePowerShellYaml = $true
-                    IncludePlatyPS        = $true
-                    IncludeBuildTestTools = $true
-                }
-                $LicenseType = 'MIT'
-                $IncludeWorkflows = $true
-                $IncludeMarkdownlint = $true
-                $IncludeDependabot = $true
-                $IncludeLabelPR = $true
-                $IncludeContributing = $true
-                $IncludePRTemplate = $true
-                $IncludeBuildScripts = $true
-                $IncludePesterTests = $true
-                $PesterTestsParams = @(
-                    @{
-                        FileName          = 'Help.Tests.ps1'
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'help.tests.ps1.template'
-                        Substitutions     = @{ MODULE_NAME = $ModuleInfo.Name }
-                    }
-                )
-                $IncludeMkDocs = $true
-                $DependabotParams = @{
-                    Updates = @(
-                        @{ Ecosystem = 'github-actions'; Directory = '/';       Interval = 'weekly' },
-                        @{ Ecosystem = 'nuget';          Directory = '/.config'; Interval = 'weekly' }
-                    )
-                }
-                $ContributingParams = @{
-                    TemplateDirectory = $TemplatesDirectory
-                    TemplateName      = 'PowerShellModule_github_contributing.md.template'
-                }
-                $PRTemplateParams = @{
-                    TemplateDirectory = $TemplatesDirectory
-                    TemplateName      = 'PowerShellModule_github_pull_request_template.md.template'
-                    Substitutions     = @{
-                        MODULE_NAME = $ModuleInfo.Name
-                        OWNER       = ''
-                    }
-                }
+                throw "The component combination '$ProfileKey' is not supported yet."
             }
-            <#
-                For the repo that houses this very PowerShell module we want to do things a little differently.
-                We avoid loading the Brownserve.PSTools module locally in _init.ps1 and use nuget as normal to get a stable version
-                (this ensures that we can still get notified of failed builds)
-                We can use our build to load the local version of the module.
-            #>
-            'BrownservePSTools'
-            {
-                Write-Debug 'BrownservePSTools selected'
-                # For now we use the same basic config as all our other PowerShell modules except in the params below
-                $DockerfileName = $DevcontainerConfig.PowerShellModule.Dockerfile
-                $ExtraPermanentPaths = $RepositoryPathsConfig.PowerShellModule.PermanentPaths
-                $ExtraEphemeralPaths = $RepositoryPathsConfig.PowerShellModule.EphemeralPaths
-                $ExtraPaketDeps = $PaketDependenciesConfig.PowerShellModule
-                $ExtraGitIgnores = $GitIgnoreConfig.PowerShellModule
-                $ExtraVSCodeExtensions = $VSCodeExtensionsConfig.PowerShellModule
-                $ExtraPackageAliases = $PackageAliasConfig.PowerShellModule
-                $ExtraEditorConfig = $EditorConfigConfig.PowerShellModule
-                $IncludeChangelog = $true
-                $InitParams = @{
-                    IncludeModuleLoader   = $false # we don't want to load the module locally, we want the stable version from nuget
-                    IncludePowerShellYaml = $true
-                    IncludePlatyPS        = $true
-                    IncludeBuildTestTools = $true
-                }
-                $IncludeWorkflows = $true
-                $IncludeMarkdownlint = $true
-                $IncludeDependabot = $true
-                $IncludeLabelPR = $true
-                $IncludeContributing = $true
-                $IncludePRTemplate = $true
-                $IncludeBuildScripts = $true
-                $IncludePesterTests = $true
-                $PesterTestsParams = @(
-                    @{
-                        FileName          = 'Help.Tests.ps1'
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'help.tests.ps1.template'
-                        Substitutions     = @{ MODULE_NAME = $ModuleInfo.Name }
-                    }
-                )
-                $IncludeMkDocs = $true
-                $BuildScriptUseWorkingCopyOption = $true
-                $DependabotParams = @{
-                    Updates = @(
-                        @{ Ecosystem = 'github-actions'; Directory = '/';       Interval = 'weekly' },
-                        @{ Ecosystem = 'nuget';          Directory = '/.config'; Interval = 'weekly' }
-                    )
-                }
-                $ContributingParams = @{
-                    TemplateDirectory = $TemplatesDirectory
-                    TemplateName      = 'PowerShellModule_github_contributing.md.template'
-                }
-                $PRTemplateParams = @{
-                    TemplateDirectory = $TemplatesDirectory
-                    TemplateName      = 'PowerShellModule_github_pull_request_template.md.template'
-                    Substitutions     = @{
-                        MODULE_NAME = $ModuleInfo.Name
-                        OWNER       = ''
-                    }
-                }
-            }
-            'WebApp'
-            {
-                Write-Debug 'WebApp selected'
-                $DockerfileName        = $DevcontainerConfig.WebApp.Dockerfile
-                $ExtraPermanentPaths   = $RepositoryPathsConfig.WebApp.PermanentPaths
-                $ExtraEphemeralPaths   = $RepositoryPathsConfig.WebApp.EphemeralPaths
-                $ExtraPaketDeps        = $PaketDependenciesConfig.WebApp
-                $ExtraGitIgnores       = $GitIgnoreConfig.WebApp
-                $ExtraVSCodeExtensions = $VSCodeExtensionsConfig.WebApp
-                $ExtraPackageAliases   = $PackageAliasConfig.WebApp
-                $ExtraEditorConfig     = $EditorConfigConfig.WebApp
-                $IncludeChangelog      = $true
-                $InitParams = @{
-                    IncludeModuleLoader   = $false
-                    IncludePowerShellYaml = $false
-                    IncludePlatyPS        = $false
-                    IncludeBuildTestTools = $true
-                }
-                $LicenseType         = 'MIT'
-                $IncludeWorkflows    = $true
-                $IncludeMarkdownlint = $true
-                $IncludeDependabot   = $true
-                $IncludeLabelPR      = $true
-                $IncludeContributing = $true
-                $IncludePRTemplate   = $true
-                $IncludeBuildScripts = $true
-                $IncludePesterTests = $true
-                $PesterTestsParams  = @(
-                    @{
-                        FileName          = 'Basic.Container.Tests.ps1'
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'container_basic_tests.ps1.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                )
-                $DependabotParams = @{
-                    Updates = @(
-                        @{ Ecosystem = 'github-actions'; Directory = '/'; Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } },
-                        @{ Ecosystem = 'docker';         Directory = '/'; Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } }
-                    )
-                }
-                $ContributingParams = @{
-                    TemplateDirectory = $TemplatesDirectory
-                    TemplateName      = 'WebApp_github_contributing.md.template'
-                }
-                $PRTemplateParams = @{
-                    TemplateDirectory = $TemplatesDirectory
-                    TemplateName      = 'WebApp_github_pull_request_template.md.template'
-                    Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
-                }
-                $WorkflowTemplateParams = @{
-                    Builds = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'webapp_github_builds.yaml.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                    StageRelease = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'webapp_github_stage-release.yaml.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                    Release = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'webapp_github_release.yaml.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                }
-                $BuildScriptTemplateParams = @{
-                    BuildScript = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'webapp_build_script.ps1.template'
-                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
-                    }
-                    BuildTasks = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'webapp_build_tasks.ps1.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                }
-            }
-            <#
-                For a repo that builds and ships a Rust application we want to include:
-                    - Invoke-Build/Pester for building and testing
-                    - GitHub Actions workflows with a matrix build (linux/mac/windows) for the Release
-                    - A GitHub release that uploads compiled binaries as assets
-                    - Cargo version kept in sync with CHANGELOG.md via [workspace.package]
-            #>
-            'RustApp'
-            {
-                Write-Debug 'RustApp selected'
-                $DockerfileName        = $DevcontainerConfig.RustApp.Dockerfile
-                $ExtraPermanentPaths   = $RepositoryPathsConfig.RustApp.PermanentPaths
-                $ExtraEphemeralPaths   = $RepositoryPathsConfig.RustApp.EphemeralPaths
-                $ExtraPaketDeps        = $PaketDependenciesConfig.RustApp
-                $ExtraGitIgnores       = $GitIgnoreConfig.RustApp
-                $ExtraVSCodeExtensions = $VSCodeExtensionsConfig.RustApp
-                $ExtraPackageAliases   = $PackageAliasConfig.RustApp
-                $ExtraEditorConfig     = $EditorConfigConfig.RustApp
-                $IncludeChangelog      = $true
-                $InitParams = @{
-                    IncludeModuleLoader   = $false
-                    IncludePowerShellYaml = $false
-                    IncludePlatyPS        = $false
-                    IncludeBuildTestTools = $true
-                }
-                $LicenseType         = 'MIT'
-                $IncludeWorkflows    = $true
-                $IncludeMarkdownlint = $true
-                $IncludeDependabot   = $true
-                $IncludeLabelPR      = $true
-                $IncludeContributing = $true
-                $IncludePRTemplate   = $true
-                $IncludeBuildScripts = $true
-                $IncludePesterTests  = $true
-                $PesterTestsParams   = @(
-                    @{
-                        FileName          = 'Basic.Binary.Tests.ps1'
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'rustapp_binary_tests.ps1.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                )
-                $DependabotParams = @{
-                    Updates = @(
-                        @{ Ecosystem = 'github-actions'; Directory = '/'; Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } },
-                        @{ Ecosystem = 'cargo';          Directory = '/'; Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } }
-                    )
-                }
-                $ContributingParams = @{
-                    TemplateDirectory = $TemplatesDirectory
-                    TemplateName      = 'RustApp_github_contributing.md.template'
-                }
-                $PRTemplateParams = @{
-                    TemplateDirectory = $TemplatesDirectory
-                    TemplateName      = 'RustApp_github_pull_request_template.md.template'
-                    Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
-                }
-                $WorkflowTemplateParams = @{
-                    Builds = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'rustapp_github_builds.yaml.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                    StageRelease = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'rustapp_github_stage-release.yaml.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                    Release = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'rustapp_github_release.yaml.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                }
-                $BuildScriptTemplateParams = @{
-                    BuildScript = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'rustapp_build_script.ps1.template'
-                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
-                    }
-                    BuildTasks = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'rustapp_build_tasks.ps1.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                }
-                $IncludeInstallScripts    = $true
-                $InstallScriptsParams = @{
-                    ShellScript = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'rustapp_install.sh.template'
-                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
-                    }
-                    PowerShellScript = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'rustapp_install.ps1.template'
-                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
-                    }
-                }
-            }
-            <#
-                bsdev is a Rust application that ALSO ships a Docker container (image/Dockerfile,
-                published to ghcr.io/<owner>/<repo>). It is therefore its own project type: the full
-                RustApp native-binary pipeline (matrix build -> GitHub release) PLUS a container
-                build/push to GHCR and DockerHub. The container is independent of the Rust binary.
-            #>
-            'bsdev'
-            {
-                Write-Debug 'bsdev selected'
-                $DockerfileName        = $DevcontainerConfig.bsdev.Dockerfile
-                $ExtraPermanentPaths   = $RepositoryPathsConfig.bsdev.PermanentPaths
-                $ExtraEphemeralPaths   = $RepositoryPathsConfig.bsdev.EphemeralPaths
-                $ExtraPaketDeps        = $PaketDependenciesConfig.bsdev
-                $ExtraGitIgnores       = $GitIgnoreConfig.bsdev
-                $ExtraVSCodeExtensions = $VSCodeExtensionsConfig.bsdev
-                $ExtraPackageAliases   = $PackageAliasConfig.bsdev
-                $ExtraEditorConfig     = $EditorConfigConfig.bsdev
-                $IncludeChangelog      = $true
-                $InitParams = @{
-                    IncludeModuleLoader   = $false
-                    IncludePowerShellYaml = $false
-                    IncludePlatyPS        = $false
-                    IncludeBuildTestTools = $true
-                }
-                $LicenseType         = 'MIT'
-                $IncludeWorkflows    = $true
-                $IncludeMarkdownlint = $true
-                $IncludeDependabot   = $true
-                $IncludeLabelPR      = $true
-                $IncludeContributing = $true
-                $IncludePRTemplate   = $true
-                $IncludeBuildScripts = $true
-                $IncludePesterTests  = $true
-                $PesterTestsParams   = @(
-                    @{
-                        FileName          = 'Basic.Binary.Tests.ps1'
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'rustapp_binary_tests.ps1.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                )
-                $DependabotParams = @{
-                    Updates = @(
-                        @{ Ecosystem = 'github-actions'; Directory = '/';      Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } },
-                        @{ Ecosystem = 'cargo';          Directory = '/';      Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } },
-                        @{ Ecosystem = 'docker';         Directory = '/image'; Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } }
-                    )
-                }
-                $ContributingParams = @{
-                    TemplateDirectory = $TemplatesDirectory
-                    TemplateName      = 'RustApp_github_contributing.md.template'
-                }
-                $PRTemplateParams = @{
-                    TemplateDirectory = $TemplatesDirectory
-                    TemplateName      = 'RustApp_github_pull_request_template.md.template'
-                    Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
-                }
-                $WorkflowTemplateParams = @{
-                    Builds = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'bsdev_github_builds.yaml.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                    StageRelease = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'rustapp_github_stage-release.yaml.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                    Release = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'bsdev_github_release.yaml.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                }
-                $BuildScriptTemplateParams = @{
-                    BuildScript = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'bsdev_build_script.ps1.template'
-                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
-                    }
-                    BuildTasks = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'bsdev_build_tasks.ps1.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                }
-                $IncludeInstallScripts    = $true
-                $InstallScriptsParams = @{
-                    ShellScript = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'rustapp_install.sh.template'
-                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
-                    }
-                    PowerShellScript = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'rustapp_install.ps1.template'
-                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
-                    }
-                }
-            }
-            'SkillsRepo'
-            {
-                Write-Debug 'SkillsRepo selected'
-                $ExtraPermanentPaths   = $RepositoryPathsConfig.SkillsRepo.PermanentPaths
-                $ExtraEphemeralPaths   = $RepositoryPathsConfig.SkillsRepo.EphemeralPaths
-                $ExtraPaketDeps        = $PaketDependenciesConfig.SkillsRepo
-                $ExtraGitIgnores       = $GitIgnoreConfig.SkillsRepo
-                $ExtraVSCodeExtensions = $VSCodeExtensionsConfig.SkillsRepo
-                $ExtraPackageAliases   = $PackageAliasConfig.SkillsRepo
-                $ExtraEditorConfig     = $EditorConfigConfig.SkillsRepo
-                $IncludeChangelog      = $true
-                $InitParams = @{
-                    IncludeModuleLoader   = $false
-                    IncludePowerShellYaml = $false
-                    IncludePlatyPS        = $false
-                    IncludeBuildTestTools = $true
-                }
-                $LicenseType         = 'MIT'
-                $IncludeWorkflows    = $true
-                $IncludeMarkdownlint = $true
-                $IncludeDependabot   = $true
-                $IncludeLabelPR      = $true
-                $IncludeContributing = $true
-                $IncludePRTemplate   = $true
-                $IncludeBuildScripts = $true
-                $IncludePesterTests  = $true
-                $IncludeAstroDocs    = $true
-                $PesterTestsParams   = @(
-                    @{
-                        FileName          = 'Skills.Tests.ps1'
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'skillsrepo_skills_tests.ps1.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                )
-                $DependabotParams = @{
-                    Updates = @(
-                        @{ Ecosystem = 'github-actions'; Directory = '/';      Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } },
-                        @{ Ecosystem = 'npm';            Directory = '/pages'; Interval = 'weekly'; Cooldown = @{ DefaultDays = 30 } }
-                    )
-                }
-                $ContributingParams = @{
-                    TemplateDirectory = $TemplatesDirectory
-                    TemplateName      = 'SkillsRepo_github_contributing.md.template'
-                }
-                $PRTemplateParams = @{
-                    TemplateDirectory = $TemplatesDirectory
-                    TemplateName      = 'SkillsRepo_github_pull_request_template.md.template'
-                    Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
-                }
-                $WorkflowTemplateParams = @{
-                    Builds = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'skillsrepo_github_builds.yaml.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                    StageRelease = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'webapp_github_stage-release.yaml.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                    Release = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'skillsrepo_github_release.yaml.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                }
-                $BuildScriptTemplateParams = @{
-                    BuildScript = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'skillsrepo_build_script.ps1.template'
-                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
-                    }
-                    BuildTasks = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = 'skillsrepo_build_tasks.ps1.template'
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                }
-            }
-            Default
-            {
-                Write-Debug 'Generic project type selected'
-                # We always need the $InitParams hashtable otherwise we'll get a null-valued expression error
-                $InitParams = @{
-                    IncludeModuleLoader   = $false
-                    IncludePowerShellYaml = $false
-                    IncludePlatyPS        = $false
-                    IncludeBuildTestTools = $false
-                }
-            }
-        }
+            $LegacyProfile = $LegacyProfiles[$ProfileKey]
 
-        if ($IncludeWorkflows -and -not $ModuleInfo -and -not $WorkflowTemplateParams)
-        {
-            throw "A '-ModuleInfo' value is required for '$ProjectType' repositories."
+            if ($LegacyProfile.VSCodeExtensionsOverride)
+            {
+                $VSCodeExtensions = $CoreVSCodeExtensions + $LegacyProfile.VSCodeExtensionsOverride
+            }
+
+            if ($IncludeContributing)
+            {
+                $ContributingParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = $LegacyProfile.ContributingTemplate
+                }
+            }
+            if ($IncludePRTemplate)
+            {
+                $PRTemplateSubstitutions = @{}
+                foreach ($Key in $LegacyProfile.PRTemplateSubstitutionKeys)
+                {
+                    switch ($Key)
+                    {
+                        'MODULE_NAME' { $PRTemplateSubstitutions['MODULE_NAME'] = $ModuleInfo.Name }
+                        'OWNER' { $PRTemplateSubstitutions['OWNER'] = '' }
+                        default { $PRTemplateSubstitutions[$Key] = '' }
+                    }
+                }
+                $PRTemplateParams = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = $LegacyProfile.PRTemplateTemplate
+                    Substitutions     = $PRTemplateSubstitutions
+                }
+            }
+            if ($IncludeWorkflows -and $LegacyProfile.WorkflowTemplates)
+            {
+                $WorkflowTemplateParams = @{
+                    Builds       = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = $LegacyProfile.WorkflowTemplates.Builds
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                    StageRelease = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = $LegacyProfile.WorkflowTemplates.StageRelease
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                    Release      = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = $LegacyProfile.WorkflowTemplates.Release
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                }
+            }
+            if ($IncludeBuildScripts -and $LegacyProfile.BuildScriptTemplates)
+            {
+                $BuildScriptTemplateParams = @{
+                    BuildScript = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = $LegacyProfile.BuildScriptTemplates.BuildScript
+                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
+                    }
+                    BuildTasks  = @{
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = $LegacyProfile.BuildScriptTemplates.BuildTasks
+                        Substitutions     = @{ REPO_NAME = '' }
+                    }
+                }
+            }
+            if ($IncludePesterTests)
+            {
+                $PesterTestsParams = @()
+                foreach ($TestSpec in $LegacyProfile.PesterTests)
+                {
+                    $Substitutions = @{}
+                    foreach ($Key in $TestSpec.SubstitutionKeys)
+                    {
+                        switch ($Key)
+                        {
+                            'MODULE_NAME' { $Substitutions['MODULE_NAME'] = $ModuleInfo.Name }
+                            default { $Substitutions[$Key] = '' }
+                        }
+                    }
+                    $PesterTestsParams += @{
+                        FileName          = $TestSpec.FileName
+                        TemplateDirectory = $TemplatesDirectory
+                        TemplateName      = $TestSpec.TemplateName
+                        Substitutions     = $Substitutions
+                    }
+                }
+            }
         }
 
         if ($UnParsableFiles.Count -gt 0 -and !$Force)
@@ -917,95 +659,6 @@ function Compare-BrownserveRepository
             }
         }
 
-        if ($ExtraPermanentPaths)
-        {
-            $FinalPermanentPaths = $DefaultPermanentPaths + $ExtraPermanentPaths
-        }
-        else
-        {
-            $FinalPermanentPaths = $DefaultPermanentPaths
-        }
-        if ($ExtraEphemeralPaths.Count -gt 0)
-        {
-            $FinalEphemeralPaths = $DefaultEphemeralPaths + $ExtraEphemeralPaths
-        }
-        else
-        {
-            $FinalEphemeralPaths = $DefaultEphemeralPaths
-        }
-
-        $InitParams.Add('PermanentPaths', $FinalPermanentPaths)
-        $InitParams.Add('EphemeralPaths', $FinalEphemeralPaths)
-
-        if ($ExtraGitIgnores)
-        {
-            $FinalGitIgnores = $DefaultGitIgnores + $ExtraGitIgnores
-        }
-        else
-        {
-            $FinalGitIgnores = $DefaultGitIgnores
-        }
-        if ($ExtraPackageAliases)
-        {
-            $FinalPackageAliases = $DefaultPackageAliases + $ExtraPackageAliases
-        }
-        else
-        {
-            $FinalPackageAliases = $DefaultPackageAliases
-        }
-        if ($FinalPackageAliases)
-        {
-            $InitParams.Add('PackageAliases', $FinalPackageAliases)
-        }
-        $GitIgnoreParams = @{
-            GitIgnores = $FinalGitIgnores
-        }
-        if ($ManualGitIgnores)
-        {
-            $GitIgnoreParams.Add('ManualGitIgnores', $ManualGitIgnores)
-        }
-
-        if ($ExtraPaketDeps)
-        {
-            $FinalPaketDependencies = $DefaultPaketDependencies + $ExtraPaketDeps
-        }
-        else
-        {
-            $FinalPaketDependencies = $DefaultPaketDependencies
-        }
-        $PaketParams = @{
-            PaketDependencies = $FinalPaketDependencies
-        }
-        if ($ManualPaketEntries)
-        {
-            $PaketParams.Add('ManualDependencies', $ManualPaketEntries)
-        }
-
-        if ($ExtraEditorConfig)
-        {
-            $FinalEditorConfig = $DefaultEditorConfig + $ExtraEditorConfig
-        }
-        else
-        {
-            $FinalEditorConfig = $DefaultEditorConfig
-        }
-        $EditorConfigParams = @{
-            IncludeRoot = $true
-            Section     = $FinalEditorConfig
-        }
-
-        if ($CustomInitSteps)
-        {
-            $InitParams.Add('CustomInitSteps', $CustomInitSteps)
-        }
-        if ($ExtraVSCodeExtensions)
-        {
-            $VSCodeExtensions = $DefaultVSCodeExtensions + $ExtraVSCodeExtensions
-        }
-        else
-        {
-            $VSCodeExtensions = $DefaultVSCodeExtensions
-        }
         if ($VSCodeExtensions.Count -gt 0)
         {
             # Extract the list of extension ID's we want to install in this repo and clean up any duplicates
@@ -1013,7 +666,7 @@ function Compare-BrownserveRepository
             $VSCodeWorkspaceExtensionIDs = $VSCodeWorkspaceExtensionIDs | Select-Object -Unique
 
             <#
-                Due to the way we store the VS Code settings in our config file, they end up getting read out as an array
+                Due to the way we store the VS Code settings, they end up getting read out as an array
                 when we expand the object property.
                 However the cmdlet that creates the settings file expects a hashtable.
                 By far the easiest method to convert this to a hashtable is to pass our array of Hashtable's to the
@@ -1230,7 +883,7 @@ function Compare-BrownserveRepository
             }
         }
 
-        # The type of license we use is dependent on the type of project we're working with
+        # The license we generate is tied to the ReleaseLifecycle component
         # though in the future we may want to allow the user to override this.
         if ($LicenseType)
         {
@@ -1263,11 +916,17 @@ function Compare-BrownserveRepository
 
         try
         {
+            $NewManifest = New-BrownserveRepositoryManifest `
+                -Components $Components `
+                -ComponentOptions $ComponentOptions `
+                -Definitions $ComponentDefinitions `
+                -GeneratedByVersion $BrownserveModuleVersions['Brownserve.PSBuildTools'] `
+                -ErrorAction 'Stop'
             $NewManifestJSON = ConvertTo-Json $NewManifest -Depth 100 -ErrorAction 'Stop' | Format-BrownserveContent
-            $CurrentManifestJSON = ConvertTo-Json $CurrentManifest -Depth 100 -ErrorAction 'Stop' | Format-BrownserveContent
             if ($CurrentManifest)
             {
                 Write-Verbose 'Checking for changes to repository manifest'
+                $CurrentManifestJSON = ConvertTo-Json $CurrentManifest -Depth 100 -ErrorAction 'Stop' | Format-BrownserveContent
                 $ManifestCompare = Compare-Object `
                     -ReferenceObject $CurrentManifestJSON.Content `
                     -DifferenceObject $NewManifestJSON.Content `
@@ -2243,12 +1902,21 @@ function Compare-BrownserveRepository
                 $MissingDirectories += [pscustomobject]@{ Path = $ScriptsDirectory }
             }
 
+            $InstallScriptsParams = @{
+                ShellScript      = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'rustapp_install.sh.template'
+                    Substitutions     = @{ REPO_NAME = $RepoName; OWNER = $Owner }
+                }
+                PowerShellScript = @{
+                    TemplateDirectory = $TemplatesDirectory
+                    TemplateName      = 'rustapp_install.ps1.template'
+                    Substitutions     = @{ REPO_NAME = $RepoName; OWNER = $Owner }
+                }
+            }
+
             try
             {
-                $InstallScriptsParams.ShellScript.Substitutions['REPO_NAME']       = $RepoName
-                $InstallScriptsParams.ShellScript.Substitutions['OWNER']           = $Owner
-                $InstallScriptsParams.PowerShellScript.Substitutions['REPO_NAME']  = $RepoName
-                $InstallScriptsParams.PowerShellScript.Substitutions['OWNER']      = $Owner
                 $ShellScriptParams      = $InstallScriptsParams.ShellScript
                 $PSScriptParams         = $InstallScriptsParams.PowerShellScript
                 $NewInstallShContent    = New-BrownserveContentFromTemplate @ShellScriptParams   | Format-BrownserveContent
@@ -2492,4 +2160,3 @@ function Compare-BrownserveRepository
         Return $Return
     }
 }
-

@@ -20,14 +20,14 @@ Update-BrownserveRepository [[-RepositoryPath] <String>] [-Owner <String>] [-For
 
 ## DESCRIPTION
 
-This cmdlet can be used after a repository has been initialised using the `Initialize-BrownserveRepository` cmdlet to keep the projects tooling and settings up to date.
+This cmdlet can be used after a repository has been initialised using the `Initialize-BrownserveRepository` cmdlet to keep the projects tooling and settings up to date. It reads the repository's components from its `.brownserve_repository_manifest`, automatically migrating a legacy (v1), project-type based manifest to the v2, component based format.
 
 ## EXAMPLES
 
 ### Example 1
 
 ```powershell
-Update-BrownserveRepository -RepositoryPath 'C:\myPowershellModule' -ProjectType 'PowerShellModule'
+Update-BrownserveRepository -RepositoryPath 'C:\myPowershellModule'
 ```
 
 Would update the project at 'C:\myPowershellModule'

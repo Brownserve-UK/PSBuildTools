@@ -572,6 +572,82 @@ enum BrownserveRepoProjectType
     Generic
 }
 
+## Repository component classes
+
+<#
+    Represents a single option that a repository component accepts (e.g. 'PowerShellModule' accepts a
+    'UseWorkingCopy' option). Definitions are read from the component's 'component.psd1' file.
+#>
+class BrownserveRepoComponentOption
+{
+    [string]$Name
+    [string]$Type
+    $Default
+    [bool]$Required
+
+    BrownserveRepoComponentOption([hashtable]$Hashtable)
+    {
+        if (!$Hashtable.Name)
+        {
+            throw "Hashtable missing key 'Name'"
+        }
+        if (!$Hashtable.Type)
+        {
+            throw "Hashtable missing key 'Type'"
+        }
+        $this.Name = $Hashtable.Name
+        $this.Type = $Hashtable.Type
+        $this.Default = $Hashtable.Default
+        $this.Required = [bool]$Hashtable.Required
+    }
+}
+
+<#
+    Represents a repository component definition as read from 'component.psd1'.
+    'Data' holds the raw, component specific data (GitIgnores, PaketDependencies, Paths, VSCodeExtensions,
+    PackageAliases, EditorConfig, Devcontainer, InitParams, Dependabot) that Compare-BrownserveRepository composes.
+#>
+class BrownserveRepoComponentDefinition
+{
+    [string]$Name
+    [string[]]$Requires = @()
+    [BrownserveRepoComponentOption[]]$Options = @()
+    [hashtable]$Data = @{}
+
+    BrownserveRepoComponentDefinition([string]$Name, [hashtable]$Hashtable)
+    {
+        $this.Name = $Name
+        if ($Hashtable.Requires)
+        {
+            $this.Requires = $Hashtable.Requires
+        }
+        if ($Hashtable.Options)
+        {
+            $this.Options = $Hashtable.Options | ForEach-Object { [BrownserveRepoComponentOption]$_ }
+        }
+        if ($Hashtable.Data)
+        {
+            $this.Data = $Hashtable.Data
+        }
+    }
+}
+
+<#
+    Represents a component that has been resolved (validated, with defaults applied) ready for
+    Compare-BrownserveRepository to consume.
+#>
+class BrownserveResolvedComponent
+{
+    [string]$Name
+    [hashtable]$Options = @{}
+
+    BrownserveResolvedComponent([string]$Name, [hashtable]$Options)
+    {
+        $this.Name = $Name
+        $this.Options = $Options
+    }
+}
+
 class GitHubActionsJob
 {
     [string]$JobTitle

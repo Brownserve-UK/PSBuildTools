@@ -127,7 +127,14 @@ param
         Mandatory = $False
     )]
     [hashtable[]]
-    $CustomNugetFeeds
+    $CustomNugetFeeds,
+
+    # If set will load the working copy of the module at the start of the build
+    [Parameter(
+        Mandatory = $false
+    )]
+    [switch]
+    $UseWorkingCopy
 )
 # Always stop on errors
 $ErrorActionPreference = 'Stop'
@@ -183,6 +190,7 @@ try
         ModuleAuthor      = $ModuleAuthor
         ModuleGuid        = $ModuleInfo.GUID
         ModuleTags        = $ModuleInfo.Tags
+        UseWorkingCopy    = ($PSBoundParameters['UseWorkingCopy'] -eq $true)
     }
     if ($ReleaseType)
     {

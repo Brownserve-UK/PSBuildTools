@@ -1,4 +1,8 @@
 {
-  "RepositoryType": "Generic",
-  "ManifestVersion": "1.0.0"
+  "ManifestVersion": "2.0.0",
+  "GeneratedBy": {
+    "Brownserve.PSBuildTools": "3.4.5"
+  },
+  "CICD": "GitHubActions",
+  "Components": []
 }

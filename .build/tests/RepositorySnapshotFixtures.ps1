@@ -220,16 +220,27 @@ function Invoke-RepositorySnapshotCompare
     } {
         param($RepositoryPath, $ProjectType, $RepoName, $Owner, $ModuleInfoData)
 
-        $CompareParams = @{
-            RepositoryPath = $RepositoryPath
-            ProjectType    = $ProjectType
-            RepoName       = $RepoName
-            Owner          = $Owner
-            ErrorAction    = 'Stop'
-        }
+        $ModuleInfoObject = $null
         if ($ModuleInfoData)
         {
-            $CompareParams.ModuleInfo = [BrownservePowerShellModule]$ModuleInfoData
+            $ModuleInfoObject = [BrownservePowerShellModule]$ModuleInfoData
+        }
+
+        # Route every case through the v1 -> v2 migration function and the component resolver, exactly as
+        # 'Update-BrownserveRepository' would for a legacy repository. This means the snapshots also cover
+        # migration, not just component resolution.
+        $Migrated = ConvertTo-BrownserveRepoComponentFromLegacyType `
+            -RepositoryType $ProjectType `
+            -ModuleInfo $ModuleInfoObject `
+            -ErrorAction 'Stop'
+
+        $CompareParams = @{
+            RepositoryPath   = $RepositoryPath
+            Components       = $Migrated.Components
+            ComponentOptions = $Migrated.ComponentOptions
+            RepoName         = $RepoName
+            Owner            = $Owner
+            ErrorAction      = 'Stop'
         }
 
         Compare-BrownserveRepository @CompareParams
