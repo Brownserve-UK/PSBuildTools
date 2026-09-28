@@ -13,10 +13,6 @@
             StageRelease = 'rustapp_github_stage-release.yaml.template'
             Release      = 'rustapp_github_release.yaml.template'
         }
-        BuildScriptTemplates       = @{
-            BuildScript = 'rustapp_build_script.ps1.template'
-            BuildTasks  = 'rustapp_build_tasks.ps1.template'
-        }
         ContributingTemplate       = 'RustApp_github_contributing.md.template'
         PRTemplateTemplate         = 'RustApp_github_pull_request_template.md.template'
         PRTemplateSubstitutionKeys = @('REPO_NAME', 'OWNER')
@@ -30,10 +26,6 @@
             StageRelease = 'webapp_github_stage-release.yaml.template'
             Release      = 'webapp_github_release.yaml.template'
         }
-        BuildScriptTemplates       = @{
-            BuildScript = 'webapp_build_script.ps1.template'
-            BuildTasks  = 'webapp_build_tasks.ps1.template'
-        }
         ContributingTemplate       = 'WebApp_github_contributing.md.template'
         PRTemplateTemplate         = 'WebApp_github_pull_request_template.md.template'
         PRTemplateSubstitutionKeys = @('REPO_NAME', 'OWNER')
@@ -46,10 +38,6 @@
             Builds       = 'bsdev_github_builds.yaml.template'
             StageRelease = 'rustapp_github_stage-release.yaml.template'
             Release      = 'bsdev_github_release.yaml.template'
-        }
-        BuildScriptTemplates       = @{
-            BuildScript = 'bsdev_build_script.ps1.template'
-            BuildTasks  = 'bsdev_build_tasks.ps1.template'
         }
         ContributingTemplate       = 'RustApp_github_contributing.md.template'
         PRTemplateTemplate         = 'RustApp_github_pull_request_template.md.template'
@@ -82,10 +70,6 @@
             Builds       = 'skillsrepo_github_builds.yaml.template'
             StageRelease = 'webapp_github_stage-release.yaml.template'
             Release      = 'skillsrepo_github_release.yaml.template'
-        }
-        BuildScriptTemplates       = @{
-            BuildScript = 'skillsrepo_build_script.ps1.template'
-            BuildTasks  = 'skillsrepo_build_tasks.ps1.template'
         }
         ContributingTemplate       = 'SkillsRepo_github_contributing.md.template'
         PRTemplateTemplate         = 'SkillsRepo_github_pull_request_template.md.template'

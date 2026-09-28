@@ -80,7 +80,7 @@
     "paket.dependencies": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:4385551d2292dc67e9c4d5a9512a4eccef43d0e6260996f758d7178146cc80f5"
+      "Hash": "sha256:27ee396e7725e707fbefa0511898f835a2005e0279facdad89c2e60cffc65312"
     }
   }
 }

@@ -40,6 +40,7 @@ function Resolve-BrownserveRepoComponent
             'RustBinary',
             'ContainerImage',
             'DirectoryArchive',
+            'NuGetPackage',
             'MkDocs',
             'AstroDocs'
         )

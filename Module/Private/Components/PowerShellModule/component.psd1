@@ -82,5 +82,31 @@
             IncludePowerShellYaml = $true
             IncludePlatyPS        = $true
         }
+        BuildTasks        = @{
+            TaskFile             = 'PowerShellModule.tasks.ps1'
+            Parameters           = @('ModuleName', 'ModuleGUID', 'ModuleDescription', 'ModuleAuthor', 'ModuleTags', 'PublishTo', 'GitHubRepoOwner', 'GitHubRepoName', 'GitHubReleaseToken', 'NugetFeedApiKey', 'PSGalleryAPIKey', 'CustomNugetFeeds', 'UseWorkingCopy')
+            OptionParameterMap   = @{}
+            ModuleInfoMap        = @{ ModuleName = 'Name'; ModuleGUID = 'GUID'; ModuleDescription = 'Description'; ModuleTags = 'Tags' }
+            SkipParameters       = @()
+            Types                = @{ ModuleAuthor = 'string'; NugetFeedApiKey = 'string'; PSGalleryAPIKey = 'string'; CustomNugetFeeds = 'hashtable[]'; UseWorkingCopy = 'switch' }
+            Defaults             = @{ ModuleAuthor = 'Brownserve UK' }
+            Descriptions         = @{
+                ModuleAuthor     = 'The author of the module'
+                NugetFeedApiKey  = 'The API key to use when publishing to a NuGet feed'
+                PSGalleryAPIKey  = 'The API key to use when publishing to the PSGallery'
+                CustomNugetFeeds = 'Any custom/private NuGet feeds to publish to'
+                UseWorkingCopy   = 'If set, loads the working copy of the module from the module directory instead of the stable version restored by _init.ps1'
+            }
+            PublicTargets        = @('BuildAndImport', 'BuildWithDocs')
+            PublicTargetAnchors  = @{
+                'BuildAndImport' = @('Build')
+                'BuildWithDocs'  = @('Build')
+            }
+            PublishValues        = @('nuget', 'PSGallery', 'GitHub', 'CustomNugetFeeds')
+            Toolchains           = @(
+                @{ Tools = @('mono'); Anchors = @('Package'); Platform = 'NonWindows' }
+            )
+            CollectorParameter   = $null
+        }
     }
 }

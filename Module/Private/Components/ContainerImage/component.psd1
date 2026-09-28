@@ -62,5 +62,26 @@
             )
         }
         Devcontainer      = @{ Dockerfile = 'Dockerfile_WebApp' }
+        BuildTasks        = @{
+            TaskFile             = 'ContainerImage.tasks.ps1'
+            Parameters           = @('ImageName', 'DockerContextPath', 'PublishTo', 'GitHubRepoOwner', 'DockerHubUsername', 'DockerHubToken', 'GHCRToken')
+            OptionParameterMap   = @{ Context = 'DockerContextPath' }
+            SkipParameters       = @('ImageName')
+            Types                = @{ DockerHubUsername = 'string'; DockerHubToken = 'string'; GHCRToken = 'string' }
+            Descriptions         = @{
+                DockerHubUsername = 'DockerHub username, required when publishing to DockerHub'
+                DockerHubToken    = 'DockerHub access token, required when publishing to DockerHub'
+                GHCRToken         = 'Token for GitHub Container Registry, needs packages:write'
+            }
+            PublicTargets        = @('ContainerImage.Check')
+            PublicTargetAnchors  = @{
+                'ContainerImage.Check' = @('Build', 'Test')
+            }
+            PublishValues        = @('DockerHub', 'GHCR')
+            Toolchains           = @(
+                @{ Tools = @('docker'); Anchors = @('Build') }
+            )
+            CollectorParameter   = $null
+        }
     }
 }

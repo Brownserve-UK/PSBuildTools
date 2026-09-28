@@ -2,6 +2,7 @@
     Requires = @('ReleaseLifecycle')
     Options  = @(
         @{ Name = 'Path'; Type = 'string'; Default = 'skills'; Required = $false }
+        @{ Name = 'ArchiveName'; Type = 'string'; Default = 'skills'; Required = $false }
     )
     Data     = @{
         PermanentPaths   = @(
@@ -59,6 +60,19 @@
             VariableName = 'BrownserveRepoSkillsDirectory'
             Description  = 'Stores the agent skills that get packaged into each release'
             PathType     = 'Directory'
+        }
+        BuildTasks        = @{
+            TaskFile             = 'DirectoryArchive.tasks.ps1'
+            Parameters           = @('Path', 'ArchiveName', 'PublishTo', 'GitHubRepoOwner', 'GitHubRepoName', 'GitHubReleaseToken')
+            OptionParameterMap   = @{ Path = 'Path'; ArchiveName = 'ArchiveName' }
+            SkipParameters       = @()
+            Types                = @{}
+            Descriptions         = @{}
+            PublicTargets        = @()
+            PublicTargetAnchors  = @{}
+            PublishValues        = @('GitHub')
+            Toolchains           = @()
+            CollectorParameter = $null
         }
     }
 }

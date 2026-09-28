@@ -20,12 +20,19 @@ Describe 'Compare-BrownserveRepository snapshots' -ForEach (Get-RepositorySnapsh
     }
 
     It "renders the expected repository state for '<CaseName>'" {
-        $Result = Invoke-RepositorySnapshotCompare `
-            -RepositoryPath $script:RepositoryPath `
-            -ProjectType $ProjectType `
-            -RepoName $RepoName `
-            -Owner $Owner `
-            -ModuleInfo $ModuleInfo
+        $CompareArgs = @{
+            RepositoryPath = $script:RepositoryPath
+            ProjectType    = $ProjectType
+            RepoName       = $RepoName
+            Owner          = $Owner
+            ModuleInfo     = $ModuleInfo
+        }
+        if ($Components)
+        {
+            $CompareArgs['Components'] = $Components
+            $CompareArgs['ComponentOptions'] = $ComponentOptions
+        }
+        $Result = Invoke-RepositorySnapshotCompare @CompareArgs
 
         $Result.ChangedFiles.Count | Should -Be 0 -Because 'the target repository is empty so nothing should be reported as changed'
 

@@ -373,6 +373,7 @@ function Compare-BrownserveRepository
                     $CoreVSCodeExtensions += $Data.VSCodeExtensions
                     $PackageAliasEntries += $Data.PackageAliases
                     $EditorConfigEntries += $Data.EditorConfig
+                    $PSBuildTasksVersion = $Data.PSBuildTasksVersion
                 }
                 'ReleaseLifecycle'
                 {
@@ -455,6 +456,14 @@ function Compare-BrownserveRepository
                     $SkillsPath.Path = $Component.Options.Path
                     $PermanentPathEntries += $SkillsPath
                 }
+                'NuGetPackage'
+                {
+                    $PermanentPathEntries += $Data.PermanentPaths
+                    $ComponentPaketDependencyBlocks += $Data.PaketDependencies
+                    $ComponentVSCodeExtensions += $Data.VSCodeExtensions
+                    $PackageAliasEntries += $Data.PackageAliases
+                    $DependabotExtraUpdates += $Data.DependabotExtraUpdates
+                }
                 'MkDocs'
                 {
                     $IncludeMkDocs = $true
@@ -498,6 +507,7 @@ function Compare-BrownserveRepository
             $GitIgnoreParams.Add('ManualGitIgnores', $ManualGitIgnores)
         }
 
+        $BrownserveModuleVersions['Brownserve.PSBuildTasks'] = $PSBuildTasksVersion
         $CorePaketDependencyBlocks | ForEach-Object {
             $_.Rule | ForEach-Object {
                 if ($BrownserveModuleVersions.ContainsKey($_.PackageName))
@@ -585,9 +595,15 @@ function Compare-BrownserveRepository
             $ProfileKey = $ProfileComponentNames -join '+'
             if (!$LegacyProfiles.ContainsKey($ProfileKey))
             {
-                throw "The component combination '$ProfileKey' is not supported yet."
+                $IncludeWorkflows = $false
+                $IncludeContributing = $false
+                $IncludePRTemplate = $false
+                $IncludePesterTests = $false
             }
-            $LegacyProfile = $LegacyProfiles[$ProfileKey]
+            else
+            {
+                $LegacyProfile = $LegacyProfiles[$ProfileKey]
+            }
 
             if ($LegacyProfile.VSCodeExtensionsOverride)
             {
@@ -635,21 +651,6 @@ function Compare-BrownserveRepository
                     Release      = @{
                         TemplateDirectory = $TemplatesDirectory
                         TemplateName      = $LegacyProfile.WorkflowTemplates.Release
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                }
-            }
-            if ($IncludeBuildScripts -and $LegacyProfile.BuildScriptTemplates)
-            {
-                $BuildScriptTemplateParams = @{
-                    BuildScript = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = $LegacyProfile.BuildScriptTemplates.BuildScript
-                        Substitutions     = @{ REPO_NAME = ''; OWNER = '' }
-                    }
-                    BuildTasks  = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = $LegacyProfile.BuildScriptTemplates.BuildTasks
                         Substitutions     = @{ REPO_NAME = '' }
                     }
                 }
@@ -1639,36 +1640,24 @@ function Compare-BrownserveRepository
         {
             $BuildScriptPath = Join-Path $BuildDirectory 'build.ps1'
             $BuildTasksScriptPath = Join-Path $BuildTasksDirectory 'build_tasks.ps1'
+            $CustomTasksScriptPath = Join-Path $BuildTasksDirectory 'custom.tasks.ps1'
+
+            if (-not $RepoName)
+            {
+                $RepoName = Split-Path $RepositoryPath -Leaf
+            }
 
             try
             {
-                if ($BuildScriptTemplateParams)
-                {
-                    if (-not $RepoName)
-                    {
-                        $RepoName = Split-Path $RepositoryPath -Leaf
-                    }
-                    $BuildScriptTemplateParams.BuildScript.Substitutions['REPO_NAME'] = $RepoName
-                    $BuildScriptTemplateParams.BuildTasks.Substitutions['REPO_NAME']  = $RepoName
-                    if ($BuildScriptTemplateParams.BuildScript.Substitutions.ContainsKey('OWNER'))
-                    {
-                        $BuildScriptTemplateParams.BuildScript.Substitutions['OWNER'] = $Owner
-                    }
-                    $BuildScriptParams = $BuildScriptTemplateParams.BuildScript
-                    $BuildTasksParams  = $BuildScriptTemplateParams.BuildTasks
-                    $NewBuildScriptContent      = New-BrownserveContentFromTemplate @BuildScriptParams | Format-BrownserveContent
-                    $NewBuildTasksScriptContent = New-BrownserveContentFromTemplate @BuildTasksParams | Format-BrownserveContent
+                $BuildScriptParams = @{
+                    ResolvedComponents   = $ResolvedComponents
+                    ComponentDefinitions = $ComponentDefinitions
+                    Owner                = $Owner
+                    RepoName             = $RepoName
+                    ModuleInfo           = $ModuleInfo
                 }
-                else
-                {
-                    $LegacyBuildScriptParams = @{}
-                    if ($BuildScriptUseWorkingCopyOption)
-                    {
-                        $LegacyBuildScriptParams['IncludeUseWorkingCopyOption'] = $true
-                    }
-                    $NewBuildScriptContent      = New-BrownserveBuildScript @LegacyBuildScriptParams -Owner $Owner | Format-BrownserveContent
-                    $NewBuildTasksScriptContent = New-BrownserveBuildTasksScript @LegacyBuildScriptParams | Format-BrownserveContent
-                }
+                $NewBuildScriptContent      = New-BrownserveBuildScript @BuildScriptParams | Format-BrownserveContent
+                $NewBuildTasksScriptContent = New-BrownserveBuildTasksScript -ResolvedComponents $ResolvedComponents -ComponentDefinitions $ComponentDefinitions -ModuleInfo $ModuleInfo | Format-BrownserveContent
             }
             catch
             {
@@ -1697,6 +1686,24 @@ function Compare-BrownserveRepository
                         Content   = $BuildFile.Content.Content
                     })
             }
+
+            if (!(Test-Path $CustomTasksScriptPath))
+            {
+                try
+                {
+                    $NewCustomTasksContent = New-BrownserveCustomTasksScript | Format-BrownserveContent
+                }
+                catch
+                {
+                    throw "Failed to generate 'custom.tasks.ps1' content.`n$($_.Exception.Message)"
+                }
+            }
+            $ManagedFiles.Add([BrownserveManagedFile]@{
+                    Path      = $CustomTasksScriptPath
+                    Ownership = [BrownserveFileOwnership]::Seeded
+                    Component = 'ReleaseLifecycle'
+                    Content   = $NewCustomTasksContent.Content
+                })
         }
 
         if ($IncludePesterTests)

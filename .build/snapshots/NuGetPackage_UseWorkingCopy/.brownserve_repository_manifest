@@ -1,0 +1,146 @@
+{
+  "ManifestVersion": "2.0.0",
+  "GeneratedBy": {
+    "Brownserve.PSBuildTools": "3.4.5"
+  },
+  "CICD": "GitHubActions",
+  "Components": [
+    {
+      "Name": "NuGetPackage",
+      "Options": {
+        "PackageId": "Brownserve.TestPackage",
+        "PackageDescription": "A test content-only NuGet package used for repository snapshot testing.",
+        "UseWorkingCopy": true
+      }
+    }
+  ],
+  "Files": {
+    ".build/_init.ps1": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:b89a5158b5aee3cf0728ee173067bbd1c0f0f8afcc02fda5ff3288473191ad65"
+    },
+    ".build/build.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:68d6799ce3f9f25e1801b61b7dd351406d1abf77ab31b456799831d4328d7619"
+    },
+    ".build/tasks/build_tasks.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:34e51b2eb913eee5cfe083082b09c2145d81affde33c82be1aba8fd4e6946791"
+    },
+    ".build/tasks/custom.tasks.ps1": {
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
+    },
+    ".config/dotnet-tools.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:88ebbef17b5ab0eda52132bcdce0f7211c722706ae146e1a185a1565251f09f4",
+      "Baseline": {
+        "paket": {
+          "version": "8.0.3",
+          "commands": [
+            "paket"
+          ]
+        }
+      }
+    },
+    ".editorconfig": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:5817aa3d5381dce14b0b39075b15891c9530adeac651355b0c1221dd7720c32f",
+      "Baseline": {
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::charset": "utf-8",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::end_of_line": "lf",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::indent_size": "4",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::indent_style": "space",
+        "*::end_of_line": "lf",
+        "*::indent_size": "2",
+        "*::indent_style": "space",
+        "*::insert_final_newline": "true"
+      }
+    },
+    ".github/dependabot.yml": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:52a6ee3950718e367b9f6af8da4d3780678826a0f6c5ea1d4b6f6c71c9266d3e"
+    },
+    ".github/workflows/label-pr.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:9b41c473c5df0d8a382ed83e57573eed55ddd5e0903a676a93f27028a4ef0749"
+    },
+    ".gitignore": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:722f20cac49d9964bc4387a38ba3bc99af350a5a09e3af9ae585a20a9fcb0434"
+    },
+    ".markdownlint.json": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:a8981893e623ea6f569156bbca76f096e776a642b53d07f89e45136926c2816a"
+    },
+    ".vscode/extensions.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:8071c2154a22cca10f0a188d5b11812ece9d235c9bfcc414b7867557ea9d7474",
+      "Baseline": {
+        "recommendations": [
+          "DavidAnson.vscode-markdownlint",
+          "EditorConfig.EditorConfig",
+          "ms-vscode.powershell",
+          "streetsidesoftware.code-spell-checker"
+        ]
+      }
+    },
+    ".vscode/settings.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:f79dd664e624a6eda7b993f1a93580ae4881b49ea65ed468122ab6e9380d3ef9",
+      "Baseline": {
+        "cSpell.language": "en,en-GB",
+        "cSpell.words": [
+          "Brownserve",
+          "paket",
+          "Teamcity",
+          "TMPDIR",
+          "Choco",
+          "CICD",
+          "dedupe",
+          "devcontainer",
+          "mrkdwn",
+          "nugetconfig",
+          "nupkg",
+          "yzhang"
+        ],
+        "powershell.codeFormatting.autoCorrectAliases": true,
+        "powershell.codeFormatting.pipelineIndentationStyle": "IncreaseIndentationAfterEveryPipeline",
+        "powershell.codeFormatting.preset": "Allman",
+        "powershell.codeFormatting.trimWhitespaceAroundPipe": true,
+        "powershell.codeFormatting.useConstantStrings": true,
+        "powershell.codeFormatting.useCorrectCasing": true,
+        "powershell.helpCompletion": "Disabled"
+      }
+    },
+    "CHANGELOG.md": {
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
+    },
+    "LICENSE": {
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
+    },
+    "nuget.config": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:e6f4904e508d73e3d5e54f87768dbadb6676d5cccc9f4ed21e9f61643c3f81af"
+    },
+    "paket.dependencies": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:0ca87c0b6d6900b3671a418b11453d6f916a0a58c19b07686c25f1167c96da02"
+    }
+  }
+}
