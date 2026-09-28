@@ -1,9 +1,11 @@
 #requires -Modules Pester
 
-$script:SnapshotsRoot = Join-Path (Split-Path $PSScriptRoot -Parent) 'snapshots'
-$script:BuildTasksCases = @(Get-ChildItem -Path $script:SnapshotsRoot -Directory | Where-Object {
-        Test-Path (Join-Path $_.FullName '.build' 'tasks' 'build_tasks.ps1')
-    })
+BeforeDiscovery {
+    $SnapshotsRoot = Join-Path (Split-Path $PSScriptRoot -Parent) 'snapshots'
+    $BuildTasksCases = @(Get-ChildItem -Path $SnapshotsRoot -Directory | Where-Object {
+            Test-Path (Join-Path $_.FullName '.build' 'tasks' 'build_tasks.ps1')
+        })
+}
 
 BeforeAll {
     function Get-BrownserveGeneratedParameterInfo
@@ -92,15 +94,11 @@ BeforeAll {
         throw "Pinned task files not found at '$($script:PinnedTasksDir)'. Restore 'Brownserve.PSBuildTasks' via paket (or populate the test scratchpad's packages directory) before running this test."
     }
 
-    $script:InvokeBuildScript = Get-ChildItem -Path ($env:PSModulePath -split [IO.Path]::PathSeparator | Where-Object { $_ -and (Test-Path $_) }) -Filter 'Invoke-Build.ps1' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
-    if (!$script:InvokeBuildScript)
-    {
-        throw "Could not locate 'Invoke-Build.ps1' on PSModulePath."
-    }
+    $script:InvokeBuildScript = Get-Command 'Invoke-Build' -ErrorAction 'Stop'
 }
 
 Describe 'build_tasks.ps1 task graphs' {
-    Context '<_.Name>' -ForEach $script:BuildTasksCases {
+    Context '<_.Name>' -ForEach $BuildTasksCases {
         BeforeEach {
             $CaseDir = $_.FullName
             $CaseName = $_.Name
@@ -198,7 +196,7 @@ Describe 'build_tasks.ps1 task graphs' {
 }
 
 Describe 'Generated build.ps1 files parse cleanly' {
-    It 'parses <_.Name>''s build.ps1 without errors' -ForEach $script:BuildTasksCases {
+    It 'parses <_.Name>''s build.ps1 without errors' -ForEach $BuildTasksCases {
         $BuildScriptPath = Join-Path $_.FullName '.build' 'build.ps1'
         $Errors = $null
         [System.Management.Automation.Language.Parser]::ParseFile($BuildScriptPath, [ref]$null, [ref]$Errors) | Out-Null
