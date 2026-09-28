@@ -1,8 +1,0 @@
-{
-    "Defaults": [],
-    "PowerShellModule":[{
-        "Alias": "nuget",
-        "FileName": "NuGet.exe",
-        "VariableName": "BrownserveNugetPath"
-    }]
-}

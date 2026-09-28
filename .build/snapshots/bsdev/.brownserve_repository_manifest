@@ -1,4 +1,210 @@
 {
-  "RepositoryType": "bsdev",
-  "ManifestVersion": "1.0.0"
+  "ManifestVersion": "2.0.0",
+  "GeneratedBy": {
+    "Brownserve.PSBuildTools": "3.4.5"
+  },
+  "CICD": "GitHubActions",
+  "Components": [
+    {
+      "Name": "RustBinary"
+    },
+    {
+      "Name": "ContainerImage",
+      "Options": {
+        "Context": "image",
+        "IncludeEnvIgnore": false,
+        "IncludeShellEditorConfig": true
+      }
+    }
+  ],
+  "Files": {
+    ".build/_init.ps1": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:1ac2a08c84a09b39c9c9b710e09ed1a3ed3dfe42d79cc2cb32d19f9c56b64066"
+    },
+    ".build/build.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:abf9f9640144013737ecffe1c1a4462b301cb614be192f936c28baf84337d34d"
+    },
+    ".build/tasks/build_tasks.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:739fe053aa9fe15b63935b2eb526a50a9b606cee8bf8625b3460a272ed9b5af3"
+    },
+    ".build/tests/Basic.Binary.Tests.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:9cbd40e7816a7bef822227075ec6913400e2d8f401baaf03920e165530221556"
+    },
+    ".config/dotnet-tools.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:88ebbef17b5ab0eda52132bcdce0f7211c722706ae146e1a185a1565251f09f4",
+      "Baseline": {
+        "paket": {
+          "version": "8.0.3",
+          "commands": [
+            "paket"
+          ]
+        }
+      }
+    },
+    ".devcontainer/devcontainer.json": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:bfe2191c1995114cb5761ad7a24ac42bdc810471feb54c2f5ed468ed5e1193bd"
+    },
+    ".devcontainer/Dockerfile": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:197a28b84f8a4bc479976d660055a1a56f3b3b4f15ee3e5bc55fcd7ad86a136e"
+    },
+    ".editorconfig": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:c1570bc7db6a101aa5d07f73efd09b168d687a85b7756caeaca941528ef8cee0",
+      "Baseline": {
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::charset": "utf-8",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::end_of_line": "lf",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::indent_size": "4",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::indent_style": "space",
+        "{Dockerfile,*.Dockerfile,Dockerfile_*,*.sh}::charset": "utf-8",
+        "{Dockerfile,*.Dockerfile,Dockerfile_*,*.sh}::end_of_line": "lf",
+        "{Dockerfile,*.Dockerfile,Dockerfile_*,*.sh}::indent_size": "4",
+        "{Dockerfile,*.Dockerfile,Dockerfile_*,*.sh}::indent_style": "space",
+        "*::end_of_line": "lf",
+        "*::indent_size": "2",
+        "*::indent_style": "space",
+        "*::insert_final_newline": "true",
+        "*.rs::charset": "utf-8",
+        "*.rs::end_of_line": "lf",
+        "*.rs::indent_size": "4",
+        "*.rs::indent_style": "space",
+        "*.toml::charset": "utf-8",
+        "*.toml::end_of_line": "lf",
+        "*.toml::indent_size": "2",
+        "*.toml::indent_style": "space"
+      }
+    },
+    ".github/CONTRIBUTING.md": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:81e11e405caca1d2852843b8e039bbff1f261f0b828424f081b43fadca5fd23b"
+    },
+    ".github/dependabot.yml": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:8b8bd5ba9836ec85fbd475955badd724e9478c91f6f465a73258f033e955187e"
+    },
+    ".github/pull_request_template.md": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:772d65251c15bfb09b38e39a61ea9e99d9f0d7f374a44e8f67547082366293e8"
+    },
+    ".github/workflows/builds.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:46597cb5f26fab990050624bdf5a0470ac264051f7e90bf459f7903de6906c0a"
+    },
+    ".github/workflows/label-pr.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:9b41c473c5df0d8a382ed83e57573eed55ddd5e0903a676a93f27028a4ef0749"
+    },
+    ".github/workflows/release.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:d2014541c40c35dd4036932f2222100a5b9c0efd96151f985e4ba152277856f7"
+    },
+    ".github/workflows/stage-release.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:4e11fa1d4d96656530a02789a0d1575c36ed2aed41fedf0bcc9c346baed48ce8"
+    },
+    ".gitignore": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:be7e50fa17bec12742055377c4e11697461eaee6650af70edd934abebfb969a7"
+    },
+    ".markdownlint.json": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:a8981893e623ea6f569156bbca76f096e776a642b53d07f89e45136926c2816a"
+    },
+    ".vscode/extensions.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:3b7581b1cc6d249be4d667078096f01887a5ce2ab4c705c4afa4af1a252b37fd",
+      "Baseline": {
+        "recommendations": [
+          "DavidAnson.vscode-markdownlint",
+          "EditorConfig.EditorConfig",
+          "ms-azuretools.vscode-docker",
+          "ms-vscode.powershell",
+          "rust-lang.rust-analyzer",
+          "streetsidesoftware.code-spell-checker",
+          "tamasfe.even-better-toml"
+        ]
+      }
+    },
+    ".vscode/settings.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:f79dd664e624a6eda7b993f1a93580ae4881b49ea65ed468122ab6e9380d3ef9",
+      "Baseline": {
+        "cSpell.language": "en,en-GB",
+        "cSpell.words": [
+          "Brownserve",
+          "paket",
+          "Teamcity",
+          "TMPDIR",
+          "Choco",
+          "CICD",
+          "dedupe",
+          "devcontainer",
+          "mrkdwn",
+          "nugetconfig",
+          "nupkg",
+          "yzhang"
+        ],
+        "powershell.codeFormatting.autoCorrectAliases": true,
+        "powershell.codeFormatting.pipelineIndentationStyle": "IncreaseIndentationAfterEveryPipeline",
+        "powershell.codeFormatting.preset": "Allman",
+        "powershell.codeFormatting.trimWhitespaceAroundPipe": true,
+        "powershell.codeFormatting.useConstantStrings": true,
+        "powershell.codeFormatting.useCorrectCasing": true,
+        "powershell.helpCompletion": "Disabled"
+      }
+    },
+    "CHANGELOG.md": {
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
+    },
+    "LICENSE": {
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
+    },
+    "nuget.config": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:e6f4904e508d73e3d5e54f87768dbadb6676d5cccc9f4ed21e9f61643c3f81af"
+    },
+    "paket.dependencies": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:8a0c5d5163f8d0b8cce1d4c6c15f83cc77dda9c43c0873221b983923493ac3bb"
+    },
+    "scripts/install.ps1": {
+      "Ownership": "Managed",
+      "Component": "RustBinary",
+      "Hash": "sha256:08b5e236215e2382dc047fac44e46de6789910c87ad08046a3c5d4d12491b16a"
+    },
+    "scripts/install.sh": {
+      "Ownership": "Managed",
+      "Component": "RustBinary",
+      "Hash": "sha256:5bc3032989ab63445c7a9ba7e6475ef60d932b0c03dd3221f25979b0dbe35113"
+    }
+  }
 }

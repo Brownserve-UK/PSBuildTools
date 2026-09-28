@@ -126,7 +126,14 @@ param
         Mandatory = $False
     )]
     [hashtable[]]
-    $CustomNugetFeeds
+    $CustomNugetFeeds,
+
+    # If set will load the working copy of the module at the start of the build
+    [Parameter(
+        Mandatory = $false
+    )]
+    [switch]
+    $UseWorkingCopy
 )
 # Just in case...
 if (!$GitHubRepoName)
@@ -268,6 +275,28 @@ task SetStagingVariables {
 task SetReleaseVariables {
     Write-Verbose 'Setting release variables'
     $script:Release = $true
+}
+
+<#
+.SYNOPSIS
+    Loads the working copy of the module from the module directory
+.DESCRIPTION
+    By default we pull in the latest _stable_ copy of the build modules from NuGet via the _init.ps1 script to run this build,
+    however if we make changes to any of the cmdlets used in this build we won't get the changes until a new release
+    is pushed.
+    This task allows us to unload the stable version and reload the working copy of this module from the local copy of the repo.
+#>
+task UseWorkingCopy {
+    if ($UseWorkingCopy -eq $true)
+    {
+        Write-Build White "Loading working copy of module from $Global:BrownserveModuleDirectory"
+        if ((Get-Module $ModuleName))
+        {
+            Write-Warning "The current version of $ModuleName has been unloaded and replaced with the working copy from $Global:BrownserveModuleDirectory. `nFunctionality may be unstable"
+            Remove-Module $ModuleName -Force -ErrorAction 'Stop' -Verbose:$false
+        }
+        Import-Module (Join-Path $Global:BrownserveModuleDirectory "$ModuleName.psm1") -Force -ErrorAction 'Stop' -Verbose:$false
+    }
 }
 
 <#
@@ -484,7 +513,7 @@ task FormatReleaseNotes SetVersion, {
     In case we want to publish the module to any custom/private NuGet feeds we need to create a temporary nuget.config file.
     This stops us from polluting the nuget.config file in the repo and avoids any potential issues with committing secrets.
 #>
-task CreateTemporaryNugetConfig CheckPublishingParameters, {
+task CreateTemporaryNugetConfig UseWorkingCopy, CheckPublishingParameters, {
     if ('CustomNugetFeeds' -in $PublishTo)
     {
         Write-Build White 'Creating temporary nuget.config for custom feeds'
@@ -1279,7 +1308,7 @@ task PublishRelease CheckPreviousReleases, CompressModule, Tests, PackNuGetPacka
     It doesn't build the documentation, NuGet package or perform any tests.
     This task is mostly here just to serve as a base for other tasks.
 #>
-task Build CreateModuleManifest, {}
+task Build UseWorkingCopy, CreateModuleManifest, {}
 
 <#
 .SYNOPSIS
@@ -1332,7 +1361,7 @@ task BuildTestAndCheck BuildAndTest, CheckForUncommittedChanges, {}
     This allows us to review the changes and make any adjustments before we actually release them.
     We use this task in the stage_release CI pipeline.
 #>
-task StageRelease CheckStagingParameters, SetStagingVariables, CreateChangelogEntry, UpdateChangelog, UpdateModuleDocumentation, CreatePullRequest, {
+task StageRelease CheckStagingParameters, SetStagingVariables, UseWorkingCopy, CreateChangelogEntry, UpdateChangelog, UpdateModuleDocumentation, CreatePullRequest, {
     $BuildMessage = @"
 The release has been successfully staged and a pull request has been created.
 Please review the changes at $script:PRLink and merge if they look good.
@@ -1349,7 +1378,7 @@ If you need to make any changes please do so on the $script:StagingBranchName br
     various endpoints.
     This is useful for testing the release process without actually releasing anything.
 #>
-task DryRun SetReleaseVariables, CheckPublishingParameters, CheckPreviousReleases, CompressModule, Tests, PackNuGetPackage, CheckForUncommittedChanges, {}
+task DryRun UseWorkingCopy, SetReleaseVariables, CheckPublishingParameters, CheckPreviousReleases, CompressModule, Tests, PackNuGetPackage, CheckForUncommittedChanges, {}
 
 <#
 .SYNOPSIS

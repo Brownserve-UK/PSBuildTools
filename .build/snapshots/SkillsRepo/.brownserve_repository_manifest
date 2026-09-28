@@ -1,4 +1,203 @@
 {
-  "RepositoryType": "SkillsRepo",
-  "ManifestVersion": "1.0.0"
+  "ManifestVersion": "2.0.0",
+  "GeneratedBy": {
+    "Brownserve.PSBuildTools": "3.4.5"
+  },
+  "CICD": "GitHubActions",
+  "Components": [
+    {
+      "Name": "DirectoryArchive"
+    },
+    {
+      "Name": "AstroDocs"
+    }
+  ],
+  "Files": {
+    ".build/_init.ps1": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:700cdd88472ea433271ca7864a06e6d468fea2dfce695a150b8d43f214c32236"
+    },
+    ".build/build.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:4b48ae3fc9f8360d9ecca9cce533984372db2a95e6f6d14d1bb988e1f7b07435"
+    },
+    ".build/tasks/build_tasks.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:fb39f326f793cfc0db09764d4107a43b61a393eb91c4d23b0e319281b3c801ef"
+    },
+    ".build/tests/Skills.Tests.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:d9ef091bda4a892e68f16bd86d4569972fcb6bdfa9ccc1013fa1adcf75961b55"
+    },
+    ".config/dotnet-tools.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:88ebbef17b5ab0eda52132bcdce0f7211c722706ae146e1a185a1565251f09f4",
+      "Baseline": {
+        "paket": {
+          "version": "8.0.3",
+          "commands": [
+            "paket"
+          ]
+        }
+      }
+    },
+    ".editorconfig": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:49890aac2a26887fc8f1ef2dac1f44a7000156c75d97c27a2e0ee87785e3f522",
+      "Baseline": {
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::charset": "utf-8",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::end_of_line": "lf",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::indent_size": "4",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::indent_style": "space",
+        "*::end_of_line": "lf",
+        "*::indent_size": "2",
+        "*::indent_style": "space",
+        "*::insert_final_newline": "true",
+        "*.sh::charset": "utf-8",
+        "*.sh::end_of_line": "lf",
+        "*.sh::indent_size": "4",
+        "*.sh::indent_style": "space"
+      }
+    },
+    ".github/CONTRIBUTING.md": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:ae084e2c76ab594a1f12af28e89d6bbddf415afa43e792842dd8d7a4356bb312"
+    },
+    ".github/dependabot.yml": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:78a982ccd181bec92e3d7dc6a8d85002976d98e13019fb4ab4b348b8c5ecbca7"
+    },
+    ".github/pull_request_template.md": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:9cbd809f0a9eec6619a361855112568a43f55ecc90ce7ea1c0709a5cb3ee6148"
+    },
+    ".github/workflows/builds.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:bbbfa831d0d8fb18eac8f429090c51a95e8a8a6e57bd076ce2a4098a8f237bd3"
+    },
+    ".github/workflows/label-pr.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:9b41c473c5df0d8a382ed83e57573eed55ddd5e0903a676a93f27028a4ef0749"
+    },
+    ".github/workflows/release.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:3ac7d3e8391f95e299c8d0187f16e2eee5f292cedb7289f2cb67da25f4631bbf"
+    },
+    ".github/workflows/stage-release.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:386215711449d9889c25e4c4c0949ab8fc806f419efc7c60522d9ab32f27a8c4"
+    },
+    ".gitignore": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:ebbfdb19b3f58d75f4a16106d45bdc6614c4e94edcff6bd5cd4651150ac61355"
+    },
+    ".markdownlint.json": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:a8981893e623ea6f569156bbca76f096e776a642b53d07f89e45136926c2816a"
+    },
+    ".vscode/extensions.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:8071c2154a22cca10f0a188d5b11812ece9d235c9bfcc414b7867557ea9d7474",
+      "Baseline": {
+        "recommendations": [
+          "DavidAnson.vscode-markdownlint",
+          "EditorConfig.EditorConfig",
+          "ms-vscode.powershell",
+          "streetsidesoftware.code-spell-checker"
+        ]
+      }
+    },
+    ".vscode/settings.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:f79dd664e624a6eda7b993f1a93580ae4881b49ea65ed468122ab6e9380d3ef9",
+      "Baseline": {
+        "cSpell.language": "en,en-GB",
+        "cSpell.words": [
+          "Brownserve",
+          "paket",
+          "Teamcity",
+          "TMPDIR",
+          "Choco",
+          "CICD",
+          "dedupe",
+          "devcontainer",
+          "mrkdwn",
+          "nugetconfig",
+          "nupkg",
+          "yzhang"
+        ],
+        "powershell.codeFormatting.autoCorrectAliases": true,
+        "powershell.codeFormatting.pipelineIndentationStyle": "IncreaseIndentationAfterEveryPipeline",
+        "powershell.codeFormatting.preset": "Allman",
+        "powershell.codeFormatting.trimWhitespaceAroundPipe": true,
+        "powershell.codeFormatting.useConstantStrings": true,
+        "powershell.codeFormatting.useCorrectCasing": true,
+        "powershell.helpCompletion": "Disabled"
+      }
+    },
+    "CHANGELOG.md": {
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
+    },
+    "LICENSE": {
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
+    },
+    "nuget.config": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:e6f4904e508d73e3d5e54f87768dbadb6676d5cccc9f4ed21e9f61643c3f81af"
+    },
+    "pages/astro.config.mjs": {
+      "Ownership": "Managed",
+      "Component": "AstroDocs",
+      "Hash": "sha256:fd49b0d5bdf5e6479e5390a77d8f8bb61fa188c2892d5bbb5363d425d87194c2",
+      "Baseline": {}
+    },
+    "pages/package.json": {
+      "Ownership": "Merged",
+      "Component": "AstroDocs",
+      "Hash": "sha256:0cd4ae4b5e0a17bfef92c6832ba1fdfaba78e6cc9c54c17c3af2783d0b0aeb95",
+      "Baseline": {
+        "dependencies::astro": "^7.3.5",
+        "scripts::astro": "astro",
+        "scripts::build": "astro build",
+        "scripts::dev": "astro dev",
+        "scripts::preview": "astro preview",
+        "engines": {
+          "node": ">=22.12.0"
+        },
+        "name": "test-skills-repo-docs",
+        "private": true,
+        "type": "module",
+        "version": "0.0.1"
+      }
+    },
+    "pages/src/pages/index.astro": {
+      "Ownership": "Seeded",
+      "Component": "AstroDocs"
+    },
+    "paket.dependencies": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:8801a95c1177c5a42e18f7fa5e6ed5aef11860a002a013b53ea6a45c03dfa878"
+    }
+  }
 }

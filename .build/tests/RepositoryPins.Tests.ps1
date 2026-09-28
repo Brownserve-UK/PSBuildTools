@@ -93,7 +93,7 @@ Describe 'Compare-BrownserveRepository pin resolution' {
         InModuleScope Brownserve.PSBuildTools -Parameters @{ RepositoryPath = $script:RepositoryPath } {
             param($RepositoryPath)
             Mock Get-BrownserveLoadedModuleVersion { throw "'Brownserve.PSCommon' is not loaded in this session." }
-            { Compare-BrownserveRepository -RepositoryPath $RepositoryPath -ProjectType 'Generic' -RepoName 'test' -ErrorAction 'Stop' } |
+            { Compare-BrownserveRepository -RepositoryPath $RepositoryPath -Components @() -RepoName 'test' -ErrorAction 'Stop' } |
                 Should -Throw -ExpectedMessage '*not loaded*'
         }
     }
@@ -102,7 +102,7 @@ Describe 'Compare-BrownserveRepository pin resolution' {
         InModuleScope Brownserve.PSBuildTools -Parameters @{ RepositoryPath = $script:RepositoryPath } {
             param($RepositoryPath)
             Mock Get-BrownserveLoadedModuleVersion { throw "Multiple versions of 'Brownserve.PSCommon' are loaded." }
-            { Compare-BrownserveRepository -RepositoryPath $RepositoryPath -ProjectType 'Generic' -RepoName 'test' -ErrorAction 'Stop' } |
+            { Compare-BrownserveRepository -RepositoryPath $RepositoryPath -Components @() -RepoName 'test' -ErrorAction 'Stop' } |
                 Should -Throw -ExpectedMessage '*Multiple versions*'
         }
     }
@@ -122,7 +122,7 @@ Describe 'Compare-BrownserveRepository pin resolution' {
 
         $Result = InModuleScope Brownserve.PSBuildTools -Parameters @{ RepositoryPath = $script:RepositoryPath } {
             param($RepositoryPath)
-            Compare-BrownserveRepository -RepositoryPath $RepositoryPath -ProjectType 'Generic' -RepoName 'test' -ErrorAction 'Stop'
+            Compare-BrownserveRepository -RepositoryPath $RepositoryPath -Components @() -RepoName 'test' -ErrorAction 'Stop'
         }
 
         $PaketFile = $Result.ChangedFiles | Where-Object { $_.Path -like '*paket.dependencies' }
@@ -139,7 +139,7 @@ Describe 'Compare-BrownserveRepository pin resolution' {
 
         InModuleScope Brownserve.PSBuildTools -Parameters @{ RepositoryPath = $script:RepositoryPath } {
             param($RepositoryPath)
-            { Compare-BrownserveRepository -RepositoryPath $RepositoryPath -ProjectType 'Generic' -RepoName 'test' -ErrorAction 'Stop' } |
+            { Compare-BrownserveRepository -RepositoryPath $RepositoryPath -Components @() -RepoName 'test' -ErrorAction 'Stop' } |
                 Should -Throw -ExpectedMessage "*can't be parsed*"
         }
     }
@@ -149,7 +149,7 @@ Describe 'Compare-BrownserveRepository pin resolution' {
 
         $Result = InModuleScope Brownserve.PSBuildTools -Parameters @{ RepositoryPath = $script:RepositoryPath } {
             param($RepositoryPath)
-            Compare-BrownserveRepository -RepositoryPath $RepositoryPath -ProjectType 'Generic' -RepoName 'test' -Force -ErrorAction 'Stop'
+            Compare-BrownserveRepository -RepositoryPath $RepositoryPath -Components @() -RepoName 'test' -Force -ErrorAction 'Stop'
         }
 
         $GitIgnoreFile = $Result.ChangedFiles | Where-Object { $_.Path -like '*.gitignore' }

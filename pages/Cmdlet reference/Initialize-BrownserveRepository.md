@@ -14,24 +14,33 @@ Prepares a repository for use for a given project
 ## SYNTAX
 
 ```text
-Initialize-BrownserveRepository [[-RepositoryPath] <String>] [-ProjectType <BrownserveRepoProjectType>]
- [-ModuleInfo <BrownservePowerShellModule>] [-RepoName <String>] [-Owner <String>] [-Force]
+Initialize-BrownserveRepository [[-RepositoryPath] <String>] -Components <String[]>
+ [-ComponentOptions <Hashtable>] [-RepoName <String>] [-Owner <String>] [-Force]
  [<CommonParameters>]
 ```
 
 ## DESCRIPTION
 
-We typically use our repositories for a common set of purposes (e.g. PowerShell modules, standard builds etc) and this cmdlet will prepare a given repository for use.
+Repositories are described by a set of components (e.g. 'PowerShellModule', 'RustBinary', 'ContainerImage') rather than a single project type. 'Core' is always included automatically. This cmdlet works out what's missing/different compared to what the requested components expect and, if it's safe to do so, creates/updates those files on a dedicated branch. A file the manifest owns that has been manually edited since it was last generated is reported as a conflict and stops the whole run, before any files are written, unless '-Force' is passed.
 
 ## EXAMPLES
 
 ### Example 1
 
 ```powershell
-Initialize-BrownserveRepository -RepositoryPath 'c:\MyPowerShellModule' -ProjectType 'PowerShellModule'
+Initialize-BrownserveRepository -RepositoryPath 'c:\MyRustApp' -Components RustBinary
 ```
 
-This would prepare the repo at 'c:\MyPowerShellModule' for use to store and build a PowerShell module
+This would prepare the repo at 'c:\MyRustApp' for use to store and build a Rust binary application
+
+### Example 2
+
+```powershell
+$ModuleInfo = @{ Name = 'Brownserve.Example'; Description = '...'; GUID = (New-Guid); Tags = @('example') }
+Initialize-BrownserveRepository -Components PowerShellModule, MkDocs -ComponentOptions @{ PowerShellModule = @{ ModuleInfo = $ModuleInfo } }
+```
+
+This would prepare the current directory for use to store and build a PowerShell module with MkDocs documentation
 
 ## PARAMETERS
 
@@ -51,18 +60,34 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -ModuleInfo
+### -Components
 
-The PowerShell module metadata, required when repo houses a PowerShell module.
+The components that should be present in this repository, 'Core' is always included automatically
 
 ```yaml
-Type: BrownservePowerShellModule
+Type: String[]
+Parameter Sets: (All)
+Aliases:
+
+Required: True
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ComponentOptions
+
+Options for the requested components, keyed by component name
+
+```yaml
+Type: Hashtable
 Parameter Sets: (All)
 Aliases:
 
 Required: False
 Position: Named
-Default value: None
+Default value: @{}
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
@@ -75,23 +100,6 @@ The owner of the repository, this is used to populate the copyright holder in th
 Type: String
 Parameter Sets: (All)
 Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -ProjectType
-
-The type of project that this repository holds
-
-```yaml
-Type: BrownserveRepoProjectType
-Parameter Sets: (All)
-Aliases:
-Accepted values: PowerShellModule, BrownservePSTools, WebApp, RustApp, bsdev, SkillsRepo, Generic
 
 Required: False
 Position: Named

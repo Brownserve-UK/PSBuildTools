@@ -1,4 +1,229 @@
 {
-  "RepositoryType": "BrownservePSTools",
-  "ManifestVersion": "1.0.0"
+  "ManifestVersion": "2.0.0",
+  "GeneratedBy": {
+    "Brownserve.PSBuildTools": "3.4.5"
+  },
+  "CICD": "GitHubActions",
+  "Components": [
+    {
+      "Name": "PowerShellModule",
+      "Options": {
+        "UseWorkingCopy": true,
+        "IncludeLicense": false
+      }
+    },
+    {
+      "Name": "MkDocs"
+    }
+  ],
+  "Files": {
+    ".build/_init.ps1": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:3b4014ce17df3c717af5a3a5f706765a213fdfa2f1383feabb5f1dcc4d537958"
+    },
+    ".build/build.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:4e632a90bb8546b1c2764c8f2a183fb2c40a02223e4b02fa2a1ed676004ca4c1"
+    },
+    ".build/ModuleInfo.json": {
+      "Ownership": "Seeded",
+      "Component": "PowerShellModule"
+    },
+    ".build/tasks/build_tasks.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:1f7e4dad25d447df6fa50061f89cbed4f9599b8eaa7f42d08c6dc4d261f94e6d"
+    },
+    ".build/tests/Help.Tests.ps1": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:4b2df005f4e9db585645c9a530c37ed6f81f085c6247e798e03281fa99cd81ba"
+    },
+    ".config/dotnet-tools.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:88ebbef17b5ab0eda52132bcdce0f7211c722706ae146e1a185a1565251f09f4",
+      "Baseline": {
+        "paket": {
+          "version": "8.0.3",
+          "commands": [
+            "paket"
+          ]
+        }
+      }
+    },
+    ".devcontainer/devcontainer.json": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:086818628cff26b7b8eb8cc19544bfa7899478ce3b63b7384dd1a9145a2d526d"
+    },
+    ".devcontainer/Dockerfile": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:487642c9d0b8f5b571184364156d497913799dbc288c9b9c53bb47b06c86fe07"
+    },
+    ".editorconfig": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:5817aa3d5381dce14b0b39075b15891c9530adeac651355b0c1221dd7720c32f",
+      "Baseline": {
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::charset": "utf-8",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::end_of_line": "lf",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::indent_size": "4",
+        "{*.ps1,*.psm1,*.psd1,*.ps1.template}::indent_style": "space",
+        "*::end_of_line": "lf",
+        "*::indent_size": "2",
+        "*::indent_style": "space",
+        "*::insert_final_newline": "true"
+      }
+    },
+    ".github/CONTRIBUTING.md": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:ee8d055e79c1f275200f40049148188fe97103a32e35d618e01406220f6281e7"
+    },
+    ".github/dependabot.yml": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:36d84ec02434deef3afd0152d31c45298d7b5f8f8d240e22ab6615a5e5cad9f1"
+    },
+    ".github/pull_request_template.md": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:f4feb054d041cca04148397c38a51a19fc2d19c9fd98d2e6794f876aebd45df7"
+    },
+    ".github/workflows/builds.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:c2fab30a076d1dfd29ab27ceb2dc6ee98626ae3bca838415b35f8f20f4a6cbdb"
+    },
+    ".github/workflows/label-pr.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:9b41c473c5df0d8a382ed83e57573eed55ddd5e0903a676a93f27028a4ef0749"
+    },
+    ".github/workflows/release.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:26b9ec8ef0aac0f8fd13f935efc8a039293350066151770caada45eefc74025a"
+    },
+    ".github/workflows/stage-release.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:8d1564b3edbda8e268d204a91f23381e605ecea65aba2a7e76480fc0715f270d"
+    },
+    ".gitignore": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:722f20cac49d9964bc4387a38ba3bc99af350a5a09e3af9ae585a20a9fcb0434"
+    },
+    ".markdownlint.json": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:a8981893e623ea6f569156bbca76f096e776a642b53d07f89e45136926c2816a"
+    },
+    ".vscode/extensions.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:3fb77d354dddb014e8565a023bd2cbb78ea4ee7adebe1be53db5411725f10625",
+      "Baseline": {
+        "recommendations": [
+          "DavidAnson.vscode-markdownlint",
+          "EditorConfig.EditorConfig",
+          "ms-vscode.powershell",
+          "streetsidesoftware.code-spell-checker",
+          "yzhang.markdown-all-in-one"
+        ]
+      }
+    },
+    ".vscode/settings.json": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:8502d350e8331c1ac9fe2fc03efe76553bdac9863a5ffc6d2ec0b8cd5416b8de",
+      "Baseline": {
+        "cSpell.language": "en,en-GB",
+        "cSpell.words": [
+          "Brownserve",
+          "paket",
+          "Teamcity",
+          "TMPDIR",
+          "Choco",
+          "CICD",
+          "dedupe",
+          "devcontainer",
+          "mrkdwn",
+          "nugetconfig",
+          "nupkg",
+          "yzhang",
+          "Allman",
+          "Cmdlets",
+          "Dont",
+          "hashtable",
+          "hashtables",
+          "imatch",
+          "LASTEXITCODE",
+          "MAML",
+          "Mddhhmm",
+          "notcontains",
+          "notlike",
+          "notmatch",
+          "pscustomobject",
+          "PSGALLERY",
+          "PSMODULE",
+          "psobject",
+          "pstools",
+          "pwsh"
+        ],
+        "markdown.extension.toc.omittedFromToc": {
+          "README.md": [
+            "# Overview"
+          ]
+        },
+        "markdown.extension.toc.updateOnSave": false,
+        "powershell.codeFormatting.autoCorrectAliases": true,
+        "powershell.codeFormatting.pipelineIndentationStyle": "IncreaseIndentationAfterEveryPipeline",
+        "powershell.codeFormatting.preset": "Allman",
+        "powershell.codeFormatting.trimWhitespaceAroundPipe": true,
+        "powershell.codeFormatting.useConstantStrings": true,
+        "powershell.codeFormatting.useCorrectCasing": true,
+        "powershell.helpCompletion": "Disabled"
+      }
+    },
+    "CHANGELOG.md": {
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
+    },
+    "mkdocs.yml": {
+      "Ownership": "Managed",
+      "Component": "MkDocs",
+      "Hash": "sha256:db95f5b8afa3d4972076530763bc8f6a337cc2b943de92dad0ddedb519038154"
+    },
+    "nuget.config": {
+      "Ownership": "Managed",
+      "Component": "Core",
+      "Hash": "sha256:e6f4904e508d73e3d5e54f87768dbadb6676d5cccc9f4ed21e9f61643c3f81af"
+    },
+    "pages/Cmdlet reference/.pages": {
+      "Ownership": "Managed",
+      "Component": "MkDocs",
+      "Hash": "sha256:8d7531f862b32c5fcc930c74d7c5767d75825ce5457272dc3aac688edaad618d"
+    },
+    "pages/index.md": {
+      "Ownership": "Managed",
+      "Component": "MkDocs",
+      "Hash": "sha256:690e7ce08a2b68c319bc3af6f1f7f64d6c74dedb0256191f64d7d5247b9fe8cd"
+    },
+    "paket.dependencies": {
+      "Ownership": "Merged",
+      "Component": "Core",
+      "Hash": "sha256:e82baf588bae67ac9b7206b2cf9af472d8c0cc3de991f2ed9544e405ce0f5621"
+    },
+    "requirements.txt": {
+      "Ownership": "Managed",
+      "Component": "MkDocs",
+      "Hash": "sha256:cbb8cf552729ac7e8f96c6411a4cca20896be74da8ffc0f75fb95cb0088330f6"
+    }
+  }
 }
