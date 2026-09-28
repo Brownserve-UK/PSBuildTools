@@ -21,12 +21,16 @@
     ".build/build.ps1": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:4b48ae3fc9f8360d9ecca9cce533984372db2a95e6f6d14d1bb988e1f7b07435"
+      "Hash": "sha256:cdb9819fe4e9c3ab0d2dd7b08c296461d6ff1f05af44b83050637ec50f1d43b9"
     },
     ".build/tasks/build_tasks.ps1": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:fb39f326f793cfc0db09764d4107a43b61a393eb91c4d23b0e319281b3c801ef"
+      "Hash": "sha256:6129fb64c7803fd643e1e6e458d6234b96741a564cfe735ce1bd9f8bfa54042e"
+    },
+    ".build/tasks/custom.tasks.ps1": {
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
     },
     ".build/tests/Skills.Tests.ps1": {
       "Ownership": "Managed",
@@ -197,7 +201,7 @@
     "paket.dependencies": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:8801a95c1177c5a42e18f7fa5e6ed5aef11860a002a013b53ea6a45c03dfa878"
+      "Hash": "sha256:45226e72a7af3ce94f6679d854ff9ec58668febe0d2484288fd9bddf5763caf2"
     }
   }
 }

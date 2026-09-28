@@ -33,5 +33,18 @@
         InitParams          = @{
             IncludeBuildTestTools = $true
         }
+        BuildTasks          = @{
+            TaskFile             = 'ReleaseLifecycle.tasks.ps1'
+            Parameters           = @('ReleaseType', 'BranchName', 'DefaultBranch', 'PublishTo', 'GitHubRepoOwner', 'GitHubRepoName', 'GitHubStageReleaseToken', 'GitHubReleaseToken')
+            OptionParameterMap   = @{}
+            SkipParameters       = @()
+            Types                = @{}
+            Descriptions         = @{}
+            PublicTargets        = @()
+            PublicTargetAnchors  = @{}
+            PublishValues        = @()
+            Toolchains           = @()
+            CollectorParameter   = $null
+        }
     }
 }

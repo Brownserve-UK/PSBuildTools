@@ -1,134 +1,108 @@
 <#
 .SYNOPSIS
-    Builds and releases the web application via Invoke-Build.
+    Builds, tests and releases this repository via Invoke-Build and Pester.
 #>
 [CmdletBinding()]
 param
 (
     # The name of the default branch
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
     [string]
     $DefaultBranch = 'main',
 
-    # The name of the branch you are running on
-    # this is used to work out if the release is production or pre-release
+    # The name of the branch you are running on, this is used to work out if the release is production or pre-release
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
-    [ValidateNotNullOrEmpty()]
     [string]
     $BranchName,
 
     # The build to run
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
-    [ValidateSet(
-        'Build',
-        'BuildTestAndCheck',
-        'StageRelease',
-        'DryRun',
-        'Release'
-    )]
-    [AllowEmptyString()]
+    [ValidateSet('Build', 'BuildAndTest', 'BuildTestAndCheck', 'StageRelease', 'DryRun', 'Release', 'ContainerImage.Check')]
     [string]
     $Build = 'Build',
 
-    # When preparing a release this denotes the type of changes that have been made.
-    # This is used to determine the version number to use for the release.
+    # When preparing a release this denotes the type of changes that have been made, used to determine the version number to use for the release
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
-    [ValidateSet(
-        'major',
-        'minor',
-        'patch'
-    )]
+    [ValidateSet('major', 'minor', 'patch')]
     [string]
     $ReleaseType = 'minor',
 
     # The various places to publish to
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
-    [ValidateNotNullOrEmpty()]
-    [ValidateSet('DockerHub', 'GHCR', 'GitHub')]
+    [ValidateSet('DockerHub', 'GHCR')]
     [string[]]
     $PublishTo,
 
-    # The GitHub organisation/account that owns this repo
+    # The GitHub organisation/account that owns this repository
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
-    [ValidateNotNullOrEmpty()]
     [string]
     $GitHubRepoOwner = 'Brownserve-UK',
 
-    # The GitHub repo name
+    # The GitHub repo that contains this repository
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
-    [ValidateNotNullOrEmpty()]
     [string]
     $GitHubRepoName,
 
-    # GitHub token used during the StageRelease build, must have the following permissions:
-    #   * Read/Write pull requests
-    #   * Read issues
+    # GitHub token used during the StageRelease build, must have Read/Write pull request and Read issue permissions
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
     [string]
     $GitHubStageReleaseToken,
 
-    # GitHub token used during the Release build, must have the following permissions:
-    #   * Read/write releases
+    # GitHub token used during the Release build, must have Read/write release permissions
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
     [string]
     $GitHubReleaseToken,
 
     # DockerHub username, required when publishing to DockerHub
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
     [string]
     $DockerHubUsername,
 
     # DockerHub access token, required when publishing to DockerHub
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
     [string]
     $DockerHubToken,
 
-    # Token used to authenticate with GitHub Container Registry (ghcr.io).
-    # Requires packages:write scope. Typically the workflow's GITHUB_TOKEN.
+    # Token for GitHub Container Registry, needs packages:write
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
     [string]
     $GHCRToken
 )
-# Always stop on errors
 $ErrorActionPreference = 'Stop'
-# If we don't have a branch name then try to work it out automatically
 if (!$BranchName)
 {
     $BranchName = & git rev-parse --abbrev-ref HEAD
 }
-# If we still don't have a branch name then set it to something sensible
 if (!$BranchName)
 {
     $BranchName = 'preview'
 }
-# Depending on how we got the branch name we may need to remove the full ref
 $BranchName = $BranchName -replace 'refs\/heads\/', ''
 
-# Run the init script
 try
 {
     Write-Verbose 'Starting build script'
@@ -140,7 +114,41 @@ catch
     Write-Error "Failed to init repo.`n$($_.Exception.Message)"
 }
 
-# Invoke our build task
+$RequiredToolchains = @(
+    @{ Component = 'ContainerImage'; Tools = @('docker'); Targets = @('Build', 'BuildAndTest', 'BuildTestAndCheck', 'DryRun', 'Release', 'ContainerImage.Check'); Platform = $null; SkipIf = { $false } }
+)
+$MissingTools = [System.Collections.Generic.List[string]]::new()
+foreach ($Requirement in $RequiredToolchains)
+{
+    if ($Requirement.Targets -notcontains $Build)
+    {
+        continue
+    }
+    if (& $Requirement.SkipIf)
+    {
+        continue
+    }
+    if ($Requirement.Platform -eq 'Windows' -and -not $IsWindows)
+    {
+        continue
+    }
+    if ($Requirement.Platform -eq 'NonWindows' -and $IsWindows)
+    {
+        continue
+    }
+    foreach ($Tool in $Requirement.Tools)
+    {
+        if (!(Get-Command $Tool -ErrorAction SilentlyContinue))
+        {
+            $MissingTools.Add("'$Tool' (required by $($Requirement.Component))")
+        }
+    }
+}
+if ($MissingTools.Count -gt 0)
+{
+    throw "The following tools are required to run this build but were not found on PATH:`n$($MissingTools -join "`n")"
+}
+
 try
 {
     $BuildParams = @{
@@ -148,44 +156,16 @@ try
         Task          = $Build
         BranchName    = $BranchName
         DefaultBranch = $DefaultBranch
-        ImageName     = 'test-web-app'
     }
-    if ($ReleaseType)
-    {
-        $BuildParams.Add('ReleaseType', $ReleaseType)
-    }
-    if ($GitHubRepoOwner)
-    {
-        $BuildParams.Add('GitHubRepoOwner', $GitHubRepoOwner)
-    }
-    if ($GitHubRepoName)
-    {
-        $BuildParams.Add('GitHubRepoName', $GitHubRepoName)
-    }
-    if ($GitHubStageReleaseToken)
-    {
-        $BuildParams.Add('GitHubStageReleaseToken', $GitHubStageReleaseToken)
-    }
-    if ($GitHubReleaseToken)
-    {
-        $BuildParams.Add('GitHubReleaseToken', $GitHubReleaseToken)
-    }
-    if ($DockerHubUsername)
-    {
-        $BuildParams.Add('DockerHubUsername', $DockerHubUsername)
-    }
-    if ($DockerHubToken)
-    {
-        $BuildParams.Add('DockerHubToken', $DockerHubToken)
-    }
-    if ($GHCRToken)
-    {
-        $BuildParams.Add('GHCRToken', $GHCRToken)
-    }
-    if ($PublishTo)
-    {
-        $BuildParams.Add('PublishTo', $PublishTo)
-    }
+    if ($ReleaseType) { $BuildParams.Add('ReleaseType', $ReleaseType) }
+    if ($GitHubRepoOwner) { $BuildParams.Add('GitHubRepoOwner', $GitHubRepoOwner) }
+    if ($GitHubRepoName) { $BuildParams.Add('GitHubRepoName', $GitHubRepoName) }
+    if ($GitHubStageReleaseToken) { $BuildParams.Add('GitHubStageReleaseToken', $GitHubStageReleaseToken) }
+    if ($GitHubReleaseToken) { $BuildParams.Add('GitHubReleaseToken', $GitHubReleaseToken) }
+    if ($PublishTo) { $BuildParams.Add('PublishTo', $PublishTo) }
+    if ($DockerHubUsername) { $BuildParams.Add('DockerHubUsername', $DockerHubUsername) }
+    if ($DockerHubToken) { $BuildParams.Add('DockerHubToken', $DockerHubToken) }
+    if ($GHCRToken) { $BuildParams.Add('GHCRToken', $GHCRToken) }
     Write-Verbose "Invoking build: $Build"
     Invoke-Build @BuildParams -Verbose:($PSBoundParameters['Verbose'] -eq $true)
 }

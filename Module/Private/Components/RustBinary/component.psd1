@@ -1,6 +1,8 @@
 @{
     Requires = @('ReleaseLifecycle')
-    Options  = @()
+    Options  = @(
+        @{ Name = 'Targets'; Type = 'array'; Default = @('x86_64-unknown-linux-gnu', 'x86_64-pc-windows-msvc', 'aarch64-apple-darwin'); Required = $false }
+    )
     Data     = @{
         PermanentPaths    = @(
             @{
@@ -74,5 +76,26 @@
             @{ Ecosystem = 'cargo'; Directory = '/'; Interval = 'weekly'; CooldownDays = 30 }
         )
         IncludeInstallScripts = $true
+        BuildTasks             = @{
+            TaskFile             = 'RustBinary.tasks.ps1'
+            Parameters           = @('BinaryName', 'Target', 'Targets', 'ArchiveSourceDirectory', 'PublishTo', 'GitHubRepoOwner', 'GitHubRepoName', 'GitHubReleaseToken')
+            OptionParameterMap   = @{ Targets = 'Targets' }
+            SkipParameters       = @('BinaryName')
+            Types                = @{ Target = 'string'; ArchiveSourceDirectory = 'string' }
+            Descriptions         = @{
+                Target                 = 'The Rust target triple to build for, used by the RustBinary.Package target'
+                ArchiveSourceDirectory = 'Directory of pre-built archives to publish instead of building with cargo'
+            }
+            PublicTargets        = @('RustBinary.Check', 'RustBinary.Package')
+            PublicTargetAnchors  = @{
+                'RustBinary.Check'   = @('Build', 'Test')
+                'RustBinary.Package' = @('Build', 'Package')
+            }
+            PublishValues        = @('GitHub')
+            Toolchains           = @(
+                @{ Tools = @('cargo'); Anchors = @('Build', 'Test', 'Package', 'Stage') }
+            )
+            CollectorParameter   = 'ArchiveSourceDirectory'
+        }
     }
 }

@@ -1,129 +1,101 @@
 <#
 .SYNOPSIS
-    Builds and releases the Rust application via Invoke-Build.
+    Builds, tests and releases this repository via Invoke-Build and Pester.
 #>
 [CmdletBinding()]
 param
 (
     # The name of the default branch
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
     [string]
     $DefaultBranch = 'main',
 
-    # The name of the branch you are running on
-    # this is used to work out if the release is production or pre-release
+    # The name of the branch you are running on, this is used to work out if the release is production or pre-release
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
-    [ValidateNotNullOrEmpty()]
     [string]
     $BranchName,
 
     # The build to run
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
-    [ValidateSet(
-        'Build',
-        'BuildTestAndCheck',
-        'Package',
-        'StageRelease',
-        'DryRun',
-        'Release'
-    )]
-    [AllowEmptyString()]
+    [ValidateSet('Build', 'BuildAndTest', 'BuildTestAndCheck', 'StageRelease', 'DryRun', 'Release', 'RustBinary.Check', 'RustBinary.Package')]
     [string]
     $Build = 'Build',
 
-    # When preparing a release this denotes the type of changes that have been made.
-    # This is used to determine the version number to use for the release.
+    # When preparing a release this denotes the type of changes that have been made, used to determine the version number to use for the release
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
-    [ValidateSet(
-        'major',
-        'minor',
-        'patch'
-    )]
+    [ValidateSet('major', 'minor', 'patch')]
     [string]
     $ReleaseType = 'minor',
 
     # The various places to publish to
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
-    [ValidateNotNullOrEmpty()]
     [ValidateSet('GitHub')]
     [string[]]
     $PublishTo,
 
-    # The GitHub organisation/account that owns this repo
+    # The GitHub organisation/account that owns this repository
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
-    [ValidateNotNullOrEmpty()]
     [string]
     $GitHubRepoOwner = 'Brownserve-UK',
 
-    # The GitHub repo name
+    # The GitHub repo that contains this repository
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
-    [ValidateNotNullOrEmpty()]
     [string]
     $GitHubRepoName,
 
-    # GitHub token used during the StageRelease build, must have the following permissions:
-    #   * Read/Write pull requests
-    #   * Read issues
+    # GitHub token used during the StageRelease build, must have Read/Write pull request and Read issue permissions
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
     [string]
     $GitHubStageReleaseToken,
 
-    # GitHub token used during the Release build, must have the following permissions:
-    #   * Read/write releases
+    # GitHub token used during the Release build, must have Read/write release permissions
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
     [string]
     $GitHubReleaseToken,
 
-    # The Rust target triple to build for (e.g. x86_64-unknown-linux-gnu).
-    # Defaults to the host target when not specified.
+    # The Rust target triple to build for, used by the RustBinary.Package target
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
     [string]
     $Target,
 
-    # Directory containing pre-built archives to copy into the build output directory before running the task.
-    # Used by the release workflow to make artifacts available after _init.ps1 recreates ephemeral directories.
+    # Directory of pre-built archives to publish instead of building with cargo
     [Parameter(
-        Mandatory = $false
+        Mandatory = $False
     )]
     [string]
     $ArchiveSourceDirectory
 )
-# Always stop on errors
 $ErrorActionPreference = 'Stop'
-# If we don't have a branch name then try to work it out automatically
 if (!$BranchName)
 {
     $BranchName = & git rev-parse --abbrev-ref HEAD
 }
-# If we still don't have a branch name then set it to something sensible
 if (!$BranchName)
 {
     $BranchName = 'preview'
 }
-# Depending on how we got the branch name we may need to remove the full ref
 $BranchName = $BranchName -replace 'refs\/heads\/', ''
 
-# Run the init script
 try
 {
     Write-Verbose 'Starting build script'
@@ -135,15 +107,41 @@ catch
     Write-Error "Failed to init repo.`n$($_.Exception.Message)"
 }
 
-# If a source directory was given, copy its archives into the build output directory now that
-# _init.ps1 has recreated the ephemeral directories.
-if ($ArchiveSourceDirectory)
+$RequiredToolchains = @(
+    @{ Component = 'RustBinary'; Tools = @('cargo'); Targets = @('Build', 'BuildAndTest', 'BuildTestAndCheck', 'StageRelease', 'DryRun', 'Release', 'RustBinary.Check', 'RustBinary.Package'); Platform = $null; SkipIf = { $ArchiveSourceDirectory } }
+)
+$MissingTools = [System.Collections.Generic.List[string]]::new()
+foreach ($Requirement in $RequiredToolchains)
 {
-    Write-Verbose "Copying release archives from '$ArchiveSourceDirectory'"
-    Get-ChildItem -Path $ArchiveSourceDirectory -File | Copy-Item -Destination $global:BrownserveRepoBuildOutputDirectory
+    if ($Requirement.Targets -notcontains $Build)
+    {
+        continue
+    }
+    if (& $Requirement.SkipIf)
+    {
+        continue
+    }
+    if ($Requirement.Platform -eq 'Windows' -and -not $IsWindows)
+    {
+        continue
+    }
+    if ($Requirement.Platform -eq 'NonWindows' -and $IsWindows)
+    {
+        continue
+    }
+    foreach ($Tool in $Requirement.Tools)
+    {
+        if (!(Get-Command $Tool -ErrorAction SilentlyContinue))
+        {
+            $MissingTools.Add("'$Tool' (required by $($Requirement.Component))")
+        }
+    }
+}
+if ($MissingTools.Count -gt 0)
+{
+    throw "The following tools are required to run this build but were not found on PATH:`n$($MissingTools -join "`n")"
 }
 
-# Invoke our build task
 try
 {
     $BuildParams = @{
@@ -151,36 +149,15 @@ try
         Task          = $Build
         BranchName    = $BranchName
         DefaultBranch = $DefaultBranch
-        BinaryName    = 'test-rust-app'
     }
-    if ($ReleaseType)
-    {
-        $BuildParams.Add('ReleaseType', $ReleaseType)
-    }
-    if ($Target)
-    {
-        $BuildParams.Add('Target', $Target)
-    }
-    if ($GitHubRepoOwner)
-    {
-        $BuildParams.Add('GitHubRepoOwner', $GitHubRepoOwner)
-    }
-    if ($GitHubRepoName)
-    {
-        $BuildParams.Add('GitHubRepoName', $GitHubRepoName)
-    }
-    if ($GitHubStageReleaseToken)
-    {
-        $BuildParams.Add('GitHubStageReleaseToken', $GitHubStageReleaseToken)
-    }
-    if ($GitHubReleaseToken)
-    {
-        $BuildParams.Add('GitHubReleaseToken', $GitHubReleaseToken)
-    }
-    if ($PublishTo)
-    {
-        $BuildParams.Add('PublishTo', $PublishTo)
-    }
+    if ($ReleaseType) { $BuildParams.Add('ReleaseType', $ReleaseType) }
+    if ($GitHubRepoOwner) { $BuildParams.Add('GitHubRepoOwner', $GitHubRepoOwner) }
+    if ($GitHubRepoName) { $BuildParams.Add('GitHubRepoName', $GitHubRepoName) }
+    if ($GitHubStageReleaseToken) { $BuildParams.Add('GitHubStageReleaseToken', $GitHubStageReleaseToken) }
+    if ($GitHubReleaseToken) { $BuildParams.Add('GitHubReleaseToken', $GitHubReleaseToken) }
+    if ($PublishTo) { $BuildParams.Add('PublishTo', $PublishTo) }
+    if ($Target) { $BuildParams.Add('Target', $Target) }
+    if ($ArchiveSourceDirectory) { $BuildParams.Add('ArchiveSourceDirectory', $ArchiveSourceDirectory) }
     Write-Verbose "Invoking build: $Build"
     Invoke-Build @BuildParams -Verbose:($PSBoundParameters['Verbose'] -eq $true)
 }

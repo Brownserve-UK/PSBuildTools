@@ -131,6 +131,21 @@ function Get-RepositorySnapshotFixtures
             RepoName    = 'test-generic-repo'
             Owner       = 'Brownserve-UK'
             ModuleInfo  = $null
+        },
+        @{
+            CaseName         = 'NuGetPackage_UseWorkingCopy'
+            ProjectType      = $null
+            RepoName         = 'test-nuget-package'
+            Owner            = 'Brownserve-UK'
+            ModuleInfo       = $null
+            Components       = @('NuGetPackage')
+            ComponentOptions = @{
+                NuGetPackage = @{
+                    PackageId          = 'Brownserve.TestPackage'
+                    PackageDescription = 'A test content-only NuGet package used for repository snapshot testing.'
+                    UseWorkingCopy     = $true
+                }
+            }
         }
     )
 }
@@ -194,7 +209,7 @@ function Invoke-RepositorySnapshotCompare
         [string]
         $RepositoryPath,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string]
         $ProjectType,
 
@@ -208,17 +223,42 @@ function Invoke-RepositorySnapshotCompare
 
         [Parameter(Mandatory = $false)]
         [hashtable]
-        $ModuleInfo
+        $ModuleInfo,
+
+        # When set, these components are resolved directly instead of migrating from a legacy 'ProjectType'
+        [Parameter(Mandatory = $false)]
+        [string[]]
+        $Components,
+
+        # Options for the directly resolved components
+        [Parameter(Mandatory = $false)]
+        [hashtable]
+        $ComponentOptions = @{}
     )
 
     InModuleScope Brownserve.PSBuildTools -Parameters @{
-        RepositoryPath = $RepositoryPath
-        ProjectType    = $ProjectType
-        RepoName       = $RepoName
-        Owner          = $Owner
-        ModuleInfoData = $ModuleInfo
+        RepositoryPath      = $RepositoryPath
+        ProjectType         = $ProjectType
+        RepoName            = $RepoName
+        Owner               = $Owner
+        ModuleInfoData      = $ModuleInfo
+        DirectComponents    = $Components
+        DirectComponentOpts = $ComponentOptions
     } {
-        param($RepositoryPath, $ProjectType, $RepoName, $Owner, $ModuleInfoData)
+        param($RepositoryPath, $ProjectType, $RepoName, $Owner, $ModuleInfoData, $DirectComponents, $DirectComponentOpts)
+
+        if ($DirectComponents)
+        {
+            $CompareParams = @{
+                RepositoryPath   = $RepositoryPath
+                Components       = $DirectComponents
+                ComponentOptions = $DirectComponentOpts
+                RepoName         = $RepoName
+                Owner            = $Owner
+                ErrorAction      = 'Stop'
+            }
+            return Compare-BrownserveRepository @CompareParams
+        }
 
         $ModuleInfoObject = $null
         if ($ModuleInfoData)

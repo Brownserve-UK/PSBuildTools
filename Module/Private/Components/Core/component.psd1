@@ -31,7 +31,14 @@
                     @{ Source = 'nuget'; PackageName = 'Invoke-Build' }
                 )
             }
+            @{
+                Comment = 'Brownserve.PSBuildTasks provides the shared Invoke-Build task files that build_tasks.ps1 dot-sources'
+                Rule    = @(
+                    @{ PackageName = 'Brownserve.PSBuildTasks'; Source = 'nuget' }
+                )
+            }
         )
+        PSBuildTasksVersion = '0.2.0'
         PermanentPaths      = @(
             @{
                 VariableName = 'BrownserveRepoBuildDirectory'

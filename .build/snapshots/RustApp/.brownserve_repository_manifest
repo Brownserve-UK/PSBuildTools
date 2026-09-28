@@ -18,17 +18,21 @@
     ".build/build.ps1": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:db8dd8d58966193e1edf6991866ff13fecb6c083463276160670d0812d3916c5"
+      "Hash": "sha256:8db844e14dd794cd7a9e27ee128bc9fd311d11a94ebca04783629d2ae6fbcad5"
     },
     ".build/tasks/build_tasks.ps1": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:173f979ffe3214628f6e607424ee5d78a3d7a29999c1d60a1990590f16df9ab1"
+      "Hash": "sha256:fbad9f759262cd7320e4ee6cbeb83d3dac7d6392a2730c370cc711df837ad573"
+    },
+    ".build/tasks/custom.tasks.ps1": {
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
     },
     ".build/tests/Basic.Binary.Tests.ps1": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:a6d8f0aba21d09b565d8e8d84c19359ce32275a18b710631e7380e74f7d034d6"
+      "Hash": "sha256:3e98d217dc4822d0a5e54138a46245439c5ff92954cd52d9e7b6c524c1227760"
     },
     ".config/dotnet-tools.json": {
       "Ownership": "Merged",
@@ -181,7 +185,7 @@
     "paket.dependencies": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:8a0c5d5163f8d0b8cce1d4c6c15f83cc77dda9c43c0873221b983923493ac3bb"
+      "Hash": "sha256:f43f7c898f7868f1256fd72d867963433093aba8ea9e5130ced30a74bce5539c"
     },
     "scripts/install.ps1": {
       "Ownership": "Managed",

@@ -5,16 +5,13 @@
     Verifies that the compiled binary exists and responds correctly to basic flags.
     These tests are intended to be run after a successful 'Build' task.
 #>
-Describe 'bsdev binary' {
+Describe 'bsdev binary' -Skip:(-not $Global:BrownserveRustBinaryPath) {
     BeforeAll {
-        # Locate the binary under the build output directory set by CARGO_TARGET_DIR.
-        # On Windows the executable has a .exe extension.
-        $BinaryName = if ($IsWindows) { 'bsdev.exe' } else { 'bsdev' }
-        $script:BinaryPath = Join-Path $Global:BrownserveRepoBuildOutputDirectory 'release' $BinaryName
+        $script:BinaryPath = $Global:BrownserveRustBinaryPath
     }
 
     Context 'Binary exists' {
-        It 'should be present in the build output directory' {
+        It 'should be present at the path recorded by the Rust build' {
             $script:BinaryPath | Should -Exist
         }
     }
