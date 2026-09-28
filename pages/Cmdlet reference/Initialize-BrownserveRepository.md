@@ -44,18 +44,18 @@ This would prepare the current directory for use to store and build a PowerShell
 
 ## PARAMETERS
 
-### -Force
+### -ComponentOptions
 
-Forces an overwrite of any files that already exist
+Options for the requested components, keyed by component name
 
 ```yaml
-Type: SwitchParameter
+Type: Hashtable
 Parameter Sets: (All)
 Aliases:
 
 Required: False
 Position: Named
-Default value: None
+Default value: @{}
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
@@ -76,18 +76,18 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -ComponentOptions
+### -Force
 
-Options for the requested components, keyed by component name
+Forces an overwrite of any files that already exist
 
 ```yaml
-Type: Hashtable
+Type: SwitchParameter
 Parameter Sets: (All)
 Aliases:
 
 Required: False
 Position: Named
-Default value: @{}
+Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
@@ -134,7 +134,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 0
+Position: 1
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -146,11 +146,7 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 
 ## INPUTS
 
-### None
-
 ## OUTPUTS
-
-### System.Object
 
 ## NOTES
 
