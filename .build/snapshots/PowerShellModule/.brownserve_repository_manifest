@@ -6,10 +6,7 @@
   "CICD": "GitHubActions",
   "Components": [
     {
-      "Name": "PowerShellModule",
-      "Options": {
-        "UseWorkingCopy": true
-      }
+      "Name": "PowerShellModule"
     },
     {
       "Name": "MkDocs"
@@ -19,12 +16,12 @@
     ".build/_init.ps1": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:3b4014ce17df3c717af5a3a5f706765a213fdfa2f1383feabb5f1dcc4d537958"
+      "Hash": "sha256:09bc4bf8738a6e242e413ffe5e8bb929eb6cc6e0cfdf22c15f0731575ba91972"
     },
     ".build/build.ps1": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:4e632a90bb8546b1c2764c8f2a183fb2c40a02223e4b02fa2a1ed676004ca4c1"
+      "Hash": "sha256:74c2e9b957060f1a13675cdcbeca0d83747541249cfa7e20a1f3c53ae304342a"
     },
     ".build/ModuleInfo.json": {
       "Ownership": "Seeded",
@@ -33,12 +30,12 @@
     ".build/tasks/build_tasks.ps1": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:1f7e4dad25d447df6fa50061f89cbed4f9599b8eaa7f42d08c6dc4d261f94e6d"
+      "Hash": "sha256:75a56f59aa7dfe6eea6b8864b6c15926337d1b48715503725f4fffc6c79ee6e4"
     },
     ".build/tests/Help.Tests.ps1": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:d3621f762a3b5f92021be1da4d045ab1ad6a07fbd33da04a682520009768bc25"
+      "Hash": "sha256:4b2df005f4e9db585645c9a530c37ed6f81f085c6247e798e03281fa99cd81ba"
     },
     ".config/dotnet-tools.json": {
       "Ownership": "Merged",
@@ -91,12 +88,12 @@
     ".github/pull_request_template.md": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:a5d566cf99a8f0835c32c36ea3aab7445924fa2eeee0f15352def42f026ceab3"
+      "Hash": "sha256:8aaec7183e55832ecb3c6577b870beb0849a70d129c4601ab28ea0872abbc231"
     },
     ".github/workflows/builds.yaml": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:f5045b3c9314b62b94ba2b9c8757b6e607dfc56c3efe7abf4144541de0fd431f"
+      "Hash": "sha256:05886d40ec54929bee2a4f209f1b7cc747b65bc1fa903da79a4143ebdac68a58"
     },
     ".github/workflows/label-pr.yaml": {
       "Ownership": "Managed",
@@ -106,12 +103,12 @@
     ".github/workflows/release.yaml": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:3731d49e2119413ec55d34054f38192e2fcd80df90642e321633b8d1de55cbef"
+      "Hash": "sha256:c9a112c5719cc1f19658f6a872debfec4fbedbff6d901577a91e47c4c5486810"
     },
     ".github/workflows/stage-release.yaml": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:620633fdd5d154039322c7723c05abdc6e38cd7b60c57dadd6ec4c3fe6b1226e"
+      "Hash": "sha256:0ec1684a8fb590a8f37fce4e1df57e68f4ae40f7317e76c863fdd45bfe356a78"
     },
     ".gitignore": {
       "Ownership": "Merged",
@@ -201,7 +198,7 @@
     "mkdocs.yml": {
       "Ownership": "Managed",
       "Component": "MkDocs",
-      "Hash": "sha256:189b5e77c46c3f1122db508e8a9f118eb415413aa4caffc5fe7f21e960c00e21"
+      "Hash": "sha256:db95f5b8afa3d4972076530763bc8f6a337cc2b943de92dad0ddedb519038154"
     },
     "nuget.config": {
       "Ownership": "Managed",
@@ -216,7 +213,7 @@
     "pages/index.md": {
       "Ownership": "Managed",
       "Component": "MkDocs",
-      "Hash": "sha256:f26068b12155ba8afb5fa0fb8064e0153b8b40837417be78facedcdfd7599467"
+      "Hash": "sha256:690e7ce08a2b68c319bc3af6f1f7f64d6c74dedb0256191f64d7d5247b9fe8cd"
     },
     "paket.dependencies": {
       "Ownership": "Merged",
