@@ -2,8 +2,6 @@
   "cSpell.language": "en,en-GB",
   "cSpell.words": [
     "Brownserve",
-    "bsdev",
-    "Dockerfiles",
     "paket",
     "Teamcity",
     "TMPDIR",
@@ -32,7 +30,9 @@
     "PSMODULE",
     "psobject",
     "pstools",
-    "pwsh"
+    "pwsh",
+    "bsdev",
+    "Dockerfiles"
   ],
   "markdown.extension.toc.omittedFromToc": {
     "README.md": [
