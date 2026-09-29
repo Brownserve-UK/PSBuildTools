@@ -191,6 +191,19 @@ foreach ($ModuleSpec in @(
     }
 }
 
+# Load the module from the "Module" directory
+try
+{
+    Write-Verbose "Loading module from '$($Global:BrownserveModuleDirectory)'"
+    Get-ChildItem $Global:BrownserveModuleDirectory -Filter '*.psm1' -Recurse | Foreach-Object {
+        Import-Module $_ -Force -Verbose:$false
+    }
+}
+catch
+{
+    throw "Failed to import module.`n$($_.Exception.Message)"
+}
+
 # The PackageManagement module needs to be loaded for Save-Module to function without being overly verbose
 if (!(Get-Module 'PackageManagement'))
 {

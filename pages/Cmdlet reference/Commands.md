@@ -2,7 +2,7 @@
 Module Name: Brownserve.PSBuildTools
 Module Guid: 2752b94a-d020-4696-9e9e-b85de62dc3ca
 Download Help Link: https://docs.brownserve.co.uk/Brownserve.PSBuildTools/Cmdlet%20reference/Commands/
-Help Version: 0.3.0
+Help Version: 0.2.0
 Locale: en-US
 ---
 
@@ -49,10 +49,6 @@ Prepares a repository for use for a given project
 ### [New-BrownserveChangelogEntry](New-BrownserveChangelogEntry.md)
 
 Creates a new Keep a Changelog entry for a given version in the standard Brownserve format.
-
-### [New-BrownserveCIConfiguration](New-BrownserveCIConfiguration.md)
-
-Generates the CI workflow files for a repository's components.
 
 ### [New-BrownservePowerShellModule](New-BrownservePowerShellModule.md)
 

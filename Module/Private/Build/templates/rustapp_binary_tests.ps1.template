@@ -5,13 +5,16 @@
     Verifies that the compiled binary exists and responds correctly to basic flags.
     These tests are intended to be run after a successful 'Build' task.
 #>
-Describe '###REPO_NAME### binary' -Skip:(-not $Global:BrownserveRustBinaryPath) {
+Describe '###REPO_NAME### binary' {
     BeforeAll {
-        $script:BinaryPath = $Global:BrownserveRustBinaryPath
+        # Locate the binary under the build output directory set by CARGO_TARGET_DIR.
+        # On Windows the executable has a .exe extension.
+        $BinaryName = if ($IsWindows) { '###REPO_NAME###.exe' } else { '###REPO_NAME###' }
+        $script:BinaryPath = Join-Path $Global:BrownserveRepoBuildOutputDirectory 'release' $BinaryName
     }
 
     Context 'Binary exists' {
-        It 'should be present at the path recorded by the Rust build' {
+        It 'should be present in the build output directory' {
             $script:BinaryPath | Should -Exist
         }
     }

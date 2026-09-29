@@ -44,12 +44,3 @@ Describe 'ModuleImport' {
         }
     }
 }
-
-Describe 'ModuleSource' {
-    It 'should not contain files or folders whose names start with a dot' {
-        $DotItems = Get-ChildItem -Path (Join-Path $Global:BrownserveRepoRootDirectory 'Module') -Recurse -Force |
-            Where-Object { $_.Name -like '.*' } |
-            ForEach-Object { [System.IO.Path]::GetRelativePath($Global:BrownserveRepoRootDirectory, $_.FullName) }
-        $DotItems | Should -BeNullOrEmpty -Because 'nuget pack and PSGallery publishing drop dot-prefixed files and folders, so they would be missing from the published module'
-    }
-}

@@ -1,0 +1,18 @@
+{
+    "PowerShellModule":
+    {
+        "Dockerfile": "Dockerfile_PowerShellModule"
+    },
+    "WebApp":
+    {
+        "Dockerfile": "Dockerfile_WebApp"
+    },
+    "RustApp":
+    {
+        "Dockerfile": "Dockerfile_RustApp"
+    },
+    "bsdev":
+    {
+        "Dockerfile": "Dockerfile_RustApp"
+    }
+}

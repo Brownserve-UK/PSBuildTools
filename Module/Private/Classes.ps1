@@ -572,159 +572,6 @@ enum BrownserveRepoProjectType
     Generic
 }
 
-<#
-    The three ways Compare-BrownserveRepository can own a file it generates:
-      - Managed: whole file compare, a manual edit is a conflict unless -Force is passed.
-      - Seeded: created if missing, never touched again.
-      - Merged: only our own contribution (a marker section or a set of structured keys) is
-        compared and replaced, manual content is preserved.
-#>
-enum BrownserveFileOwnership
-{
-    Managed
-    Seeded
-    Merged
-}
-
-<#
-.DESCRIPTION
-    Represents a single file that Compare-BrownserveRepository has planned to create or update,
-    together with the ownership mode that governs how manual edits to it are treated.
-    'MarkerSection' names the marker-delimited section a 'Merged' file's generated content lives in
-    (e.g. '.gitignore's manually defined ignores), and 'StructuredContributions' records the
-    generator's contributed keys/values for a structured 'Merged' file (e.g. VS Code settings).
-#>
-class BrownserveManagedFile
-{
-    [string]$Path
-    [string[]]$Content
-    [string]$LineEnding = 'LF'
-    [BrownserveFileOwnership]$Ownership
-    [string]$Component
-    [hashtable]$MarkerSection
-    $StructuredContributions
-    [bool]$Conflict = $false
-    [string]$ConflictReason
-
-    BrownserveManagedFile([hashtable]$Hashtable)
-    {
-        $RequiredKeys = @('Path', 'Ownership')
-        foreach ($Key in $RequiredKeys)
-        {
-            if (!$Hashtable.ContainsKey($Key) -or $null -eq $Hashtable[$Key])
-            {
-                throw "Hashtable missing key '$Key'"
-            }
-        }
-        $this.Path = $Hashtable.Path
-        $this.Ownership = $Hashtable.Ownership
-        if ($Hashtable.Content)
-        {
-            $this.Content = $Hashtable.Content
-        }
-        if ($Hashtable.LineEnding)
-        {
-            $this.LineEnding = $Hashtable.LineEnding
-        }
-        if ($Hashtable.Component)
-        {
-            $this.Component = $Hashtable.Component
-        }
-        if ($Hashtable.MarkerSection)
-        {
-            $this.MarkerSection = $Hashtable.MarkerSection
-        }
-        if ($Hashtable.StructuredContributions)
-        {
-            $this.StructuredContributions = $Hashtable.StructuredContributions
-        }
-        if ($Hashtable.ContainsKey('Conflict'))
-        {
-            $this.Conflict = [bool]$Hashtable.Conflict
-        }
-        if ($Hashtable.ConflictReason)
-        {
-            $this.ConflictReason = $Hashtable.ConflictReason
-        }
-    }
-}
-
-## Repository component classes
-
-<#
-    Represents a single option that a repository component accepts (e.g. 'PowerShellModule' accepts a
-    'UseWorkingCopy' option). Definitions are read from the component's 'component.psd1' file.
-#>
-class BrownserveRepoComponentOption
-{
-    [string]$Name
-    [string]$Type
-    $Default
-    [bool]$Required
-
-    BrownserveRepoComponentOption([hashtable]$Hashtable)
-    {
-        if (!$Hashtable.Name)
-        {
-            throw "Hashtable missing key 'Name'"
-        }
-        if (!$Hashtable.Type)
-        {
-            throw "Hashtable missing key 'Type'"
-        }
-        $this.Name = $Hashtable.Name
-        $this.Type = $Hashtable.Type
-        $this.Default = $Hashtable.Default
-        $this.Required = [bool]$Hashtable.Required
-    }
-}
-
-<#
-    Represents a repository component definition as read from 'component.psd1'.
-    'Data' holds the raw, component specific data (GitIgnores, PaketDependencies, Paths, VSCodeExtensions,
-    PackageAliases, EditorConfig, Devcontainer, InitParams, Dependabot) that Compare-BrownserveRepository composes.
-#>
-class BrownserveRepoComponentDefinition
-{
-    [string]$Name
-    [string[]]$Requires = @()
-    [BrownserveRepoComponentOption[]]$Options = @()
-    [hashtable]$Data = @{}
-
-    BrownserveRepoComponentDefinition([string]$Name, [hashtable]$Hashtable)
-    {
-        $this.Name = $Name
-        if ($Hashtable.Requires)
-        {
-            $this.Requires = $Hashtable.Requires
-        }
-        if ($Hashtable.Options)
-        {
-            $this.Options = $Hashtable.Options | ForEach-Object { [BrownserveRepoComponentOption]$_ }
-        }
-        if ($Hashtable.Data)
-        {
-            $this.Data = $Hashtable.Data
-        }
-    }
-}
-
-<#
-    Represents a component that has been resolved (validated, with defaults applied) ready for
-    Compare-BrownserveRepository to consume.
-#>
-class BrownserveResolvedComponent
-{
-    [string]$Name
-    [hashtable]$Options = @{}
-
-    BrownserveResolvedComponent([string]$Name, [hashtable]$Options)
-    {
-        $this.Name = $Name
-        $this.Options = $Options
-    }
-}
-
 class GitHubActionsJob
 {
     [string]$JobTitle
@@ -752,7 +599,6 @@ class PaketDependencyRule
 {
     [string]$Source
     [string]$PackageName
-    [string]$Version
 
     PaketDependencyRule([hashtable]$Hashtable)
     {
@@ -767,10 +613,6 @@ class PaketDependencyRule
             {
                 $this.$Key = $Hashtable.$Key
             }
-        }
-        if ($Hashtable.Version)
-        {
-            $this.Version = $Hashtable.Version
         }
     }
 
@@ -787,10 +629,6 @@ class PaketDependencyRule
             {
                 $this.$Key = $Object.$Key
             }
-        }
-        if ($Object.Version)
-        {
-            $this.Version = $Object.Version
         }
     }
 }

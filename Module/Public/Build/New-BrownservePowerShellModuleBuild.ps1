@@ -60,15 +60,9 @@ function New-BrownservePowerShellModuleBuild
 
                 try
                 {
-                    $CIFiles = @(New-BrownserveCIConfiguration `
-                            -Provider $CICDProvider `
-                            -Components 'PowerShellModule' `
-                            -ComponentOptions @{ PowerShellModule = @{ ModuleInfo = $ModuleInfo } } `
-                            -RepoName $RepoName `
-                            -ErrorAction 'Stop')
-                    $BuildsWorkflowContent = ($CIFiles | Where-Object { $_.Path -eq '.github/workflows/builds.yaml' }).Content
-                    $StageReleaseWorkflowContent = ($CIFiles | Where-Object { $_.Path -eq '.github/workflows/stage-release.yaml' }).Content
-                    $ReleaseWorkflowContent = ($CIFiles | Where-Object { $_.Path -eq '.github/workflows/release.yaml' }).Content
+                    $BuildsWorkflowContent = New-BrownserveGitHubBuildsWorkflow -ModuleName $ModuleInfo.Name
+                    $StageReleaseWorkflowContent = New-BrownserveGitHubStageReleaseWorkflow -ModuleName $ModuleInfo.Name
+                    $ReleaseWorkflowContent = New-BrownserveGitHubReleaseWorkflow -ModuleName $ModuleInfo.Name
                 }
                 catch
                 {
