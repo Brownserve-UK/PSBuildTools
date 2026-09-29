@@ -65,12 +65,27 @@
     ".github/dependabot.yml": {
       "Ownership": "Managed",
       "Component": "Core",
-      "Hash": "sha256:52a6ee3950718e367b9f6af8da4d3780678826a0f6c5ea1d4b6f6c71c9266d3e"
+      "Hash": "sha256:9180cac8d9212b286918b82f7d59879ca9b9cdccc98f2343ad27c3d7e5324fff"
+    },
+    ".github/workflows/builds.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:8d5e0367f771d646e4d55e1daaadceb88829a51af2a34f9afefd10aaac4a8f34"
     },
     ".github/workflows/label-pr.yaml": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:9b41c473c5df0d8a382ed83e57573eed55ddd5e0903a676a93f27028a4ef0749"
+      "Hash": "sha256:e4a24454f640e089af4bf442b93e610b86463169c8e05fd8def8dcc4a7cd4a2c"
+    },
+    ".github/workflows/release.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:dc33e8ccf34bb6c02850c58c1eb75ec1c8f376955e2b1c28682a2e70bafbf5b0"
+    },
+    ".github/workflows/stage-release.yaml": {
+      "Ownership": "Managed",
+      "Component": "ReleaseLifecycle",
+      "Hash": "sha256:5d48649f28ee4ce36d77f7d7eb2c2f4786550a2957042b8328b5d20378205181"
     },
     ".gitignore": {
       "Ownership": "Merged",
@@ -140,7 +155,7 @@
     "paket.dependencies": {
       "Ownership": "Merged",
       "Component": "Core",
-      "Hash": "sha256:0ca87c0b6d6900b3671a418b11453d6f916a0a58c19b07686c25f1167c96da02"
+      "Hash": "sha256:0f440b18b13f07dffaa177c36aae595c7a8be3f330594e2ca2a3dd8d7ad8bec4"
     }
   }
 }

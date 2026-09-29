@@ -50,6 +50,10 @@ Prepares a repository for use for a given project
 
 Creates a new Keep a Changelog entry for a given version in the standard Brownserve format.
 
+### [New-BrownserveCIConfiguration](New-BrownserveCIConfiguration.md)
+
+Generates the CI workflow files for a repository's components.
+
 ### [New-BrownservePowerShellModule](New-BrownservePowerShellModule.md)
 
 Creates a new PowerShell module in the standard Brownserve format

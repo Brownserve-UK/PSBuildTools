@@ -75,6 +75,13 @@
             @{ Alias = 'nuget'; FileName = 'NuGet.exe'; VariableName = 'BrownserveNugetPath' }
         )
         Devcontainer      = @{ Dockerfile = 'Dockerfile_PowerShellModule' }
+        CI                = @{
+            ChangePatterns = @('module/', 'pages/Cmdlet reference/')
+            PublishSecrets = @{
+                nuget     = @('NuGetApiKey')
+                PSGallery = @('PSGalleryApiKey')
+            }
+        }
         DependabotExtraUpdates = @(
             @{ Ecosystem = 'nuget'; Directory = '/.config'; Interval = 'weekly' }
         )

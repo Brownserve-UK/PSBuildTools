@@ -130,45 +130,17 @@ function New-BrownserveBuildScript
 
         $ToolchainLines = [System.Collections.Generic.List[string]]::new()
         $ToolchainLines.Add('$RequiredToolchains = @(')
-        foreach ($TaskComponent in $Plan.TaskComponents)
+        foreach ($Requirement in (Get-BrownserveToolchainRequirement -Plan $Plan))
         {
-            foreach ($Requirement in $TaskComponent.BuildTasks.Toolchains)
+            $ToolsLiteral = (@($Requirement.Tools | ForEach-Object { "'$_'" }) -join ', ')
+            $TargetsLiteral = (@($Requirement.Targets | ForEach-Object { "'$_'" }) -join ', ')
+            $SkipIfExpression = '{ $false }'
+            if ($Requirement.CollectorParameter)
             {
-                $ApplicableTargets = [System.Collections.Generic.List[string]]::new()
-                foreach ($SharedTarget in $Plan.SharedTargetAnchors.Keys)
-                {
-                    $SharedAnchors = $Plan.SharedTargetAnchors[$SharedTarget]
-                    if ($SharedAnchors | Where-Object { $Requirement.Anchors -contains $_ })
-                    {
-                        $ApplicableTargets.Add($SharedTarget)
-                    }
-                }
-                if ($TaskComponent.BuildTasks.PublicTargetAnchors)
-                {
-                    foreach ($OwnTarget in ($TaskComponent.BuildTasks.PublicTargetAnchors.Keys | Sort-Object))
-                    {
-                        $OwnAnchors = $TaskComponent.BuildTasks.PublicTargetAnchors[$OwnTarget]
-                        if ($OwnAnchors | Where-Object { $Requirement.Anchors -contains $_ })
-                        {
-                            $ApplicableTargets.Add($OwnTarget)
-                        }
-                    }
-                }
-                $ApplicableTargets = @($ApplicableTargets | Select-Object -Unique)
-                if ($ApplicableTargets.Count -eq 0)
-                {
-                    continue
-                }
-                $ToolsLiteral = (@($Requirement.Tools | ForEach-Object { "'$_'" }) -join ', ')
-                $TargetsLiteral = (@($ApplicableTargets | ForEach-Object { "'$_'" }) -join ', ')
-                $SkipIfExpression = '{ $false }'
-                if ($TaskComponent.BuildTasks.CollectorParameter)
-                {
-                    $SkipIfExpression = "{ `$$($TaskComponent.BuildTasks.CollectorParameter) }"
-                }
-                $PlatformLiteral = if ($Requirement.Platform) { "'$($Requirement.Platform)'" } else { '$null' }
-                $ToolchainLines.Add("    @{ Component = '$($TaskComponent.Name)'; Tools = @($ToolsLiteral); Targets = @($TargetsLiteral); Platform = $PlatformLiteral; SkipIf = $SkipIfExpression }")
+                $SkipIfExpression = "{ `$$($Requirement.CollectorParameter) }"
             }
+            $PlatformLiteral = if ($Requirement.Platform) { "'$($Requirement.Platform)'" } else { '$null' }
+            $ToolchainLines.Add("    @{ Component = '$($Requirement.Component)'; Tools = @($ToolsLiteral); Targets = @($TargetsLiteral); Platform = $PlatformLiteral; SkipIf = $SkipIfExpression }")
         }
         $ToolchainLines.Add(')')
 

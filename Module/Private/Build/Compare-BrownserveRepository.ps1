@@ -572,6 +572,16 @@ function Compare-BrownserveRepository
                 }
                 $DependabotUpdatesFinal += $Update
             }
+            foreach ($Update in $DependabotUpdatesFinal)
+            {
+                $IgnoredDependencies = @($ComponentDefinitions['Core'].Data.DependabotIgnore |
+                        Where-Object { $_.Ecosystem -eq $Update.Ecosystem } |
+                        ForEach-Object { $_.DependencyName })
+                if ($IgnoredDependencies.Count -gt 0)
+                {
+                    $Update['Ignore'] = $IgnoredDependencies
+                }
+            }
             $DependabotParams = @{
                 Updates = $DependabotUpdatesFinal
             }
@@ -589,13 +599,12 @@ function Compare-BrownserveRepository
         }
 
         $TemplatesDirectory = Join-Path $PSScriptRoot 'templates'
-        if ($IncludeWorkflows -or $IncludeBuildScripts -or $IncludeContributing -or $IncludePRTemplate -or $IncludePesterTests)
+        if ($IncludeBuildScripts -or $IncludeContributing -or $IncludePRTemplate -or $IncludePesterTests)
         {
             $ProfileComponentNames = @($ResolvedComponents.Name | Where-Object { $_ -in @('PowerShellModule', 'RustBinary', 'ContainerImage', 'DirectoryArchive') } | Sort-Object)
             $ProfileKey = $ProfileComponentNames -join '+'
             if (!$LegacyProfiles.ContainsKey($ProfileKey))
             {
-                $IncludeWorkflows = $false
                 $IncludeContributing = $false
                 $IncludePRTemplate = $false
                 $IncludePesterTests = $false
@@ -633,26 +642,6 @@ function Compare-BrownserveRepository
                     TemplateDirectory = $TemplatesDirectory
                     TemplateName      = $LegacyProfile.PRTemplateTemplate
                     Substitutions     = $PRTemplateSubstitutions
-                }
-            }
-            if ($IncludeWorkflows -and $LegacyProfile.WorkflowTemplates)
-            {
-                $WorkflowTemplateParams = @{
-                    Builds       = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = $LegacyProfile.WorkflowTemplates.Builds
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                    StageRelease = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = $LegacyProfile.WorkflowTemplates.StageRelease
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
-                    Release      = @{
-                        TemplateDirectory = $TemplatesDirectory
-                        TemplateName      = $LegacyProfile.WorkflowTemplates.Release
-                        Substitutions     = @{ REPO_NAME = '' }
-                    }
                 }
             }
             if ($IncludePesterTests)
@@ -1484,96 +1473,49 @@ function Compare-BrownserveRepository
                 })
         }
 
-        if ($IncludeWorkflows)
+        if ($IncludeWorkflows -or $IncludeLabelPR)
         {
             if (-not $RepoName)
             {
                 $RepoName = Split-Path $RepositoryPath -Leaf
             }
 
-            $BuildsWorkflowPath = Join-Path $WorkflowDirectory 'builds.yaml'
-            $StageReleaseWorkflowPath = Join-Path $WorkflowDirectory 'stage-release.yaml'
-            $ReleaseWorkflowPath = Join-Path $WorkflowDirectory 'release.yaml'
-
             try
             {
-                if ($WorkflowTemplateParams)
-                {
-                    $WorkflowTemplateParams.Builds.Substitutions['REPO_NAME']       = $RepoName
-                    $WorkflowTemplateParams.StageRelease.Substitutions['REPO_NAME'] = $RepoName
-                    $WorkflowTemplateParams.Release.Substitutions['REPO_NAME']      = $RepoName
-                    $BuildsTemplateParams       = $WorkflowTemplateParams.Builds
-                    $StageReleaseTemplateParams = $WorkflowTemplateParams.StageRelease
-                    $ReleaseTemplateParams      = $WorkflowTemplateParams.Release
-                    $NewBuildsWorkflowContent       = New-BrownserveContentFromTemplate @BuildsTemplateParams | Format-BrownserveContent
-                    $NewStageReleaseWorkflowContent = New-BrownserveContentFromTemplate @StageReleaseTemplateParams | Format-BrownserveContent
-                    $NewReleaseWorkflowContent      = New-BrownserveContentFromTemplate @ReleaseTemplateParams | Format-BrownserveContent
-                }
-                else
-                {
-                    $WorkflowCommonParams = @{ ModuleName = $ModuleInfo.Name; RepoName = $RepoName }
-                    $NewBuildsWorkflowContent       = New-BrownserveGitHubBuildsWorkflow -ModuleName $ModuleInfo.Name -RepoName $RepoName | Format-BrownserveContent
-                    $NewStageReleaseWorkflowContent = New-BrownserveGitHubStageReleaseWorkflow @WorkflowCommonParams | Format-BrownserveContent
-                    $NewReleaseWorkflowContent      = New-BrownserveGitHubReleaseWorkflow @WorkflowCommonParams | Format-BrownserveContent
-                }
+                $CIFiles = @(New-BrownserveCIConfiguration `
+                        -Provider ([BrownserveCICD]::GitHubActions) `
+                        -Components $Components `
+                        -ComponentOptions $ComponentOptions `
+                        -RepoName $RepoName `
+                        -Owner $Owner `
+                        -ErrorAction 'Stop')
             }
             catch
             {
-                throw "Failed to generate GitHub Actions workflow content.`n$($_.Exception.Message)"
+                throw "Failed to generate CI workflow content.`n$($_.Exception.Message)"
             }
 
-            if (!(Test-Path $GitHubDirectory) -and ($MissingDirectories.Path -notcontains $GitHubDirectory))
+            if ($CIFiles.Count -gt 0)
             {
-                $MissingDirectories += [pscustomobject]@{ Path = $GitHubDirectory }
+                if (!(Test-Path $GitHubDirectory) -and ($MissingDirectories.Path -notcontains $GitHubDirectory))
+                {
+                    $MissingDirectories += [pscustomobject]@{ Path = $GitHubDirectory }
+                }
+                if (!(Test-Path $WorkflowDirectory) -and ($MissingDirectories.Path -notcontains $WorkflowDirectory))
+                {
+                    $MissingDirectories += [pscustomobject]@{ Path = $WorkflowDirectory }
+                }
             }
-            if (!(Test-Path $WorkflowDirectory) -and ($MissingDirectories.Path -notcontains $WorkflowDirectory))
+            foreach ($CIFile in $CIFiles)
             {
-                $MissingDirectories += [pscustomobject]@{ Path = $WorkflowDirectory }
-            }
-
-            $WorkflowFiles = @(
-                @{ Path = $BuildsWorkflowPath; Content = $NewBuildsWorkflowContent },
-                @{ Path = $StageReleaseWorkflowPath; Content = $NewStageReleaseWorkflowContent },
-                @{ Path = $ReleaseWorkflowPath; Content = $NewReleaseWorkflowContent }
-            )
-            foreach ($WorkflowFile in $WorkflowFiles)
-            {
+                $NewCIContent = $CIFile.Content | Format-BrownserveContent
                 $ManagedFiles.Add([BrownserveManagedFile]@{
-                        Path      = $WorkflowFile.Path
+                        Path      = Join-Path $RepositoryPath $CIFile.Path
                         Ownership = [BrownserveFileOwnership]::Managed
                         Component = 'ReleaseLifecycle'
-                        Content   = $WorkflowFile.Content.Content
+                        Content   = $NewCIContent.Content
                     })
             }
-        }
-
-        if ($IncludeLabelPR)
-        {
-            $LabelPRWorkflowPath = Join-Path $WorkflowDirectory 'label-pr.yaml'
-
-            if (!(Test-Path $GitHubDirectory) -and ($MissingDirectories.Path -notcontains $GitHubDirectory))
-            {
-                $MissingDirectories += [pscustomobject]@{ Path = $GitHubDirectory }
-            }
-            if (!(Test-Path $WorkflowDirectory) -and ($MissingDirectories.Path -notcontains $WorkflowDirectory))
-            {
-                $MissingDirectories += [pscustomobject]@{ Path = $WorkflowDirectory }
-            }
-
-            try
-            {
-                $NewLabelPRWorkflowContent = New-BrownserveGitHubLabelPRWorkflow | Format-BrownserveContent
-            }
-            catch
-            {
-                throw "Failed to process '$LabelPRWorkflowPath'.`n$($_.Exception.Message)"
-            }
-            $ManagedFiles.Add([BrownserveManagedFile]@{
-                    Path      = $LabelPRWorkflowPath
-                    Ownership = [BrownserveFileOwnership]::Managed
-                    Component = 'ReleaseLifecycle'
-                    Content   = $NewLabelPRWorkflowContent.Content
-                })
         }
 
         if ($IncludeContributing)

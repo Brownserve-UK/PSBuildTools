@@ -8,47 +8,37 @@ on:
 permissions: {}
 
 jobs:
-  check-changes:
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
-    outputs:
-      relevant: ${{ steps.filter.outputs.relevant }}
-    steps:
-      - name: check-relevant-changes
-        id: filter
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          FILES=$(gh pr view ${{ github.event.pull_request.number }} \
-            --repo ${{ github.repository }} \
-            --json files --jq '.files[].path')
-          if echo "$FILES" | grep -iqE '^(src/|Dockerfile|package\.json$|\.build/|\.config/|nuget\.config$)'; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "No relevant files changed, skipping build"
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
-          fi
-
-  BuildTestAndCheck:
-    needs: check-changes
-    if: needs.check-changes.outputs.relevant == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+  container-image:
+    uses: Brownserve-UK/actions/.github/workflows/brownserve-pr-build.yaml@73e2adb47b47bb461e804dd6c0038f5e4e513f89 # v0.1.0
     permissions:
       contents: read
+      pull-requests: read
+    with:
+      repo-name: 'test-web-app'
+      change-pattern: '^(src/|Dockerfile|package\.json$|\.build/|\.config/|nuget\.config$)'
+      build-task: ContainerImage.Check
+      os-matrix: '["ubuntu-latest"]'
+
+  # Gate job: always runs and reports the single status check name that branch protection requires.
+  # Skipped and cancelled jobs fail it, path-filter skips are reported as successes by the called workflow.
+  merge-checks:
+    needs:
+      - container-image
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
     steps:
-      # Step 1: Checkout the repo
-      - name: checkout-repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          path: test-web-app
-      # Step 2: Run the build script
-      - name: run-build-script
-        shell: pwsh
+      - name: evaluate-build-results
+        env:
+          CONTAINER_IMAGE_RESULT: ${{ needs.container-image.result }}
         run: |
-            ./test-web-app/.build/build.ps1 `
-              -GitHubRepoName 'test-web-app' `
-              -BranchName $env:GITHUB_REF `
-              -Build 'BuildTestAndCheck' `
-              -Verbose
+          FAILED=0
+          if [ "$CONTAINER_IMAGE_RESULT" != "success" ]; then
+            echo "container-image did not succeed (result: $CONTAINER_IMAGE_RESULT)"
+            FAILED=1
+          fi
+          if [ "$FAILED" -ne 0 ]; then
+            exit 1
+          fi
+          echo "All required jobs succeeded"

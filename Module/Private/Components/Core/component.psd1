@@ -38,7 +38,63 @@
                 )
             }
         )
-        PSBuildTasksVersion = '0.2.0'
+        PSBuildTasksVersion = '0.2.1'
+        DependabotIgnore    = @(
+            @{ Ecosystem = 'github-actions'; DependencyName = 'Brownserve-UK/actions*' }
+        )
+        CI                  = @{
+            ChangePatterns = @('\.build/', '\.config/', 'nuget\.config$')
+            Pipelines      = @{
+                PullRequestBuild = @{
+                    Permissions = @('ReadContents', 'ReadPullRequests')
+                    Secrets     = @()
+                }
+                StageRelease     = @{
+                    Permissions = @('ReadContents')
+                    Secrets     = @('AppId', 'AppPrivateKey')
+                }
+                Release          = @{
+                    Permissions = @('ReadContents', 'WritePackages')
+                    Secrets     = @('AppId', 'AppPrivateKey', 'NotificationWebhook')
+                }
+                LabelPullRequest = @{
+                    Permissions = @('WriteIssues', 'WritePullRequests')
+                    Secrets     = @()
+                }
+            }
+        }
+        GitHubActions       = @{
+            ActionsRepository = 'Brownserve-UK/actions'
+            ActionsVersion    = 'v0.1.0'
+            ActionsCommit     = '73e2adb47b47bb461e804dd6c0038f5e4e513f89'
+            DefaultRunner     = 'ubuntu-latest'
+            Workflows         = @{
+                PullRequestBuild = @{ File = 'brownserve-pr-build.yaml'; ToolchainInputs = @('rust', 'node', 'mono'); RunnerProvidedTools = @() }
+                StageRelease     = @{ File = 'brownserve-stage-release.yaml'; ToolchainInputs = @('rust'); RunnerProvidedTools = @() }
+                Release          = @{ File = 'brownserve-release.yaml'; ToolchainInputs = @('mono'); RunnerProvidedTools = @('npm') }
+                DeployDocs       = @{ File = 'brownserve-deploy-docs.yaml'; ToolchainInputs = @(); RunnerProvidedTools = @() }
+                LabelPullRequest = @{ File = 'brownserve-label-pr.yaml'; ToolchainInputs = @(); RunnerProvidedTools = @() }
+            }
+            ToolchainInputs   = @{ cargo = 'rust'; npm = 'node'; mono = 'mono' }
+            PreinstalledTools = @{ docker = @('ubuntu-latest') }
+            PermissionScopes  = @{
+                ReadContents      = @{ Scope = 'contents'; Access = 'read' }
+                WriteContents     = @{ Scope = 'contents'; Access = 'write' }
+                ReadPullRequests  = @{ Scope = 'pull-requests'; Access = 'read' }
+                WritePullRequests = @{ Scope = 'pull-requests'; Access = 'write' }
+                WriteIssues       = @{ Scope = 'issues'; Access = 'write' }
+                WritePackages     = @{ Scope = 'packages'; Access = 'write' }
+            }
+            Secrets           = @{
+                AppId               = @{ Input = 'app-id'; Name = 'BROWNSERVE_CI_APP_ID' }
+                AppPrivateKey       = @{ Input = 'app-private-key'; Name = 'BROWNSERVE_CI_APP_PRIVATE_KEY' }
+                NotificationWebhook = @{ Input = 'slack-webhook'; Name = 'SLACK_WEBHOOK_BUILD' }
+                NuGetApiKey         = @{ Input = 'nuget-api-key'; Name = 'NUGET_API_KEY' }
+                PSGalleryApiKey     = @{ Input = 'psgallery-api-key'; Name = 'POWERSHELL_GALLERY_API_KEY' }
+                DockerHubUsername   = @{ Input = 'dockerhub-username'; Name = 'DOCKERHUB_USERNAME' }
+                DockerHubToken      = @{ Input = 'dockerhub-token'; Name = 'DOCKERHUB_TOKEN' }
+            }
+        }
         PermanentPaths      = @(
             @{
                 VariableName = 'BrownserveRepoBuildDirectory'

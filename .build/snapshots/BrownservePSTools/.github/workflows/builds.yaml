@@ -8,47 +8,37 @@ on:
 permissions: {}
 
 jobs:
-  check-changes:
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
-    outputs:
-      relevant: ${{ steps.filter.outputs.relevant }}
-    steps:
-      - name: check-relevant-changes
-        id: filter
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          FILES=$(gh pr view ${{ github.event.pull_request.number }} \
-            --repo ${{ github.repository }} \
-            --json files --jq '.files[].path')
-          if echo "$FILES" | grep -iqE '^(module/|\.build/|\.config/|pages/Cmdlet reference/|nuget\.config$)'; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "No relevant files changed, skipping build"
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
-          fi
-
-  BuildTestAndCheck:
-    needs: check-changes
-    if: needs.check-changes.outputs.relevant == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+  build:
+    uses: Brownserve-UK/actions/.github/workflows/brownserve-pr-build.yaml@73e2adb47b47bb461e804dd6c0038f5e4e513f89 # v0.1.0
     permissions:
       contents: read
+      pull-requests: read
+    with:
+      repo-name: 'PSTools'
+      change-pattern: '^(module/|pages/Cmdlet reference/|\.build/|\.config/|nuget\.config$)'
+      build-task: BuildTestAndCheck
+      os-matrix: '["ubuntu-latest"]'
+
+  # Gate job: always runs and reports the single status check name that branch protection requires.
+  # Skipped and cancelled jobs fail it, path-filter skips are reported as successes by the called workflow.
+  merge-checks:
+    needs:
+      - build
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
     steps:
-      # Step 1: Checkout the repo
-      - name: checkout-module
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          path: PSTools
-      # Step 2: Run the build script
-      - name: run-build-script
-        shell: pwsh
+      - name: evaluate-build-results
+        env:
+          BUILD_RESULT: ${{ needs.build.result }}
         run: |
-            ./PSTools/.build/build.ps1 `
-              -GitHubRepoName 'PSTools' `
-              -BranchName $env:GITHUB_REF `
-              -Build 'BuildTestAndCheck' `
-              -Verbose
+          FAILED=0
+          if [ "$BUILD_RESULT" != "success" ]; then
+            echo "build did not succeed (result: $BUILD_RESULT)"
+            FAILED=1
+          fi
+          if [ "$FAILED" -ne 0 ]; then
+            exit 1
+          fi
+          echo "All required jobs succeeded"

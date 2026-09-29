@@ -6,6 +6,7 @@
     a package ecosystem, the directory to scan, and the update schedule interval.
     Optionally a Cooldown hashtable with a DefaultDays key adds a cooldown block so
     Dependabot waits before opening PRs for newly published versions.
+    An optional Ignore array of dependency names adds an ignore block so Dependabot leaves those dependencies alone.
 #>
 function New-BrownserveDependabotConfig
 {
@@ -14,6 +15,7 @@ function New-BrownserveDependabotConfig
     (
         # The list of ecosystems to monitor. Each entry must contain Ecosystem, Directory, and Interval keys.
         # An optional Cooldown hashtable with a DefaultDays key emits a cooldown block.
+        # An optional Ignore array of dependency names emits an ignore block.
         [Parameter(Mandatory = $true)]
         [hashtable[]]
         $Updates
@@ -33,6 +35,14 @@ function New-BrownserveDependabotConfig
             {
                 $Lines += '    cooldown:'
                 $Lines += "      default-days: $($Update.Cooldown.DefaultDays)"
+            }
+            if ($Update.Ignore)
+            {
+                $Lines += '    ignore:'
+                foreach ($IgnoredDependency in $Update.Ignore)
+                {
+                    $Lines += "      - dependency-name: `"$IgnoredDependency`""
+                }
             }
             if ($i -lt $Last)
             {

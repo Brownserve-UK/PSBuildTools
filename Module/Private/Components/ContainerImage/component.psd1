@@ -62,6 +62,13 @@
             )
         }
         Devcontainer      = @{ Dockerfile = 'Dockerfile_WebApp' }
+        CI                = @{
+            ChangePatterns       = @('{Context}/')
+            OptionChangePatterns = @(
+                @{ Option = 'Context'; Value = '.'; Patterns = @('src/', 'Dockerfile', 'package\.json$') }
+            )
+            PublishSecrets       = @{ DockerHub = @('DockerHubUsername', 'DockerHubToken') }
+        }
         BuildTasks        = @{
             TaskFile             = 'ContainerImage.tasks.ps1'
             Parameters           = @('ImageName', 'DockerContextPath', 'PublishTo', 'GitHubRepoOwner', 'DockerHubUsername', 'DockerHubToken', 'GHCRToken')
