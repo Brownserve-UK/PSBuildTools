@@ -3,5 +3,8 @@
     Options  = @()
     Data     = @{
         IncludeMkDocs = $true
+        CI            = @{
+            DeployDocs = @{ Engine = 'mkdocs'; Permissions = @('WriteContents') }
+        }
     }
 }

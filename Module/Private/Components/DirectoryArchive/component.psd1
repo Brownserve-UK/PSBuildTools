@@ -56,6 +56,9 @@
             @{ ExtensionID = 'EditorConfig.EditorConfig'; CustomSettings = @{} }
             @{ ExtensionID = 'DavidAnson.vscode-markdownlint'; CustomSettings = @{} }
         )
+        CI                = @{
+            ChangePatterns = @('{Path}/')
+        }
         PermanentPathTemplate = @{
             VariableName = 'BrownserveRepoSkillsDirectory'
             Description  = 'Stores the agent skills that get packaged into each release'

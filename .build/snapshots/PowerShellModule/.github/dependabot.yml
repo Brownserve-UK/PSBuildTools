@@ -5,6 +5,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "Brownserve-UK/actions*"
 
   - package-ecosystem: nuget
     directory: /.config

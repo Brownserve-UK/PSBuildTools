@@ -53,6 +53,10 @@
         DependabotExtraUpdates = @(
             @{ Ecosystem = 'nuget'; Directory = '/.config'; Interval = 'weekly' }
         )
+        CI                = @{
+            ChangePatterns = @('tasks/')
+            PublishSecrets = @{ nuget = @('NuGetApiKey') }
+        }
         BuildTasks        = @{
             TaskFile             = 'NuGetPackage.tasks.ps1'
             Parameters           = @('PackageId', 'PackageDescription', 'PackageAuthor', 'PackageTags', 'PublishTo', 'GitHubRepoOwner', 'GitHubRepoName', 'GitHubReleaseToken', 'NugetFeedApiKey', 'CustomNugetFeeds')

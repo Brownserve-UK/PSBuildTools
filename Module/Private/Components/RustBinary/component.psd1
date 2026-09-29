@@ -76,6 +76,18 @@
             @{ Ecosystem = 'cargo'; Directory = '/'; Interval = 'weekly'; CooldownDays = 30 }
         )
         IncludeInstallScripts = $true
+        CI                = @{
+            ChangePatterns = @('Cargo\.toml$', 'Cargo\.lock$', '.*\.rs$')
+            TargetOption   = 'Targets'
+            PackageTarget  = 'RustBinary.Package'
+        }
+        GitHubActions     = @{
+            Runners = @{
+                'x86_64-unknown-linux-gnu' = 'ubuntu-latest'
+                'x86_64-pc-windows-msvc'   = 'windows-latest'
+                'aarch64-apple-darwin'     = 'macos-latest'
+            }
+        }
         BuildTasks             = @{
             TaskFile             = 'RustBinary.tasks.ps1'
             Parameters           = @('BinaryName', 'Target', 'Targets', 'ArchiveSourceDirectory', 'PublishTo', 'GitHubRepoOwner', 'GitHubRepoName', 'GitHubReleaseToken')

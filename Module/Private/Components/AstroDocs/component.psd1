@@ -11,6 +11,10 @@
                 PathType     = 'Directory'
             }
         )
+        CI                = @{
+            ChangePatterns = @('pages/')
+            DeployDocs     = @{ Engine = 'astro'; Path = 'pages'; Permissions = @('WriteContents') }
+        }
         DependabotExtraUpdates = @(
             @{ Ecosystem = 'npm'; Directory = '/pages'; Interval = 'weekly'; CooldownDays = 30 }
         )

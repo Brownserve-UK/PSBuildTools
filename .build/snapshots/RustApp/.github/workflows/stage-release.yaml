@@ -17,38 +17,13 @@ permissions: {}
 
 jobs:
   stage-release:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      # Step 1: Generate a short-lived token from the GitHub App
-      - name: generate-app-token
-        id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
-        with:
-          app-id: ${{ secrets.BROWNSERVE_CI_APP_ID }}
-          private-key: ${{ secrets.BROWNSERVE_CI_APP_PRIVATE_KEY }}
-      # Step 2: Checkout the repo (full history needed to generate changelog entries from previous release)
-      - name: checkout-repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          path: test-rust-app
-          fetch-depth: 0
-          token: ${{ steps.app-token.outputs.token }}
-      # Step 3: Install Rust (needed by UpdateCargoVersion to regenerate Cargo.lock)
-      - name: install-rust
-        run: rustup toolchain install stable --profile minimal
-      # Step 4: Call the build script
-      - name: run-build-script
-        shell: pwsh
-        env:
-          GitHubPAT: ${{ steps.app-token.outputs.token }}
-        run: |
-            $Params = @{
-              BranchName              = $env:GITHUB_REF
-              GitHubRepoName          = 'test-rust-app'
-              Build                   = 'StageRelease'
-              GitHubStageReleaseToken = $env:GitHubPAT
-              ReleaseType             = '${{ inputs.release_type }}'
-              Verbose                 = $true
-            }
-            ./test-rust-app/.build/build.ps1 @Params
+    uses: Brownserve-UK/actions/.github/workflows/brownserve-stage-release.yaml@73e2adb47b47bb461e804dd6c0038f5e4e513f89 # v0.1.0
+    permissions:
+      contents: read
+    with:
+      repo-name: 'test-rust-app'
+      release-type: ${{ inputs.release_type }}
+      rust: true
+    secrets:
+      app-id: ${{ secrets.BROWNSERVE_CI_APP_ID }}
+      app-private-key: ${{ secrets.BROWNSERVE_CI_APP_PRIVATE_KEY }}

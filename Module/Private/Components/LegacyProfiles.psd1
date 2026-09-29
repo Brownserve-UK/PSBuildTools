@@ -8,11 +8,6 @@
         )
     }
     'RustBinary'                    = @{
-        WorkflowTemplates          = @{
-            Builds       = 'rustapp_github_builds.yaml.template'
-            StageRelease = 'rustapp_github_stage-release.yaml.template'
-            Release      = 'rustapp_github_release.yaml.template'
-        }
         ContributingTemplate       = 'RustApp_github_contributing.md.template'
         PRTemplateTemplate         = 'RustApp_github_pull_request_template.md.template'
         PRTemplateSubstitutionKeys = @('REPO_NAME', 'OWNER')
@@ -21,11 +16,6 @@
         )
     }
     'ContainerImage'                = @{
-        WorkflowTemplates          = @{
-            Builds       = 'webapp_github_builds.yaml.template'
-            StageRelease = 'webapp_github_stage-release.yaml.template'
-            Release      = 'webapp_github_release.yaml.template'
-        }
         ContributingTemplate       = 'WebApp_github_contributing.md.template'
         PRTemplateTemplate         = 'WebApp_github_pull_request_template.md.template'
         PRTemplateSubstitutionKeys = @('REPO_NAME', 'OWNER')
@@ -34,11 +24,6 @@
         )
     }
     'ContainerImage+RustBinary'     = @{
-        WorkflowTemplates          = @{
-            Builds       = 'bsdev_github_builds.yaml.template'
-            StageRelease = 'rustapp_github_stage-release.yaml.template'
-            Release      = 'bsdev_github_release.yaml.template'
-        }
         ContributingTemplate       = 'RustApp_github_contributing.md.template'
         PRTemplateTemplate         = 'RustApp_github_pull_request_template.md.template'
         PRTemplateSubstitutionKeys = @('REPO_NAME', 'OWNER')
@@ -66,11 +51,6 @@
         )
     }
     'DirectoryArchive'              = @{
-        WorkflowTemplates          = @{
-            Builds       = 'skillsrepo_github_builds.yaml.template'
-            StageRelease = 'webapp_github_stage-release.yaml.template'
-            Release      = 'skillsrepo_github_release.yaml.template'
-        }
         ContributingTemplate       = 'SkillsRepo_github_contributing.md.template'
         PRTemplateTemplate         = 'SkillsRepo_github_pull_request_template.md.template'
         PRTemplateSubstitutionKeys = @('REPO_NAME', 'OWNER')

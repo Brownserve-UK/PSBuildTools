@@ -11,7 +11,7 @@ nuget Brownserve.PSBuildTools = 3.4.5
 nuget Invoke-Build
 
 # Brownserve.PSBuildTasks provides the shared Invoke-Build task files that build_tasks.ps1 dot-sources
-nuget Brownserve.PSBuildTasks = 0.2.0
+nuget Brownserve.PSBuildTasks = 0.2.1
 
 # Pester is used to perform testing on the build scripts and binary smoke tests
 nuget Pester
