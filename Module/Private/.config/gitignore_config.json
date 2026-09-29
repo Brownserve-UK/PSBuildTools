@@ -1,0 +1,74 @@
+{
+    "Defaults": [
+        {
+            "comment": "Paket is used to restore various dependencies (including the Brownserve.PSTools PowerShell module).`nWe deliberately ignore the 'paket.lock' file as our projects are usually not precious about taking the latest versions of packages.",
+            "item": [
+                "paket.lock",
+                "packages/",
+                "paket-files/"
+            ]
+        },
+        {
+            "comment": "The temporary directory is used to store build output, log files, redirected output etc. It is recreated by the _init.ps1 script.",
+            "item": ".tmp/"
+        },
+        {
+            "comment": "AI coding tool directories contain local/personal configuration and session data that should not be committed.",
+            "item": [
+                ".agents/*",
+                "!.agents/project.json",
+                ".claude/",
+                ".cursor/",
+                ".aider*",
+                ".continue/"
+            ]
+        }
+    ],
+    "WebApp": [
+        {
+            "comment": "Environment files often contain secrets and should never be committed.",
+            "item": [
+                ".env",
+                ".env.*"
+            ]
+        },
+        {
+            "comment": "Docker build output and cache.",
+            "item": ".docker/"
+        }
+    ],
+    "RustApp": [
+        {
+            "comment": "Cargo build output. Note: Cargo.lock is intentionally NOT ignored for binary applications.",
+            "item": "target/"
+        },
+        {
+            "comment": "Rust backup files created by certain editors.",
+            "item": "**/*.rs.bk"
+        }
+    ],
+    "bsdev": [
+        {
+            "comment": "Cargo build output. Note: Cargo.lock is intentionally NOT ignored for binary applications.",
+            "item": "target/"
+        },
+        {
+            "comment": "Rust backup files created by certain editors.",
+            "item": "**/*.rs.bk"
+        },
+        {
+            "comment": "Docker build output and cache.",
+            "item": ".docker/"
+        }
+    ],
+    "SkillsRepo": [
+        {
+            "comment": "Node dependencies and Astro build output/cache for the documentation site.",
+            "item": [
+                "node_modules/",
+                "pages/dist/",
+                "pages/.astro/"
+            ]
+        }
+    ]
+}

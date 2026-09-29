@@ -1,24 +1,3 @@
-<#
-.SYNOPSIS
-    Updates a repository that has already been initialised with 'Initialize-BrownserveRepository'.
-.DESCRIPTION
-    Reads the repository's '.brownserve_repository_manifest' to work out which components it's configured with.
-    A v1 (legacy, project-type based) manifest is migrated automatically to the v2, component based format,
-    carrying over the working-copy setting for PowerShell module repositories where appropriate.
-    A file the manifest owns that has been manually edited since it was last generated is reported as a
-    conflict and stops the whole run, before any files are written, unless '-Force' is passed.
-.PARAMETER RepositoryPath
-    The path to the repository to update. Defaults to the current directory.
-.PARAMETER Owner
-    The owner of the repository, used for licensing and other metadata.
-.PARAMETER Force
-    Forces the recreation of files even if they already exist.
-.PARAMETER RepoName
-    The GitHub repository name, if different from the local directory name.
-.EXAMPLE
-    Update-BrownserveRepository
-    Updates the repository in the current directory.
-#>
 function Update-BrownserveRepository
 {
     [CmdletBinding()]
@@ -43,7 +22,42 @@ function Update-BrownserveRepository
         # Defaults to the leaf name of RepositoryPath if not provided.
         [Parameter(Mandatory = $false)]
         [string]
-        $RepoName
+        $RepoName,
+
+        # The config file to use for setting our .gitignore content
+        [Parameter(Mandatory = $false, DontShow)]
+        [string]
+        $GitIgnoreConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'gitignore_config.json'),
+
+        # The config file to use for setting our .gitignore content
+        [Parameter(Mandatory = $false, DontShow)]
+        [string]
+        $PaketDependenciesConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'paket_dependencies_config.json'),
+
+        # The config file to use that stores our permanent/ephemeral path configuration
+        [Parameter(Mandatory = $false, DontShow)]
+        [string]
+        $RepositoryPathsConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'repository_paths_config.json'),
+
+        # The config file that stores devcontainer configurations
+        [Parameter(Mandatory = $false, DontShow)]
+        [string]
+        $DevcontainerConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'devcontainer_config.json'),
+
+        # The config file that stores VS Code extension configuration
+        [Parameter(Mandatory = $false, DontShow)]
+        [string]
+        $VSCodeExtensionsConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'repository_vscode_extensions.json'),
+
+        # The config file that stores any package aliases we'd like to create
+        [Parameter(Mandatory = $false, DontShow)]
+        [string]
+        $PackageAliasConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'package_aliases_config.json'),
+
+        # The config file that stores any editorconfig settings we'd like to create
+        [Parameter(Mandatory = $false, DontShow)]
+        [string]
+        $EditorConfigConfigFile = (Join-Path $Script:BrownservePSBuildToolsConfigDirectory 'editorconfig_config.json')
     )
     begin
     {
@@ -62,7 +76,7 @@ function Update-BrownserveRepository
     process
     {
         <#
-            Start by loading our special repository manifest file so we know what components we're working with
+            Start by loading our special repository manifest file so we know what type of project we're working with
         #>
         $RepositoryManifestFile = Join-Path $RepositoryPath '.brownserve_repository_manifest'
         if (!(Test-Path $RepositoryManifestFile))
@@ -71,21 +85,28 @@ function Update-BrownserveRepository
         }
         try
         {
-            $Manifest = Get-Content $RepositoryManifestFile -ErrorAction 'Stop' | ConvertFrom-Json -Depth 100 -AsHashtable
+            $RepositoryType = Get-Content $RepositoryManifestFile -ErrorAction 'Stop' |
+                ConvertFrom-Json |
+                    Select-Object -ExpandProperty RepositoryType
         }
         catch
         {
             throw "Failed to read repository manifest file.`n$($_.Exception.Message)"
         }
-
-        $ModuleInfoPath = Join-Path $RepositoryPath '.build' 'ModuleInfo.json'
-        $ExistingModuleInfo = $null
-        if (Test-Path $ModuleInfoPath)
+        if ($RepositoryType -in @('PowerShellModule', 'BrownservePSTools'))
         {
             try
             {
-                $ModuleInfoData = Get-Content $ModuleInfoPath -Raw -ErrorAction 'Stop' | ConvertFrom-Json -AsHashtable
-                $ExistingModuleInfo = [BrownservePowerShellModule]$ModuleInfoData
+                $RepositoryPathsConfig = Read-ConfigurationFromFile $RepositoryPathsConfigFile
+                $BuildDirectory = Join-Path $RepositoryPath ($RepositoryPathsConfig.Defaults.PermanentPaths |
+                    Where-Object { $_.VariableName -eq 'BrownserveRepoBuildDirectory' }).Path
+                $ModuleInfoPath = Join-Path $BuildDirectory 'ModuleInfo.json'
+                if (!(Test-Path $ModuleInfoPath))
+                {
+                    throw "ModuleInfo.json not found at '$ModuleInfoPath'."
+                }
+                $ModuleInfoData = Get-Content $ModuleInfoPath -Raw | ConvertFrom-Json -AsHashtable
+                $ModuleInfo = [BrownservePowerShellModule]$ModuleInfoData
             }
             catch
             {
@@ -93,54 +114,25 @@ function Update-BrownserveRepository
             }
         }
 
-        if ($Manifest.ManifestVersion -like '2.*')
-        {
-            $Components = @($Manifest.Components | ForEach-Object { $_.Name })
-            $ComponentOptions = @{}
-            foreach ($ManifestComponent in $Manifest.Components)
-            {
-                if ($ManifestComponent.Options)
-                {
-                    $ComponentOptions[$ManifestComponent.Name] = @{} + $ManifestComponent.Options
-                }
-            }
-            if ($Components -contains 'PowerShellModule' -and $ExistingModuleInfo)
-            {
-                if (!$ComponentOptions.ContainsKey('PowerShellModule'))
-                {
-                    $ComponentOptions['PowerShellModule'] = @{}
-                }
-                $ComponentOptions['PowerShellModule']['ModuleInfo'] = $ExistingModuleInfo
-            }
-        }
-        else
-        {
-            Write-Verbose 'Migrating legacy (v1) repository manifest to the v2, component based format.'
-            try
-            {
-                $Migrated = ConvertTo-BrownserveRepoComponentFromLegacyType `
-                    -RepositoryType $Manifest.RepositoryType `
-                    -ModuleInfo $ExistingModuleInfo `
-                    -ErrorAction 'Stop'
-            }
-            catch
-            {
-                throw "Failed to migrate legacy repository manifest.`n$($_.Exception.Message)"
-            }
-            $Components = $Migrated.Components
-            $ComponentOptions = $Migrated.ComponentOptions
-        }
-
         try
         {
             $CompareParams = @{
-                RepositoryPath   = $RepositoryPath
-                Components       = $Components
-                ComponentOptions = $ComponentOptions
-                Owner            = $Owner
-                RepoName         = $RepoName
-                Force            = $Force
-                ErrorAction      = 'Stop'
+                RepositoryPath             = $RepositoryPath
+                ProjectType                = $RepositoryType
+                Owner                      = $Owner
+                GitIgnoreConfigFile        = $GitIgnoreConfigFile
+                PaketDependenciesConfigFile = $PaketDependenciesConfigFile
+                RepositoryPathsConfigFile  = $RepositoryPathsConfigFile
+                DevcontainerConfigFile     = $DevcontainerConfigFile
+                VSCodeExtensionsConfigFile = $VSCodeExtensionsConfigFile
+                PackageAliasConfigFile     = $PackageAliasConfigFile
+                EditorConfigConfigFile     = $EditorConfigConfigFile
+                RepoName                  = $RepoName
+                ErrorAction               = 'Stop'
+            }
+            if ($ModuleInfo)
+            {
+                $CompareParams.ModuleInfo = $ModuleInfo
             }
             $RepositoryState = Compare-BrownserveRepository @CompareParams
         }
@@ -149,16 +141,8 @@ function Update-BrownserveRepository
             throw "Failed to get repository state.`n$($_.Exception.Message)"
         }
 
-        if ($RepositoryState.ConflictedFiles.Count -gt 0)
-        {
-            $ConflictSummary = ($RepositoryState.ConflictedFiles | ForEach-Object { "$($_.Path): $($_.Reason)" }) -join "`n"
-            throw "The following files have been modified since they were last generated and would be overwritten:`n$ConflictSummary`nUse the '-Force' switch to overwrite them."
-        }
-
-        $FilesToRemove = @($RepositoryState.RemovedFiles | Where-Object { $_.Action -eq 'Removed' })
-
-        # Only proceed if we have no missing files, changes or removals
-        if (($RepositoryState.MissingFiles.Count -gt 0) -or ($RepositoryState.ChangedFiles.Count -gt 0) -or ($FilesToRemove.Count -gt 0))
+        # Only proceed if we have no missing files or changes
+        if (($RepositoryState.MissingFiles.Count -gt 0) -or ($RepositoryState.ChangedFiles.Count -gt 0))
         {
             Write-Debug "Changed files: $(($RepositoryState.ChangedFiles | Select-Object -ExpandProperty Path) -join "`n")"
             if ($RepositoryState.MissingFiles.Count -gt 0)
@@ -226,17 +210,54 @@ function Update-BrownserveRepository
                 }
             }
 
-            try
+            # Start by creating any missing directories, they may be needed for the files we're about to create
+            foreach ($Directory in $RepositoryState.MissingDirectories)
             {
-                Set-BrownserveRepositoryState `
-                    -RepositoryPath $RepositoryPath `
-                    -RepositoryState $RepositoryState `
-                    -Force:$Force `
-                    -ErrorAction 'Stop'
+                Write-Verbose "Creating directory '$Directory.Path)'"
+                try
+                {
+                    New-Item `
+                        -Path $Directory.Path `
+                        -ItemType 'Directory' `
+                        -ErrorAction 'Stop' | Out-Null
+                }
+                catch
+                {
+                    throw "Failed to create directory '$($Directory.Path)'.`n$($_.Exception.Message)"
+                }
             }
-            catch
+
+            # Create any missing files
+            foreach ($File in $RepositoryState.MissingFiles)
             {
-                throw "Failed to apply repository changes.`n$($_.Exception.Message)"
+                Write-Verbose "Creating file '$($File.Path)'"
+                try
+                {
+                    New-Item `
+                        -Path $File.Path `
+                        -ItemType 'File' `
+                        -ErrorAction 'Stop' | Out-Null
+
+                    $File | Set-BrownserveContent -ErrorAction 'Stop'
+                }
+                catch
+                {
+                    throw "Failed to create file '$($File.Path)'.`n$($_.Exception.Message)"
+                }
+            }
+
+            # Update any changed files
+            foreach ($File in $RepositoryState.ChangedFiles)
+            {
+                Write-Verbose "Updating file '$($File.Path)'"
+                try
+                {
+                    $File | Set-BrownserveContent -ErrorAction 'Stop'
+                }
+                catch
+                {
+                    throw "Failed to update file '$($File.Path)'.`n$($_.Exception.Message)"
+                }
             }
         }
         else

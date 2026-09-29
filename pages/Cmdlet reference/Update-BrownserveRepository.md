@@ -20,14 +20,14 @@ Update-BrownserveRepository [[-RepositoryPath] <String>] [-Owner <String>] [-For
 
 ## DESCRIPTION
 
-This cmdlet can be used after a repository has been initialised using the `Initialize-BrownserveRepository` cmdlet to keep the projects tooling and settings up to date. It reads the repository's components from its `.brownserve_repository_manifest`, automatically migrating a legacy (v1), project-type based manifest to the v2, component based format. A file the manifest owns that has been manually edited since it was last generated is reported as a conflict and stops the whole run, before any files are written, unless `-Force` is passed.
+This cmdlet can be used after a repository has been initialised using the `Initialize-BrownserveRepository` cmdlet to keep the projects tooling and settings up to date.
 
 ## EXAMPLES
 
 ### Example 1
 
 ```powershell
-Update-BrownserveRepository -RepositoryPath 'C:\myPowershellModule'
+Update-BrownserveRepository -RepositoryPath 'C:\myPowershellModule' -ProjectType 'PowerShellModule'
 ```
 
 Would update the project at 'C:\myPowershellModule'
@@ -92,7 +92,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 1
+Position: 0
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -104,7 +104,11 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 
 ## INPUTS
 
+### None
+
 ## OUTPUTS
+
+### System.Object
 
 ## NOTES
 

@@ -30,14 +30,7 @@ function New-PaketDependenciesFile
                     $PaketDependenciesTemplate += "$($_.Comment)`n"
                 }
                 $_.Rule | ForEach-Object {
-                    if ($_.Version)
-                    {
-                        $PaketDependenciesTemplate += "$($_.Source) $($_.PackageName) = $($_.Version)`n"
-                    }
-                    else
-                    {
-                        $PaketDependenciesTemplate += "$($_.Source) $($_.PackageName)`n"
-                    }
+                    $PaketDependenciesTemplate += "$($_.Source) $($_.PackageName)`n"
                 }
                 $PaketDependenciesTemplate += "`n"
             }

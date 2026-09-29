@@ -1,7 +1,0 @@
-.build
-.build/tasks
-.build/tests
-.config
-.github
-.github/workflows
-.vscode

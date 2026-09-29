@@ -20,8 +20,8 @@ $PrivatePath |
                 . $_.FullName
             }
 
-# Set up the path to the module's bundled repository component definitions
-$Script:BrownserveRepoComponentsDirectory = Join-Path $PrivatePath 'Components'
+# Set up the path to the module's bundled config directory so private cmdlets can find their JSON config files
+$Script:BrownservePSBuildToolsConfigDirectory = Join-Path $PrivatePath '.config'
 
 # Dot source our public functions and then add their help information to an array
 Join-Path $PSScriptRoot -ChildPath 'Public' |

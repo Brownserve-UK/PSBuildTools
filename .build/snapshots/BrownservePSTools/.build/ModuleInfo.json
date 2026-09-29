@@ -1,9 +1,0 @@
-{
-  "Name": "Brownserve.TestModule",
-  "Description": "A test module used for repository snapshot testing.",
-  "GUID": "11111111-1111-1111-1111-111111111111",
-  "Tags": [
-    "test",
-    "powershell"
-  ]
-}
