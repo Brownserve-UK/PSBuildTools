@@ -11,5 +11,3 @@ Please ensure you have completed the following before submitting your PR:
 
 - [ ] Read the [contributing guide](https://github.com/###OWNER###/###REPO_NAME###/blob/main/.github/CONTRIBUTING.md)
 - [ ] Read our [code of conduct](https://github.com/###OWNER###/.github/blob/main/CODE_OF_CONDUCT.md)
-- [ ] Verified that each changed skill has a valid `SKILL.md`
-- [ ] Verified that the documentation site still builds if `pages/` was changed

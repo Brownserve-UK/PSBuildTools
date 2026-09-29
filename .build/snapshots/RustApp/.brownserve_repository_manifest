@@ -81,9 +81,8 @@
       }
     },
     ".github/CONTRIBUTING.md": {
-      "Ownership": "Managed",
-      "Component": "ReleaseLifecycle",
-      "Hash": "sha256:81e11e405caca1d2852843b8e039bbff1f261f0b828424f081b43fadca5fd23b"
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
     },
     ".github/dependabot.yml": {
       "Ownership": "Managed",
@@ -91,29 +90,28 @@
       "Hash": "sha256:aa146903838e7acd6f533e9d4e54d4bb2fb2125a69407448c000681bc0414aae"
     },
     ".github/pull_request_template.md": {
-      "Ownership": "Managed",
-      "Component": "ReleaseLifecycle",
-      "Hash": "sha256:d50da8d0e157b0de2d1ab923a03f77535c7541244b5473df3b1abb425e2be00e"
+      "Ownership": "Seeded",
+      "Component": "ReleaseLifecycle"
     },
     ".github/workflows/builds.yaml": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:79ed066ae3ce46658478c84511ba9928f70f869d35a85c68071062e1d3f32b16"
+      "Hash": "sha256:efc13972bb194878d24a8e9c98fe216e93b2dc4099a2cbbdc572b863f0dad6f4"
     },
     ".github/workflows/label-pr.yaml": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:e4a24454f640e089af4bf442b93e610b86463169c8e05fd8def8dcc4a7cd4a2c"
+      "Hash": "sha256:9df0175896ff04d58d95e7a7a0e94ca90dbc37b66b9d9bcc8b5d3ba81813e620"
     },
     ".github/workflows/release.yaml": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:a3639a675653cb6b45d3526d4784c216d2fb50ddc57fd84e1b45efd953299838"
+      "Hash": "sha256:092688e2864205821015fb52c1f6e7d2ffaf1f2ef4ee3faac9ed6f5768ee92df"
     },
     ".github/workflows/stage-release.yaml": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:7544017a3e9d44b5618c2ef769ac23846b39c1f3b98727bba9161d9dc60bc6eb"
+      "Hash": "sha256:0f9e47632a8a02a81651498b40f115bc882538787217578e18df4ace0ceaf63c"
     },
     ".gitignore": {
       "Ownership": "Merged",

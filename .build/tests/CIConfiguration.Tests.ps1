@@ -282,6 +282,38 @@ Describe 'New-BrownserveCIConfiguration' {
             $With.Keys | Should -Not -Contain 'mono'
         }
 
+        It 'sets node on the release when AstroDocs is enabled' {
+            $With = (Get-CIWorkflowSet -Shape 'DirectoryArchiveAstro')['release.yaml'].Yaml.jobs['release'].with
+            $With['node'] | Should -BeTrue
+        }
+
+        It 'sets no node input on the release for <Shape>' -ForEach @(
+            @{ Shape = 'bsdev' }
+            @{ Shape = 'PowerShellModule' }
+            @{ Shape = 'DirectoryArchive' }
+        ) {
+            (Get-CIWorkflowSet -Shape $Shape)['release.yaml'].Yaml.jobs['release'].with.Keys | Should -Not -Contain 'node'
+        }
+
+        It 'declares the release toolchain inputs in the order the workflow does' {
+            $script:CoreGitHubData.Workflows['Release'].ToolchainInputs | Should -Be @('node', 'mono')
+        }
+
+        It 'keeps no runner provided tools data on any workflow' {
+            foreach ($Workflow in $script:CoreGitHubData.Workflows.Values)
+            {
+                $Workflow.Keys | Should -Not -Contain 'RunnerProvidedTools'
+            }
+        }
+
+        It 'throws for npm on a workflow with no node input' {
+            InModuleScope Brownserve.PSBuildTools {
+                $Definitions = Get-BrownserveRepoComponentDefinition -ErrorAction 'Stop'
+                $Npm = [pscustomobject]@{ Component = 'AstroDocs'; Tools = @('npm'); Platform = $null }
+                { Get-BrownserveGitHubToolchainInput -Requirements @($Npm) -Runners @('ubuntu-latest') -Workflow 'StageRelease' -ComponentDefinitions $Definitions } | Should -Throw '*npm*AstroDocs*brownserve-stage-release.yaml*'
+            }
+        }
+
         It 'allows docker only when every runner is ubuntu-latest' {
             InModuleScope Brownserve.PSBuildTools {
                 $Definitions = Get-BrownserveRepoComponentDefinition -ErrorAction 'Stop'
@@ -337,9 +369,47 @@ Describe 'New-BrownserveCIConfiguration' {
             ConvertTo-PermissionText $Set['stage-release.yaml'].Yaml.jobs['stage-release'].permissions | Should -Be 'contents: read'
         }
 
-        It 'grants release contents read and packages write' {
-            $Set = Get-CIWorkflowSet -Shape 'bsdev'
+        It 'grants release contents read and packages write for <Shape>, which publishes to GHCR' -ForEach @(
+            @{ Shape = 'bsdev' }
+            @{ Shape = 'ContainerImage' }
+        ) {
+            $Set = Get-CIWorkflowSet -Shape $Shape
             ConvertTo-PermissionText $Set['release.yaml'].Yaml.jobs['release'].permissions | Should -Be 'contents: read; packages: write'
+        }
+
+        It 'grants release only contents read for <Shape>' -ForEach @(
+            @{ Shape = 'RustBinary' }
+            @{ Shape = 'PowerShellModule' }
+            @{ Shape = 'NuGetPackage' }
+            @{ Shape = 'DirectoryArchive' }
+            @{ Shape = 'DirectoryArchiveAstro' }
+        ) {
+            $Set = Get-CIWorkflowSet -Shape $Shape
+            ConvertTo-PermissionText $Set['release.yaml'].Yaml.jobs['release'].permissions | Should -Be 'contents: read'
+        }
+
+        It 'grants no packages write when ContainerImage only publishes to DockerHub' {
+            $Set = Get-CIWorkflowSet -Shape 'ContainerImage' -ComponentOptions @{ ContainerImage = @{ Registries = @('DockerHub') } }
+            ConvertTo-PermissionText $Set['release.yaml'].Yaml.jobs['release'].permissions | Should -Be 'contents: read'
+            $Set['release.yaml'].Yaml.jobs['release'].secrets.Keys | Should -Contain 'dockerhub-token'
+        }
+
+        It 'grants packages write and no DockerHub secrets when ContainerImage only publishes to GHCR' {
+            $Set = Get-CIWorkflowSet -Shape 'ContainerImage' -ComponentOptions @{ ContainerImage = @{ Registries = @('GHCR') } }
+            ConvertTo-PermissionText $Set['release.yaml'].Yaml.jobs['release'].permissions | Should -Be 'contents: read; packages: write'
+            $Set['release.yaml'].Yaml.jobs['release'].secrets.Keys | Should -Not -Contain 'dockerhub-token'
+            $Set['release.yaml'].Yaml.jobs['release'].secrets.Keys | Should -Not -Contain 'dockerhub-username'
+            $Set['release.yaml'].Yaml['on'].workflow_dispatch.inputs.publish_to.default | Should -Not -Match 'DockerHub'
+        }
+
+        It 'lists each release permission once' {
+            InModuleScope Brownserve.PSBuildTools {
+                $Definitions = Get-BrownserveRepoComponentDefinition -ErrorAction 'Stop'
+                $Definitions['ContainerImage'].Data.CI.PublishPermissions['DockerHub'] = @('WritePackages')
+                $Resolved = Resolve-BrownserveRepoComponent -Name @('ContainerImage') -Options @{} -ErrorAction 'Stop'
+                $Plan = Get-BrownserveCIPlan -ResolvedComponents $Resolved -ComponentDefinitions $Definitions -RepoName 'test-repo'
+                $Plan.Release.Permissions | Should -Be @('ReadContents', 'WritePackages')
+            }
         }
 
         It 'grants deploy-docs contents write' {
@@ -471,6 +541,14 @@ Describe 'New-BrownserveCIConfiguration' {
                 }
             }
             $Count | Should -BeGreaterThan 4
+        }
+
+        It 'uses the v0.2.0 commit with a v0.2.0 comment' {
+            $script:CoreGitHubData.ActionsVersion | Should -Be 'v0.2.0'
+            $script:CoreGitHubData.ActionsCommit | Should -Be '28d69596e4bcf98b0fe7f260c8ea2486265cd03a'
+            $Set = Get-CIWorkflowSet -Shape 'bsdev'
+            $Line = $Set['release.yaml'].Content -split "`n" | Where-Object { $_ -match '^\s+uses:' } | Select-Object -First 1
+            $Line | Should -Match '@28d69596e4bcf98b0fe7f260c8ea2486265cd03a # v0\.2\.0$'
         }
 
         It 'holds a full length commit SHA and a semantic version in the Core data' {

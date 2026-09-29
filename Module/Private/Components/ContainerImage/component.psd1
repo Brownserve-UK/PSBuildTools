@@ -68,6 +68,7 @@
                 @{ Option = 'Context'; Value = '.'; Patterns = @('src/', 'Dockerfile', 'package\.json$') }
             )
             PublishSecrets       = @{ DockerHub = @('DockerHubUsername', 'DockerHubToken') }
+            PublishPermissions   = @{ GHCR = @('WritePackages') }
         }
         BuildTasks        = @{
             TaskFile             = 'ContainerImage.tasks.ps1'
@@ -85,6 +86,7 @@
                 'ContainerImage.Check' = @('Build', 'Test')
             }
             PublishValues        = @('DockerHub', 'GHCR')
+            PublishValuesOption  = 'Registries'
             Toolchains           = @(
                 @{ Tools = @('docker'); Anchors = @('Build') }
             )

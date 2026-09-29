@@ -54,7 +54,7 @@
                     Secrets     = @('AppId', 'AppPrivateKey')
                 }
                 Release          = @{
-                    Permissions = @('ReadContents', 'WritePackages')
+                    Permissions = @('ReadContents')
                     Secrets     = @('AppId', 'AppPrivateKey', 'NotificationWebhook')
                 }
                 LabelPullRequest = @{
@@ -65,15 +65,15 @@
         }
         GitHubActions       = @{
             ActionsRepository = 'Brownserve-UK/actions'
-            ActionsVersion    = 'v0.1.0'
-            ActionsCommit     = '73e2adb47b47bb461e804dd6c0038f5e4e513f89'
+            ActionsVersion    = 'v0.2.0'
+            ActionsCommit     = '28d69596e4bcf98b0fe7f260c8ea2486265cd03a'
             DefaultRunner     = 'ubuntu-latest'
             Workflows         = @{
-                PullRequestBuild = @{ File = 'brownserve-pr-build.yaml'; ToolchainInputs = @('rust', 'node', 'mono'); RunnerProvidedTools = @() }
-                StageRelease     = @{ File = 'brownserve-stage-release.yaml'; ToolchainInputs = @('rust'); RunnerProvidedTools = @() }
-                Release          = @{ File = 'brownserve-release.yaml'; ToolchainInputs = @('mono'); RunnerProvidedTools = @('npm') }
-                DeployDocs       = @{ File = 'brownserve-deploy-docs.yaml'; ToolchainInputs = @(); RunnerProvidedTools = @() }
-                LabelPullRequest = @{ File = 'brownserve-label-pr.yaml'; ToolchainInputs = @(); RunnerProvidedTools = @() }
+                PullRequestBuild = @{ File = 'brownserve-pr-build.yaml'; ToolchainInputs = @('rust', 'node', 'mono') }
+                StageRelease     = @{ File = 'brownserve-stage-release.yaml'; ToolchainInputs = @('rust') }
+                Release          = @{ File = 'brownserve-release.yaml'; ToolchainInputs = @('node', 'mono') }
+                DeployDocs       = @{ File = 'brownserve-deploy-docs.yaml'; ToolchainInputs = @() }
+                LabelPullRequest = @{ File = 'brownserve-label-pr.yaml'; ToolchainInputs = @() }
             }
             ToolchainInputs   = @{ cargo = 'rust'; npm = 'node'; mono = 'mono' }
             PreinstalledTools = @{ docker = @('ubuntu-latest') }

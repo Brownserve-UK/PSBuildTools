@@ -75,6 +75,10 @@
             @{ Alias = 'nuget'; FileName = 'NuGet.exe'; VariableName = 'BrownserveNugetPath' }
         )
         Devcontainer      = @{ Dockerfile = 'Dockerfile_PowerShellModule' }
+        GitHubTemplates   = @(
+            @{ Path = '.github/CONTRIBUTING.md'; TemplateName = 'PowerShellModule_github_contributing.md.template'; SubstitutionKeys = @(); Ownership = 'Managed' }
+            @{ Path = '.github/pull_request_template.md'; TemplateName = 'PowerShellModule_github_pull_request_template.md.template'; SubstitutionKeys = @('MODULE_NAME', 'REPO_NAME', 'OWNER'); Ownership = 'Managed' }
+        )
         CI                = @{
             ChangePatterns = @('module/', 'pages/Cmdlet reference/')
             PublishSecrets = @{

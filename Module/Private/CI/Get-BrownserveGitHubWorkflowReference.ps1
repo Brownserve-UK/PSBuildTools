@@ -4,7 +4,7 @@
 .DESCRIPTION
     Every reference is pinned to the commit SHA held in the 'Core' component's 'GitHubActions' data, followed by
     a comment with the matching release version, e.g.
-    'Brownserve-UK/actions/.github/workflows/brownserve-pr-build.yaml@<sha> # v0.1.0'.
+    'Brownserve-UK/actions/.github/workflows/brownserve-pr-build.yaml@<sha> # v0.2.0'.
 #>
 function Get-BrownserveGitHubWorkflowReference
 {

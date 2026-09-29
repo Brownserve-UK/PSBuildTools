@@ -212,7 +212,7 @@ function New-BrownserveBuildTasksScript
 
             if ($BuildTasksData.Parameters -contains 'PublishTo')
             {
-                $PublishValuesLiteral = (@($BuildTasksData.PublishValues | ForEach-Object { "'$_'" }) -join ', ')
+                $PublishValuesLiteral = (@($TaskComponent.PublishValues | ForEach-Object { "'$_'" }) -join ', ')
                 $FilteredVarName = "$($ParamsVarName)PublishTo"
                 $BodyLines.Add("`$$FilteredVarName = @(`$PublishTo | Where-Object { `$_ -in @($PublishValuesLiteral) })")
                 $BodyLines.Add("if (`$$FilteredVarName.Count -gt 0) { `$$ParamsVarName.Add('PublishTo', `$$FilteredVarName) }")

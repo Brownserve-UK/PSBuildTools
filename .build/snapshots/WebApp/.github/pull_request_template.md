@@ -11,5 +11,3 @@ Please ensure you have completed the following before submitting your PR:
 
 - [ ] Read the [contributing guide](https://github.com/Brownserve-UK/test-web-app/blob/main/.github/CONTRIBUTING.md)
 - [ ] Read our [code of conduct](https://github.com/Brownserve-UK/.github/blob/main/CODE_OF_CONDUCT.md)
-- [ ] Verified that `docker build .` succeeds locally
-- [ ] Updated `.env.example` if any new environment variables were added

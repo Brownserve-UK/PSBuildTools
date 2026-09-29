@@ -2,25 +2,10 @@
 
 Pull requests are welcome. Please read this guide before submitting.
 
-## Prerequisites
-
-- [Rust toolchain](https://rustup.rs) (stable)
-- [PowerShell 7+](https://github.com/PowerShell/PowerShell) (for the build scripts)
-
-## Building locally
+## Running the checks locally
 
 ```sh
-# Build in release mode
-cargo build --release
-
-# Run all tests
-cargo test --workspace
-```
-
-You can also use the Brownserve build script for a full build-and-test run:
-
-```powershell
-./.build/build.ps1 -Build BuildTestAndCheck
+pwsh ./.build/build.ps1 -Build BuildTestAndCheck
 ```
 
 ## Commit and PR requirements
@@ -41,7 +26,7 @@ Supported prefixes (brackets are optional):
 | `[ci]:` `ci:` `[cicd]:` `cicd:` | CI/CD changes |
 | `[chore]:` `[refactor]:` `[ops]:` `[test]:` `[style]:` (and without brackets) | Maintenance |
 
-Add `!` before the colon to flag a breaking change, e.g. `feat!: drop support for older platforms`.
+Add `!` before the colon to flag a breaking change, e.g. `feat!: remove a deprecated option`.
 
 > **Please Note:**
 > If your PR title does not match a recognised prefix the check will fail and a comment will be posted on the PR explaining what to fix. Simply update the title and the checks will re-run automatically.

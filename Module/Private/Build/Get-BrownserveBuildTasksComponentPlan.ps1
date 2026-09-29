@@ -45,10 +45,24 @@ function Get-BrownserveBuildTasksComponentPlan
             $RuntimeNames = @($BuildTasksData.Parameters | Where-Object {
                         $_ -notin $ReleaseLifecycleParameterNames -and $_ -notin $LiteralNames -and $_ -notin $SkipNames
                     })
+            $PublishValues = @($BuildTasksData.PublishValues)
+            if ($BuildTasksData.PublishValuesOption)
+            {
+                $OptionName = $BuildTasksData.PublishValuesOption
+                $Chosen = @($Component.Options[$OptionName] | Where-Object { $_ })
+                $Unknown = @($Chosen | Where-Object { $_ -notin $PublishValues })
+                if ($Chosen.Count -eq 0 -or $Unknown.Count -gt 0)
+                {
+                    $Detail = if ($Chosen.Count -eq 0) { 'it can not be empty' } else { "'$($Unknown -join "', '")' is not allowed" }
+                    throw "The '$OptionName' option of the $($Component.Name) component is invalid: $Detail. Allowed values are $(($PublishValues | ForEach-Object { "'$_'" }) -join ', ')."
+                }
+                $PublishValues = @($PublishValues | Where-Object { $_ -in $Chosen })
+            }
             $TaskComponents.Add([pscustomobject]@{
                     Name                  = $Component.Name
                     Options               = $Component.Options
                     BuildTasks            = $BuildTasksData
+                    PublishValues         = $PublishValues
                     RuntimeParameterNames = $RuntimeNames
                 })
         }
@@ -61,7 +75,7 @@ function Get-BrownserveBuildTasksComponentPlan
         $PublicTargets = @()
         foreach ($TaskComponent in $TaskComponents)
         {
-            $PublishToValues += $TaskComponent.BuildTasks.PublishValues
+            $PublishToValues += $TaskComponent.PublishValues
             $PublicTargets += $TaskComponent.BuildTasks.PublicTargets
         }
         $PublishToValues = @($PublishToValues | Select-Object -Unique)

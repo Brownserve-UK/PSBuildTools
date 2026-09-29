@@ -1,32 +1,20 @@
 @{
     'PowerShellModule'              = @{
-        ContributingTemplate       = 'PowerShellModule_github_contributing.md.template'
-        PRTemplateTemplate         = 'PowerShellModule_github_pull_request_template.md.template'
-        PRTemplateSubstitutionKeys = @('MODULE_NAME', 'OWNER')
         PesterTests                = @(
             @{ FileName = 'Help.Tests.ps1'; TemplateName = 'help.tests.ps1.template'; SubstitutionKeys = @('MODULE_NAME') }
         )
     }
     'RustBinary'                    = @{
-        ContributingTemplate       = 'RustApp_github_contributing.md.template'
-        PRTemplateTemplate         = 'RustApp_github_pull_request_template.md.template'
-        PRTemplateSubstitutionKeys = @('REPO_NAME', 'OWNER')
         PesterTests                = @(
             @{ FileName = 'Basic.Binary.Tests.ps1'; TemplateName = 'rustapp_binary_tests.ps1.template'; SubstitutionKeys = @('REPO_NAME') }
         )
     }
     'ContainerImage'                = @{
-        ContributingTemplate       = 'WebApp_github_contributing.md.template'
-        PRTemplateTemplate         = 'WebApp_github_pull_request_template.md.template'
-        PRTemplateSubstitutionKeys = @('REPO_NAME', 'OWNER')
         PesterTests                = @(
             @{ FileName = 'Basic.Container.Tests.ps1'; TemplateName = 'container_basic_tests.ps1.template'; SubstitutionKeys = @('REPO_NAME') }
         )
     }
     'ContainerImage+RustBinary'     = @{
-        ContributingTemplate       = 'RustApp_github_contributing.md.template'
-        PRTemplateTemplate         = 'RustApp_github_pull_request_template.md.template'
-        PRTemplateSubstitutionKeys = @('REPO_NAME', 'OWNER')
         PesterTests                = @(
             @{ FileName = 'Basic.Binary.Tests.ps1'; TemplateName = 'rustapp_binary_tests.ps1.template'; SubstitutionKeys = @('REPO_NAME') }
         )
@@ -51,9 +39,6 @@
         )
     }
     'DirectoryArchive'              = @{
-        ContributingTemplate       = 'SkillsRepo_github_contributing.md.template'
-        PRTemplateTemplate         = 'SkillsRepo_github_pull_request_template.md.template'
-        PRTemplateSubstitutionKeys = @('REPO_NAME', 'OWNER')
         PesterTests                = @(
             @{ FileName = 'Skills.Tests.ps1'; TemplateName = 'skillsrepo_skills_tests.ps1.template'; SubstitutionKeys = @('REPO_NAME') }
         )

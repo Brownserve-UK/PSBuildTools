@@ -6,12 +6,14 @@
         IncludeChangelog    = $true
         IncludeMarkdownlint = $true
         IncludeLabelPR      = $true
-        IncludeContributing = $true
-        IncludePRTemplate   = $true
         IncludeWorkflows    = $true
         IncludeBuildScripts = $true
         IncludePesterTests  = $true
         IncludeDependabot   = $true
+        GitHubTemplates     = @(
+            @{ Path = '.github/CONTRIBUTING.md'; TemplateName = 'github_contributing.md.template'; SubstitutionKeys = @(); Ownership = 'Seeded' }
+            @{ Path = '.github/pull_request_template.md'; TemplateName = 'github_pull_request_template.md.template'; SubstitutionKeys = @('REPO_NAME', 'OWNER'); Ownership = 'Seeded' }
+        )
         MarkdownlintRules   = @(
             @{ Name = 'MD013'; Value = $false }
             @{ Name = 'MD024'; Value = @{ siblings_only = $true } }
