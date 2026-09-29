@@ -9,16 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v0.4.0](https://github.com/Brownserve-UK/PSBuildTools/tree/v0.4.0) (2026-09-29)
 
-### Breaking Changes
-
-- feat!: generate thin CI workflows that call Brownserve-UK/actions in [#36](https://github.com/Brownserve-UK/PSBuildTools/pull/36) by [@shoddyguard](https://github.com/shoddyguard)
-- feat!: generate thin build scripts that consume Brownserve.PSBuildTasks in [#35](https://github.com/Brownserve-UK/PSBuildTools/pull/35) by [@shoddyguard](https://github.com/shoddyguard)
-
-### Added
-
-- feat: pin actions v0.2.0, seed generic templates and honour Registries in [#37](https://github.com/Brownserve-UK/PSBuildTools/pull/37) by [@shoddyguard](https://github.com/shoddyguard)
-- feat: refactor project onboarding worflow in [#31](https://github.com/Brownserve-UK/PSBuildTools/pull/31) by [@shoddyguard](https://github.com/shoddyguard)
-
 ### Changed
 
 - refactor(revert): drop all te changes we've been making in [#38](https://github.com/Brownserve-UK/PSBuildTools/pull/38) by [@shoddyguard](https://github.com/shoddyguard)
