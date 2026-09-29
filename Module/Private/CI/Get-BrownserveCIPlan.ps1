@@ -124,18 +124,19 @@ function Get-BrownserveCIPlan
         $CollectorComponent = if ($PackageMatrix -and $ComponentDefinitions[$PackageMatrix.Component].Data.BuildTasks.CollectorParameter) { $PackageMatrix.Component } else { $null }
 
         $ReleaseSecrets = @($CoreCI.Pipelines.Release.Secrets)
+        $ReleasePermissions = @($CoreCI.Pipelines.Release.Permissions)
         foreach ($TaskComponent in $BuildPlan.OtherComponents)
         {
-            $PublishSecrets = $ComponentDefinitions[$TaskComponent.Name].Data.CI.PublishSecrets
-            if (!$PublishSecrets)
+            $ComponentCI = $ComponentDefinitions[$TaskComponent.Name].Data.CI
+            foreach ($PublishValue in $TaskComponent.PublishValues)
             {
-                continue
-            }
-            foreach ($PublishValue in $TaskComponent.BuildTasks.PublishValues)
-            {
-                if ($PublishSecrets.ContainsKey($PublishValue))
+                if ($ComponentCI.PublishSecrets -and $ComponentCI.PublishSecrets.ContainsKey($PublishValue))
                 {
-                    $ReleaseSecrets += $PublishSecrets[$PublishValue]
+                    $ReleaseSecrets += $ComponentCI.PublishSecrets[$PublishValue]
+                }
+                if ($ComponentCI.PublishPermissions -and $ComponentCI.PublishPermissions.ContainsKey($PublishValue))
+                {
+                    $ReleasePermissions += $ComponentCI.PublishPermissions[$PublishValue]
                 }
             }
         }
@@ -179,7 +180,7 @@ function Get-BrownserveCIPlan
             Release          = [pscustomobject]@{
                 BuildTask     = 'Release'
                 Toolchains    = @($Requirements | Where-Object { $_.Targets -contains 'Release' -and $_.Component -ne $CollectorComponent })
-                Permissions   = @($CoreCI.Pipelines.Release.Permissions)
+                Permissions   = @($ReleasePermissions | Select-Object -Unique)
                 Secrets       = @($ReleaseSecrets | Select-Object -Unique)
                 PublishTo     = @($BuildPlan.PublishToValues | Where-Object { $_ -ne 'CustomNugetFeeds' })
                 PackageMatrix = $PackageMatrix

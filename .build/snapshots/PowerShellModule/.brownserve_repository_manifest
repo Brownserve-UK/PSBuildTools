@@ -81,7 +81,7 @@
     },
     ".github/CONTRIBUTING.md": {
       "Ownership": "Managed",
-      "Component": "ReleaseLifecycle",
+      "Component": "PowerShellModule",
       "Hash": "sha256:ee8d055e79c1f275200f40049148188fe97103a32e35d618e01406220f6281e7"
     },
     ".github/dependabot.yml": {
@@ -91,28 +91,28 @@
     },
     ".github/pull_request_template.md": {
       "Ownership": "Managed",
-      "Component": "ReleaseLifecycle",
+      "Component": "PowerShellModule",
       "Hash": "sha256:8aaec7183e55832ecb3c6577b870beb0849a70d129c4601ab28ea0872abbc231"
     },
     ".github/workflows/builds.yaml": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:6daa104d0d309d9b541410790088b04dbfaa70ea7284a10e473a64f29aec2a5d"
+      "Hash": "sha256:3d71a51341ae33e94f8e4a95e92c7d7856808dc1025f291bb3491c158ce1f376"
     },
     ".github/workflows/label-pr.yaml": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:e4a24454f640e089af4bf442b93e610b86463169c8e05fd8def8dcc4a7cd4a2c"
+      "Hash": "sha256:9df0175896ff04d58d95e7a7a0e94ca90dbc37b66b9d9bcc8b5d3ba81813e620"
     },
     ".github/workflows/release.yaml": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:aed0facaee52d0b39325a9a19925f587b2a5f6e2491acd019f1310f0f5641fe7"
+      "Hash": "sha256:35aa07ef0e547821b17a0e2d1cf68dc8c1e1cb5318301583b4b427044b501d9e"
     },
     ".github/workflows/stage-release.yaml": {
       "Ownership": "Managed",
       "Component": "ReleaseLifecycle",
-      "Hash": "sha256:20cdde44034da45ab607ac3b5bd0fd23581a36ddf0fa1f931c09b43c56e17246"
+      "Hash": "sha256:00f6757ecff9a873a209f8ffedbe9c4be6fade2a91a7d64c081c482b39b3bd38"
     },
     ".gitignore": {
       "Ownership": "Merged",

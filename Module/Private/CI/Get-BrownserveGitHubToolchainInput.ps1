@@ -59,10 +59,6 @@ function Get-BrownserveGitHubToolchainInput
             }
             foreach ($Tool in $Requirement.Tools)
             {
-                if ($WorkflowData.RunnerProvidedTools -contains $Tool)
-                {
-                    continue
-                }
                 $Preinstalled = $GitHubData.PreinstalledTools[$Tool]
                 if ($Preinstalled)
                 {

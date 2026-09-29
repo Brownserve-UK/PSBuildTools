@@ -2,17 +2,10 @@
 
 Pull requests are welcome. Please read this guide before submitting.
 
-## Docker image conventions
-
-- The application must be buildable with `docker build .` from the repository root.
-- The default image should run the application without additional arguments.
-- Any required environment variables should be documented in a `.env.example` file committed to the repo.
-
-## Running locally
+## Running the checks locally
 
 ```sh
-docker build -t my-app:local .
-docker run --rm -p 8080:8080 my-app:local
+pwsh ./.build/build.ps1 -Build BuildTestAndCheck
 ```
 
 ## Commit and PR requirements
@@ -33,7 +26,7 @@ Supported prefixes (brackets are optional):
 | `[ci]:` `ci:` `[cicd]:` `cicd:` | CI/CD changes |
 | `[chore]:` `[refactor]:` `[ops]:` `[test]:` `[style]:` (and without brackets) | Maintenance |
 
-Add `!` before the colon to flag a breaking change, e.g. `feat!: drop support for older base image`.
+Add `!` before the colon to flag a breaking change, e.g. `feat!: remove a deprecated option`.
 
 > **Please Note:**
 > If your PR title does not match a recognised prefix the check will fail and a comment will be posted on the PR explaining what to fix. Simply update the title and the checks will re-run automatically.

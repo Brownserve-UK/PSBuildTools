@@ -346,8 +346,7 @@ function Compare-BrownserveRepository
         $LicenseType = $null
         $IncludeMarkdownlint = $false
         $IncludeLabelPR = $false
-        $IncludeContributing = $false
-        $IncludePRTemplate = $false
+        $GitHubTemplates = [ordered]@{}
         $IncludeWorkflows = $false
         $IncludeBuildScripts = $false
         $IncludePesterTests = $false
@@ -383,8 +382,10 @@ function Compare-BrownserveRepository
                     $LicenseType = $Data.LicenseType
                     $IncludeMarkdownlint = $Data.IncludeMarkdownlint
                     $IncludeLabelPR = $Data.IncludeLabelPR
-                    $IncludeContributing = $Data.IncludeContributing
-                    $IncludePRTemplate = $Data.IncludePRTemplate
+                    foreach ($GitHubTemplate in $Data.GitHubTemplates)
+                    {
+                        $GitHubTemplates[$GitHubTemplate.Path] = @{ Component = $Component.Name } + $GitHubTemplate
+                    }
                     $IncludeWorkflows = $Data.IncludeWorkflows
                     $IncludeBuildScripts = $Data.IncludeBuildScripts
                     $IncludePesterTests = $Data.IncludePesterTests
@@ -394,6 +395,10 @@ function Compare-BrownserveRepository
                 'PowerShellModule'
                 {
                     $ModuleInfo = $Component.Options.ModuleInfo
+                    foreach ($GitHubTemplate in $Data.GitHubTemplates)
+                    {
+                        $GitHubTemplates[$GitHubTemplate.Path] = @{ Component = $Component.Name } + $GitHubTemplate
+                    }
                     $PermanentPathEntries += $Data.PermanentPaths
                     $ComponentPaketDependencyBlocks += $Data.PaketDependencies
                     $ComponentVSCodeExtensions += $Data.VSCodeExtensions
@@ -599,14 +604,12 @@ function Compare-BrownserveRepository
         }
 
         $TemplatesDirectory = Join-Path $PSScriptRoot 'templates'
-        if ($IncludeBuildScripts -or $IncludeContributing -or $IncludePRTemplate -or $IncludePesterTests)
+        if ($IncludeBuildScripts -or $IncludePesterTests)
         {
             $ProfileComponentNames = @($ResolvedComponents.Name | Where-Object { $_ -in @('PowerShellModule', 'RustBinary', 'ContainerImage', 'DirectoryArchive') } | Sort-Object)
             $ProfileKey = $ProfileComponentNames -join '+'
             if (!$LegacyProfiles.ContainsKey($ProfileKey))
             {
-                $IncludeContributing = $false
-                $IncludePRTemplate = $false
                 $IncludePesterTests = $false
             }
             else
@@ -619,31 +622,6 @@ function Compare-BrownserveRepository
                 $VSCodeExtensions = $CoreVSCodeExtensions + $LegacyProfile.VSCodeExtensionsOverride
             }
 
-            if ($IncludeContributing)
-            {
-                $ContributingParams = @{
-                    TemplateDirectory = $TemplatesDirectory
-                    TemplateName      = $LegacyProfile.ContributingTemplate
-                }
-            }
-            if ($IncludePRTemplate)
-            {
-                $PRTemplateSubstitutions = @{}
-                foreach ($Key in $LegacyProfile.PRTemplateSubstitutionKeys)
-                {
-                    switch ($Key)
-                    {
-                        'MODULE_NAME' { $PRTemplateSubstitutions['MODULE_NAME'] = $ModuleInfo.Name }
-                        'OWNER' { $PRTemplateSubstitutions['OWNER'] = '' }
-                        default { $PRTemplateSubstitutions[$Key] = '' }
-                    }
-                }
-                $PRTemplateParams = @{
-                    TemplateDirectory = $TemplatesDirectory
-                    TemplateName      = $LegacyProfile.PRTemplateTemplate
-                    Substitutions     = $PRTemplateSubstitutions
-                }
-            }
             if ($IncludePesterTests)
             {
                 $PesterTestsParams = @()
@@ -1518,63 +1496,60 @@ function Compare-BrownserveRepository
             }
         }
 
-        if ($IncludeContributing)
-        {
-            $ContributingPath = Join-Path $GitHubDirectory 'CONTRIBUTING.md'
-
-            if (!(Test-Path $GitHubDirectory) -and ($MissingDirectories.Path -notcontains $GitHubDirectory))
-            {
-                $MissingDirectories += [pscustomobject]@{ Path = $GitHubDirectory }
-            }
-
-            try
-            {
-                $NewContributingContent = New-BrownserveContentFromTemplate @ContributingParams | Format-BrownserveContent
-            }
-            catch
-            {
-                throw "Failed to process '$ContributingPath'.`n$($_.Exception.Message)"
-            }
-            $ManagedFiles.Add([BrownserveManagedFile]@{
-                    Path      = $ContributingPath
-                    Ownership = [BrownserveFileOwnership]::Managed
-                    Component = 'ReleaseLifecycle'
-                    Content   = $NewContributingContent.Content
-                })
-        }
-
-        if ($IncludePRTemplate)
+        foreach ($GitHubTemplate in $GitHubTemplates.Values)
         {
             if (-not $RepoName)
             {
                 $RepoName = Split-Path $RepositoryPath -Leaf
             }
 
-            $PRTemplatePath = Join-Path $GitHubDirectory 'pull_request_template.md'
+            $GitHubTemplatePath = Join-Path $RepositoryPath $GitHubTemplate.Path
+            $GitHubTemplateOwnership = [BrownserveFileOwnership]$GitHubTemplate.Ownership
 
             if (!(Test-Path $GitHubDirectory) -and ($MissingDirectories.Path -notcontains $GitHubDirectory))
             {
                 $MissingDirectories += [pscustomobject]@{ Path = $GitHubDirectory }
             }
 
+            if ($GitHubTemplateOwnership -eq [BrownserveFileOwnership]::Seeded -and (Test-Path $GitHubTemplatePath))
+            {
+                $ManagedFiles.Add([BrownserveManagedFile]@{
+                        Path      = $GitHubTemplatePath
+                        Ownership = $GitHubTemplateOwnership
+                        Component = $GitHubTemplate.Component
+                    })
+                continue
+            }
+
+            $GitHubTemplateSubstitutions = @{}
+            foreach ($Key in $GitHubTemplate.SubstitutionKeys)
+            {
+                $GitHubTemplateSubstitutions[$Key] = switch ($Key)
+                {
+                    'MODULE_NAME' { $ModuleInfo.Name }
+                    'OWNER' { $Owner }
+                    'REPO_NAME' { $RepoName }
+                    default { '' }
+                }
+            }
+
             try
             {
-                $PRTemplateParams.Substitutions['REPO_NAME'] = $RepoName
-                if ($PRTemplateParams.Substitutions.ContainsKey('OWNER'))
-                {
-                    $PRTemplateParams.Substitutions['OWNER'] = $Owner
-                }
-                $NewPRTemplateContent = New-BrownserveContentFromTemplate @PRTemplateParams | Format-BrownserveContent
+                $NewGitHubTemplateContent = New-BrownserveContentFromTemplate `
+                    -TemplateDirectory $TemplatesDirectory `
+                    -TemplateName $GitHubTemplate.TemplateName `
+                    -Substitutions $GitHubTemplateSubstitutions `
+                    -ErrorAction 'Stop' | Format-BrownserveContent
             }
             catch
             {
-                throw "Failed to process '$PRTemplatePath'.`n$($_.Exception.Message)"
+                throw "Failed to process '$GitHubTemplatePath'.`n$($_.Exception.Message)"
             }
             $ManagedFiles.Add([BrownserveManagedFile]@{
-                    Path      = $PRTemplatePath
-                    Ownership = [BrownserveFileOwnership]::Managed
-                    Component = 'ReleaseLifecycle'
-                    Content   = $NewPRTemplateContent.Content
+                    Path      = $GitHubTemplatePath
+                    Ownership = $GitHubTemplateOwnership
+                    Component = $GitHubTemplate.Component
+                    Content   = $NewGitHubTemplateContent.Content
                 })
         }
 
