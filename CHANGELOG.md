@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Release
 
+## [v0.4.0](https://github.com/Brownserve-UK/PSBuildTools/tree/v0.4.0) (2026-09-29)
+
+### Changed
+
+- refactor(revert): drop all te changes we've been making in [#38](https://github.com/Brownserve-UK/PSBuildTools/pull/38) by [@shoddyguard](https://github.com/shoddyguard)
+- chore: run Update-BrownserveRepository in [#34](https://github.com/Brownserve-UK/PSBuildTools/pull/34) by [@shoddyguard](https://github.com/shoddyguard)
+
+
 ## [v0.3.0](https://github.com/Brownserve-UK/PSBuildTools/tree/v0.3.0) (2026-09-27)
 
 ### Added
