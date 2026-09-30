@@ -4,6 +4,10 @@
 
 Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%20Refactor.md).
 
+## Status
+
+**Phase 1: Inventory.** Proposed groups written up, awaiting review. Next: agree the groups, then fill in the inventory one group at a time.
+
 ## Purpose
 
 Each research investigation has a plausible direction, but they overlap on project configuration and ownership:
@@ -42,77 +46,49 @@ These describe what a word refers to, not decisions. New terms are added as they
 | --- | --- |
 | **Project type** | Today's model: one label per repository (`bsdev`, `PowerShellModule`) that selects every generated file. Being replaced by capabilities. |
 | **Capability** | A named piece of shared process that a repository opts into, e.g. `rust`, `container`, `powershell-module`. A repository can combine several. |
-| **Declaration** | The authoritative statement of what a repository uses: at minimum, its capabilities. When anything disagrees with it, the declaration wins. |
+| **Information** | A single fact about a repository that something reads, e.g. its capabilities, the binary name, the Docker context. |
 | **Source of truth** | The one place a piece of information is authoritatively stated. Two places both treated as authoritative for the same information are *competing* sources of truth. |
-| **Consumer** | Anything whose content or behaviour depends on the declaration, inside the repository (build tasks, workflows, `dependabot.yml`) or outside it (Terraform). |
-| **Direct consumer** | A consumer that reads the declaration itself whenever it runs. |
-| **Generated file** | A committed file whose content is derived from the declaration ahead of time, and has to be regenerated when the declaration changes. |
+| **Reader** | Anything that uses a piece of information, inside the repository (build tasks, workflows, Dependabot) or outside it (Terraform). |
+| **Generated file** | A committed file whose content a tool produces from information held elsewhere, and which has to be regenerated when that information changes. |
 | **Writer** | Any person or automation that changes a file, e.g. the maintainer, Dependabot, the sync mechanism. |
 | **Owner** | A writer that is *allowed* to change a given file, or a given part of one. Ownership is the rule; writing is the act. |
 | **Maintainer** | The people responsible for a repository. |
 | **Sync mechanism** | Whatever brings shared files in a repository up to date with their central source. Provisionally Copier, per [Updating Distributed Files](./2026-09-30%20-%20Updating%20Distributed%20Files.md). |
-| **Local customisation** | A change the maintainer makes in one repository to a file that comes from somewhere shared, e.g. extra cSpell words, `bsdev`'s `publish_to` input. Dependabot's edits are tracked separately. |
-| **Pass / stop** | This document's method. A pass follows one change (declare, add, remove). A stop is one part of the repository visited during a pass. |
+| **Local customisation** | A change the maintainer makes in one repository to a file that comes from somewhere shared, e.g. extra cSpell words, a manually defined `.gitignore` entry. Dependabot's edits are tracked separately. |
+| **Change trace** | Phase 2's record of one change (declare, add, remove): which information and files it touches. |
 
 ## Method
 
-- The example raises each decision. Nothing is decided until the example forces the question.
-- One decision at a time, with the facts gathered at that point, options, trade-offs and a recommendation.
-- Each decision relies only on earlier ones. If a later stop shows an earlier decision was wrong, it's reopened explicitly.
-- Decisions are recorded as they're made, so this document always shows where we stopped.
+Three phases. Each finishes with a stable output before the next starts, so work can be handed off between sessions.
 
-We follow one change through the repository, one stop at a time, in three passes:
+1. **Inventory (facts only).** Every piece of information the `rust` and `container` capabilities involve in `bsdev` today: where it's stated (every place), what reads it, what writes it, when it changes. No proposals, no owners. Complete when every group has been checked against the sources below and reviewed.
+2. **Change traces (facts plus research proposals).** For each change (declare `rust` + `container`, add a capability, remove `container`): which inventory rows change, which files must change, and where each research doc's proposal would leave more than one source of truth or an unclear writer. No decisions. Complete when every conflict is listed.
+3. **Decisions.** One conflict at a time, each set out as: question, today, readers, options (with consequences for `bsdev` on declare, add and remove), knock-on for the research docs, recommendation and confidence. Whether a declaration exists, what it holds and where it lives are decided last.
 
-1. **Declare** `rust` + `container`. Visits every stop and settles who owns what when nothing is changing.
-2. **Add** a capability. Revisits stops 1 to 7, asking only what the change adds.
-3. **Remove** `container`. As pass 2.
+Rules:
 
-Stops (provisional order):
+- Every fact carries a file reference so anyone can check it.
+- Decisions rely only on earlier ones. If a later finding shows an earlier decision was wrong, it's reopened explicitly.
+- The Status section is updated at the end of each session.
+- No git history of Brownserve repositories is consulted (per the brief).
 
-1. The declaration: what it states and who writes it
-2. Build tasks
-3. CI workflows (stub and Tier 2)
-4. `dependabot.yml`
-5. Dependency manifests
-6. Other repository files the capabilities affect
-7. Outside the repository (Terraform)
-8. Where the declaration lives (pass 1 only, decided once all the constraints from stops 2 to 7 are in)
+Sources checked:
 
-## Walkthrough
+- `bsdev`: `~/host-repos/Brownserve/bsdev`
+- The generator: `Module/Private/Build/Compare-BrownserveRepository.ps1`, `Module/Private/.config/`, `Module/Private/Build/templates/`
+- Terraform: `~/host-repos/Brownserve/Terraform/GitHub`
 
-### Pass 1: Declare
+## Phase 1: Inventory
 
-#### Stop 1: The declaration
+In progress
 
-In progress.
-
-What `bsdev` has today:
-
-- `.brownserve_repository_manifest` states only `RepositoryType: bsdev` and a hardcoded `ManifestVersion: 1.0.0`. The generator writes it.
-- Project settings are implicit. Binary and image names default to the repo name in `build_tasks.ps1`, and `build.ps1` also hardcodes `BinaryName = 'bsdev'`. The Docker context (`image/`) is baked into the type's tasks.
-- Publish targets (`DockerHub`, `GHCR`, `GitHub`) and the Rust target triple are `build.ps1` parameters, chosen per run.
-
-What the research proposes the declaration might hold:
-
-- Capabilities (all four docs).
-- Per-capability settings such as binary name, image name, docs path and publish targets (Invoke-Build P2).
-- The template version, ejected paths and a rollout channel (Updating Distributed Files, as Copier answers).
-
-### Pass 2: Add
+## Phase 2: Change traces
 
 Not started.
 
-### Pass 3: Remove
+## Phase 3: Decisions
 
 Not started.
-
-## Constraints on the declaration's location
-
-Collected at each stop for stop 8. None yet.
-
-## Decisions log
-
-None yet.
 
 ## Open questions
 
