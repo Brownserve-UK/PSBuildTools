@@ -19,3 +19,4 @@ paket-files/
 .continue/
 
 ## Manually defined ignores: ##
+!.agents/research
