@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 2: Change traces.** 2.3 done: Trace A (declare `rust-app` + `container`) has filled in every group of the proposed map. 2.4 done: the `docs-astro` inventory and its today's-map rows are written (hypothetical, generator only; no repo uses it). 2.5 in progress: Trace B declaration and Build done. Next: CI workflows.
+**Phase 2: Change traces.** 2.3 done: Trace A (declare `rust-app` + `container`) has filled in every group of the proposed map. 2.4 done: the `docs-astro` inventory and its today's-map rows are written (hypothetical, generator only; no repo uses it). 2.5 in progress: Trace B declaration, Build and CI workflows done. Next: Dependency tooling.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -568,6 +568,8 @@ Retired: `paket.dependencies`, and the Paket entry in `.config/dotnet-tools.json
 | Thing | Comes from | Gets there by |
 | --- | --- | --- |
 | Shared workflow logic (today's jobs: matrices, build steps, gate job, artifacts, Slack) | Shared workflows | Workflow call |
+| Shared workflow logic, docs deploy (today's `deploy-docs`) ⚠ T6 | Shared workflows | Workflow call |
+| Shared workflow logic, Node setup ⚠ B3 | Shared workflows | Workflow call |
 | Stubs (`ci`, `pr-checks`, `stage-release`, `release`), everything except the pin | Template | `copier copy` |
 | `release` stub, `publish_to` input ⚠ A5 | Template | `copier copy` |
 | Template sync stub | Template | `copier copy` |
@@ -578,6 +580,8 @@ References: tiers and stub contents (GHA `:53-64`, `:85-88`, `:108`); stub owner
 - **Repo name:** the shared workflow does the checkout, so the stubs don't need it. Whether the checkout still has to use a folder named after the repo is open (GHA `:19`, C4 `:160`).
 - **Required checks:** through a reusable workflow a check is named `<caller job> / <called job>` (GHA `:168`, V6 `:191`). Covered under GitHub settings.
 - **Dependabot:** the `github-actions` entry exists today; Brownserve refs need excluding from the 30-day cooldown (GHA `:139`). Covered under Dependency tooling.
+- **`docs-astro` deploy:** either Tier 1 per generator or `actions/deploy-pages` (GHA `:132`). The stubs' `capabilities` input switches it on, and the `ci` stub's path filter carries the docs path (GHA `:128`); both are covered by the stubs row.
+- **Go-live:** today the deploy runs only after `release` (`skillsrepo_github_release.yaml.template:64`), which is `workflow_dispatch` (`:4`), so a docs-only fix waits for the next release. The maintainer wants a way to trigger the docs deploy manually on its own.
 
 **Dependency tooling**
 
@@ -728,6 +732,7 @@ References: Terraform stays the owner of settings, secrets and the consumer list
 - **A13. A required check name is built from three sources.** `<caller job>` comes from the template (the stub's job name), `<called job>` from the shared workflows (GHA `:158`), and the full string is stated in Terraform's `required_status_checks` (`repos.tf:211`). Today there are two: the job name in `builds.yaml:98` and Terraform. If a shared workflow release renames its gate job, each repo's Dependabot bump PR reports the new name and never the old one, and strict protection with `enforce_admins` (`repository.tf:46`, `:59`) stops it merging. If Terraform changes first, every repo that hasn't taken the bump is blocked instead. Whether `rust-app`'s matrix and `container`'s smoke test sit behind one gate job with a fixed name (GHA `:129`) isn't settled; if the name varies by capability, Terraform has to know the capabilities too, which ties A13 to A12. Not verified (GHA V6, `:191`).
 - **B1. Adding a capability has no route of its own.** The template sync runs `copier update --defaults` (UDF `:141`), which reuses the recorded answers, so changing a capability needs a manual `copier update`. That needs Python (`:145`), `--trust` (`:149`) and a clean tree (`:150`). By default it also moves the repo to the newest template release, so the PR adding `docs-astro` can carry unrelated template changes and conflicts. How Copier takes a changed answer, and whether it can stay on the current template version, are not verified. The maintainer considers this a heavy-handed way to change a repo's capabilities, and wants the approach considered properly in Phase 3.
 - **B2. Nothing says which entry point the site build hooks into.** Today it's part of `Build` (`skillsrepo_build_tasks.ps1.template:391`), and IBT's entry points table lists no docs hook (`:125-133`). `bsdev`'s PR check runs `BuildTestAndCheck` on three OSes (`builds.yaml:48-49`, `:67`). If `docs-astro` hooks `Build` the way today's task does, every PR builds the site three times, and the Linux, macOS and Windows runners all need Node. The maintainer expects the builds to be restructured as part of the main work, and the site build to be placed properly then.
+- **B3. The Node version has two owners.** The shared workflow's `setup-node` sets the Node version CI installs, while the repo's `package.json` states the range Astro needs (`>=22.12.0`, `skillsrepo_astro_package.json.template:16`), scaffolded once and then the maintainer's. Today the generator writes both, plus the two workflow copies (`skillsrepo_github_builds.yaml.template:50`, `skillsrepo_github_release.yaml.template:79`), so they change together. If an Astro major needs a newer Node, Dependabot's `astro` bump PR fails until a shared workflow release raises the version and the repo takes that bump: two hops, slowed by the cooldown unless Brownserve refs are excluded (GHA `:139`). Whether `setup-node` can read the version from `package.json` instead (`node-version-file`) is not verified.
 
 ### Trace A: declare `rust-app` + `container`
 
@@ -749,6 +754,7 @@ An existing `rust-app` + `container` repo adds `docs-astro`. This is hypothetica
 
 - **Declaration.** Reached: answers file, then the same readers as Trace A (project config, `Extends` list, the stubs' `capabilities` input), plus Terraform for Pages. Route: a manual `copier update`, not the template sync. Problems: B1, plus A1 and A2 again (IBT has a `docs-astro` base script, `:117`). No T problems.
 - **Build.** Reached: shared tasks (the `docs-astro` base script, through the task package), the `Extends` list, the docs path in the project config. Not reached: the dependency manifest, since Astro needs no NuGet package. Problems: B2, A1 (widened), A2. T6 is carried to CI workflows.
+- **CI workflows.** Reached: shared workflow logic (Node setup, site build and docs deploy, switched on by the `capabilities` input); the `ci` and `release` stubs (the `capabilities` input, and the docs path in the `ci` path filter). Problems: B3, A1 (path filter), A4. Narrows the `docs-astro` part of T1 to A4. Carries T6 over: it clears only if the deploy publishes the task package's build.
 
 ## Phase 3: Decisions
 
