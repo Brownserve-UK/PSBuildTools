@@ -6,7 +6,18 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 1: Inventory.** Complete. Next: start Phase 2 with the first change trace (declare `rust` + `container`).
+**Phase 2: Change traces.** Next: 2.2, build today's map from the Phase 1 inventory.
+
+- [x] 1. Inventory
+- [x] 2.1 Agree the map format
+- [ ] 2.2 Today's map, built from the Phase 1 inventory
+- [ ] 2.3 Trace A: declare `rust` + `container`, filling in the proposed rows it reaches
+- [ ] 2.4 Extra inventory for `docs-astro`, plus its rows in today's map
+- [ ] 2.5 Trace B: add `docs-astro`, filling in its proposed rows
+- [ ] 2.6 Trace C: remove `container`
+- [ ] 2.7 Problem list: duplicates removed, dependencies noted, order agreed for Phase 3
+- [ ] 3.x Decisions: one problem per step, each fixing a row of the proposed map. The declaration (whether it exists, what it holds, where it lives) comes last
+- [ ] F. Final pass: final map and unresolved questions, re-run the three traces against it, decide whether an overview diagram is worth adding
 
 ## Purpose
 
@@ -57,17 +68,31 @@ These describe what a word refers to, not decisions. New terms are added as they
 | **Maintainer** | The people responsible for a repository. |
 | **Sync mechanism** | Whatever brings shared files in a repository up to date with their central source. Provisionally Copier, per [Updating Distributed Files](./2026-09-30%20-%20Updating%20Distributed%20Files.md). |
 | **Local customisation** | A change the maintainer makes in one repository to a file that comes from somewhere shared, e.g. extra cSpell words, a manually defined `.gitignore` entry. Dependabot's edits are tracked separately. |
-| **Change trace** | Phase 2's record of one change (declare, add, remove): which information and files it touches. |
+| **Map** | A table of where each piece of content in a repository comes from and how it gets there. Phase 2 builds one for today and one proposed. |
+| **Route** | How content gets from where it comes from to where it's used, e.g. the generator, a Dependabot PR, a hand edit. Each piece of content should have exactly one. |
+| **Problem** | A map row marked ⚠: two routes into the same thing, a route with no clear writer, or something that needs to change but has no route. |
+| **Change trace** | Phase 2's record of one change (declare, add, remove): which source it changes, the map rows reached by following the routes out of it, and the problems found. |
 
 ## Method
 
 This is being done slowly and carefully to assess each area in turn with the user to ensure direction is aligned and help guide towards the correct shape.
-Three phases. Each finishes with a stable output before the next starts, so work can be handed off between sessions.
+Three phases and a final pass. Each finishes with a stable output before the next starts, so work can be handed off between sessions.
 File edits must be agreed with the user before writing.
 
 1. **Inventory (facts only).** Every piece of information the `rust` and `container` capabilities involve in `bsdev` today: where it's stated (every place), what reads it, what writes it, when it changes. No proposals, no owners. Complete when every group has been checked against the sources below and reviewed.
-2. **Change traces (facts plus research proposals).** For each change (declare `rust` + `container`, add a capability, remove `container`): which inventory rows change, which files must change, and where each research doc's proposal would leave more than one source of truth or an unclear writer. No decisions. Complete when every conflict is listed.
-3. **Decisions.** One conflict at a time, each set out as: question, today, readers, options (with consequences for `bsdev` on declare, add and remove), knock-on for the research docs, recommendation and confidence. Whether a declaration exists, what it holds and where it lives are decided last.
+2. **Change traces (facts plus research proposals).** Build today's map from the inventory, then trace three changes: declare `rust` + `container`, add `docs-astro`, remove `container`. Each trace fills in the proposed map rows it reaches from what the research docs propose. No decisions. Complete when every problem is listed and their order for Phase 3 is agreed.
+3. **Decisions.** One problem at a time, each fixing a row of the proposed map, set out as: question, today, readers, options (with consequences for `bsdev` on declare, add and remove), knock-on for the research docs, recommendation and confidence. Whether a declaration exists, what it holds and where it lives are decided last.
+4. **Final pass.** Settle the final map and unresolved questions. Re-run the three traces against the final map; anything still ambiguous reopens a decision or becomes an unresolved question. Proposed rows no trace reached are filled in or marked as unaffected by capabilities.
+
+Map format:
+
+- A list of sources first, each named once: the distinct values of the **Comes from** column.
+- One table per area, using the Phase 1 groups, with three columns: **Thing**, **Comes from**, **Gets there by**.
+- A row is a file, or part of a file where the parts arrive by different routes.
+- ⚠ marks a problem. Problems are listed under the map with an ID.
+- The proposed map starts empty and is filled in by the traces.
+
+Trace format: a trace changes one source and follows the routes out of it. It records the rows reached, anything that should change but has no route, and anything reached by two routes. Trace C also covers what happens to local customisations.
 
 Rules:
 
