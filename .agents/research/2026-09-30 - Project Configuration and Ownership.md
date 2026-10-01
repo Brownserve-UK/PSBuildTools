@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 1: Inventory.** Groups agreed. Build, CI workflows, Dependency tooling, Dev environment and Repository hygiene done. Next: Docs.
+**Phase 1: Inventory.** Groups agreed. Build, CI workflows, Dependency tooling, Dev environment, Repository hygiene and Docs done. Next: Install scripts.
 
 ## Purpose
 
@@ -221,6 +221,31 @@ Three merge behaviours: the devcontainer files are replaced whole, `.vscode/*` o
 - Ephemeral paths: `.tmp/` and `paket.lock` are ignored here and also wiped and recreated by `_init.ps1` (`:77-79`).
 - Cargo.lock: "intentionally NOT ignored" (`:21`), matching the Dependency tooling row.
 
+### Docs
+
+| File | Holds | Comes from | Written by | Read by | Changes when |
+| --- | --- | --- | --- | --- | --- |
+| `README.md` | What the tool does and the image's toolset (`:9-23`); install one-liners with owner and repo baked into the URLs (`:31`, `:36`); command usage; building needs Rust and PowerShell, and runs `BuildTestAndCheck` (`:107-113`) | Not generated: nothing in the generator or templates produces it | The maintainer | People, on GitHub. Nothing in `.build/`, `.github/` or `scripts/` reads it | The maintainer documents a change |
+| `CHANGELOG.md` | Keep a Changelog header and a `## Release` heading (`:1-8`); one entry per release, with owner and repo in every link (`:10` onwards) | Header: `New-BrownserveChangelogHeader` (`Module/Private/Build/New-BrownserveChangelogHeader.ps1:7-20`), which also writes a `v0.0.0` placeholder that the first staged release replaces. Entries: `New-BrownserveChangelogEntry -Auto`, built from merged PRs and their labels (`build_tasks.ps1:344-368`) | The generator, only if missing (`:1667-1686`); `UpdateChangelog` during a staged release (`build_tasks.ps1:380-392`) | `GetReleaseHistory` for the current version (`build_tasks.ps1:261-272`); `PublishRelease` for the version and release notes (`:604-608`) | Every staged release |
+| `LICENSE` | MIT, `Copyright (c) 2026 Brownserve-UK` | `New-SPDXLicense` (`Module/Public/Build/New-SPDXLicense.ps1`): fetched from the SPDX list on GitHub, with year and owner filled in (`:78`). The `bsdev` type sets `MIT` (`:708`) | The generator, only if missing; never overwritten "for legal reasons" (`:1688-1702`) | People; GitHub's licence detection | Only a hand edit |
+| `CLAUDE.md` | Repo layout, how it works, build commands, conventions for AI agents. Restates scaffold facts: binary must be `bsdev` and pass the Pester contract (`:130-132`); `[workspace.package]` version bumped by release tooling (`:11-12`); image published to GHCR (`:46`) | Not generated | The maintainer (and agents working on the repo) | AI coding agents. Committed; `.claude/` is ignored but `CLAUDE.md` isn't (`.gitignore:16`) | The maintainer or an agent updates it |
+| `.github/CONTRIBUTING.md` | Prerequisites: Rust toolchain and PowerShell 7 (`:7-8`); `cargo build`/`cargo test` and `BuildTestAndCheck` (`:12-24`); signed commits; the Conventional Commits prefix table (`:36-42`) | `RustApp_github_contributing.md.template`, which `bsdev` shares with `RustApp` (`:734`), no substitutions. Matches exactly | The generator, whole file, whenever it differs (`:1946-1991`) | People, on GitHub | A regeneration picks up a template change |
+| `.github/pull_request_template.md` | Repo name (`:1`); links to CONTRIBUTING and the org `CODE_OF_CONDUCT.md` with owner and repo filled in (`:12-13`); `cargo build` and `cargo test` checklist items (`:14-15`) | `RustApp_github_pull_request_template.md.template` with `REPO_NAME` and `OWNER` filled in (`:736-740`, `:2009-2013`). Matches | The generator, whole file, whenever it differs (`:1993-2048`) | GitHub, when a PR is opened | A regeneration picks up a template, repo name or owner change |
+
+Three write behaviours: CONTRIBUTING and the PR template are replaced whole; `CHANGELOG.md` and `LICENSE` are only created if missing; `README.md` and `CLAUDE.md` aren't generated at all.
+
+Only `rust` shows up in the generated docs (CONTRIBUTING prerequisites, both files' cargo commands). Neither generated doc mentions `container`: there's no `BuildImage` or Docker step in either. The image only appears in the maintainer-owned `README.md` and `CLAUDE.md`.
+
+`New-SPDXLicense` runs on every regeneration (`:1216-1222`) even though its output is only used when `LICENSE` is missing, so every regeneration needs to reach GitHub.
+
+**Repeats added:**
+
+- Owner and repo name: `README.md` install URLs, every `CHANGELOG.md` entry link, `LICENSE`, and the PR template.
+- Conventional Commits prefix table: `CONTRIBUTING.md:36-42`, and the title mapping in `label-pr.yaml:79-90`.
+- Changelog labels: `New-BrownserveChangelogEntry -Auto` sorts entries by the labels `label-pr.yaml` applies (confirmed by the maintainer), so the `removed`/`removal` mismatch reaches the changelog too.
+- Build commands (`cargo build`, `cargo test`, `BuildTestAndCheck`): `README.md`, `CLAUDE.md`, `CONTRIBUTING.md`, the PR template.
+- Scaffold contract (binary name, `[workspace.package]` version): restated in `CLAUDE.md`.
+
 ## Phase 2: Change traces
 
 Not started.
@@ -231,5 +256,6 @@ Not started.
 
 ## Open questions
 
-- **`removed` vs `removal` label.** `label-pr.yaml:88` applies `removed`, but Terraform defines `removal` (`modules/github-brownserve_repo/issues.tf:93`). Terraform's labels are authoritative (`issues.tf:2-3`). This isn't specific to `rust` or `container`, but it's two sources of the same information that disagree.
+- **`removed` vs `removal` label.** `label-pr.yaml:88` applies `removed`, but Terraform defines `removal` (`modules/github-brownserve_repo/issues.tf:93`). Terraform's labels are authoritative (`issues.tf:2-3`). This isn't specific to `rust` or `container`, but it's two sources of the same information that disagree. The changelog groups entries by these labels, so the mismatch reaches `CHANGELOG.md` too.
 - **Dependabot `docker` entry may do nothing.** `image/Dockerfile:8` uses `archlinux:latest` with no version or digest. Dependabot bumps versioned tags or digests, so this entry (`dependabot.yml:18-23`) probably never opens a PR. Not verified.
+- **Org `CODE_OF_CONDUCT.md` not verified.** `bsdev`'s PR template links to it in the `.github` repo (`repos.tf:123`), which isn't checked out locally.
