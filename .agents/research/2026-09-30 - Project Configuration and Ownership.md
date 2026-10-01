@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 1: Inventory.** Groups agreed. Build, CI workflows, Dependency tooling and Dev environment done. Next: Repository hygiene.
+**Phase 1: Inventory.** Groups agreed. Build, CI workflows, Dependency tooling, Dev environment and Repository hygiene done. Next: Docs.
 
 ## Purpose
 
@@ -204,6 +204,22 @@ Three merge behaviours: the devcontainer files are replaced whole, `.vscode/*` o
 - Ubuntu focal: `devcontainer.json:5`, `Dockerfile:5`, and the `ubuntu/20.04` package URL (`Dockerfile:19`).
 - Rust and container each show up in three configs: extensions (`rust-analyzer`, `even-better-toml`, `vscode-docker`), editorconfig sections (`*.rs`, `*.toml`, `Dockerfile`), and the devcontainer, which has the Rust toolchain but no Docker tooling.
 - PowerShell formatting settings: copied into five type entries in `repository_vscode_extensions.json` (`:31-39`, `:60-70`, `:93-104`, `:115-126`, `:137-148`). Generator-side, not in `bsdev`.
+
+### Repository hygiene
+
+| File | Holds | Comes from | Written by | Read by | Changes when |
+| --- | --- | --- | --- | --- | --- |
+| `.gitignore` | Paket files and `.tmp/` (`:6-11`); AI tool directories (`:14-19`); Rust: `target/` and `**/*.rs.bk` (`:22-25`); container: `.docker/` (`:28`); a manual section (`:30`) | `gitignore_config.json`: defaults (`:2-26`) plus `bsdev` (`:50-63`). Matches exactly. `bsdev`'s list is `RustApp`'s plus `.docker/`, which it shares with `WebApp` | The generator, apart from the manual section after `## Manually defined ignores: ##`, which it keeps (`:308-320`, `:1372-1397`). If that marker is missing, the file is reported as unparsable and generation stops unless `-Force` is used (`:319`, `:882-890`) | Git | A regeneration picks up a config change; the maintainer edits the manual section |
+| `.markdownlint.json` | `MD013` off; `MD024` siblings only | `markdownlint_config.json`, which is one config for every type, with no per-type entries. Matches exactly | The generator, whole file. It deliberately overwrites local changes "for a consistent gold standard" (`:1704-1748`) | markdownlint (VS Code extension) | A regeneration picks up a config change |
+
+`.docker/` is ignored, but nothing in `bsdev`'s `.build/` or `.github/` creates it. It comes along with the container config entry.
+
+`.markdownlint.json` is the first file deliberately identical across every type, with no local customisation allowed. Neither `rust` nor `container` affects it.
+
+**Repeats added:**
+
+- Ephemeral paths: `.tmp/` and `paket.lock` are ignored here and also wiped and recreated by `_init.ps1` (`:77-79`).
+- Cargo.lock: "intentionally NOT ignored" (`:21`), matching the Dependency tooling row.
 
 ## Phase 2: Change traces
 
