@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 2: Change traces.** 2.3 in progress, Trace A (declare `rust-app` + `container`): declaration, Build and CI workflows done. Next: Dependency tooling.
+**Phase 2: Change traces.** 2.3 in progress, Trace A (declare `rust-app` + `container`): declaration, Build, CI workflows and Dependency tooling done. Next: Dev environment.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -458,8 +458,10 @@ Unlike today's map, a row is also given to anything that replaces a file committ
 | **Template** | The Copier template repo, released with version tags (UDF `:133`). |
 | **Task package** | The shared build tasks, one base script per capability (IBT `:85`), plus the stock Pester tests, which read the binary name from the project config (UDF `:92`). |
 | **Shared workflows** | The Tier 2 reusable workflows, which call the Tier 1 actions (GHA `:53-79`). |
-| **Upstream** | New releases of packages (the task package, the Brownserve modules, Invoke-Build, Pester) and of the shared workflows. |
-| **NuGet** | Dependency resolution from the dependency manifest. Same role as Cargo today. |
+| **Upstream** | New releases of packages (the task package, the Brownserve modules, Invoke-Build, Pester), of the shared workflows, and of crates and base images. |
+| **NuGet** | Dependency resolution from the dependency manifest. Same role as Cargo. |
+| **Cargo** | Dependency resolution from the `Cargo.toml` files. |
+| **Release history** | The previous version, the release type and the PRs merged since. |
 
 **Routes**
 
@@ -472,6 +474,8 @@ Unlike today's map, a row is also given to anything that replaces a file committ
 | **Workflow call** | GitHub runs the shared workflow at the version the stub pins (GHA `:46-47`, `:103`). Nothing is copied into the repo. |
 | **Hand edit** | Someone edits the file in the repo. |
 | **Dependabot PR** | Dependabot opens a PR. |
+| **Cargo build** | Cargo rewrites the lock file when a build sees a manifest change. |
+| **Staged release** | The task package's `StageRelease` tasks write the file, run through the `stage-release` shared workflow. |
 
 **Build**
 
@@ -511,6 +515,33 @@ References: tiers and stub contents (GHA `:53-64`, `:85-88`, `:108`); stub owner
 - **Required checks:** through a reusable workflow a check is named `<caller job> / <called job>` (GHA `:168`, V6 `:191`). Covered under GitHub settings.
 - **Dependabot:** the `github-actions` entry exists today; Brownserve refs need excluding from the 30-day cooldown (GHA `:139`). Covered under Dependency tooling.
 
+**Dependency tooling**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| `dependabot.yml` | Template | `copier copy` |
+| Root `Cargo.toml`, members and edition ⚠ A6 | Maintainer | Hand edit |
+| Root `Cargo.toml`, `[workspace.package]` version | Release history | Staged release |
+| `cli/` and `core/` `Cargo.toml`, packages, binary name, dependency list ⚠ A6 | Maintainer | Hand edit |
+| `cli/` and `core/` `Cargo.toml`, dependency versions | Upstream | Dependabot PR |
+| `Cargo.lock` ⚠ T3 | Cargo | Cargo build; Dependabot PR; Staged release |
+| `image/Dockerfile` ⚠ A6 | Maintainer | Hand edit |
+| `image/Dockerfile`, base image tag | Upstream | Dependabot PR (may do nothing, see Open questions) |
+
+References: `dependabot.yml` is class 4, owned by the template (UDF `:79`, `:98`, `:262`), rendered from the answers. Its entries:
+
+- `github-actions` at `/`, for the stub pins (GHA `:53`).
+- `nuget` at the dependency manifest's folder, new (Paket `:97`, `:119`, `:161`).
+- `cargo` at `/`, from `rust-app`.
+- `docker` at the Docker context, from `container` (UDF `:134`).
+
+Brownserve refs (`Brownserve-UK/*` actions, `Brownserve.*` packages) are grouped into one PR and excluded from the cooldown (GHA `:139`, Paket `:161`). Without that, a Tier 1 fix could take two 30-day cooldowns to arrive. Not verified (GHA V7 `:192`, Paket V2 `:189`).
+
+No research doc distributes the `Cargo.toml` files, `Cargo.lock` or `image/Dockerfile`. `UpdateCargoVersion` moves into the task package unchanged (IBT `:38`, `:114`), so T3 carries over and keeps its ID.
+
+- **Local edits to `dependabot.yml`:** the file is owned by the template (UDF `:79`), but Copier's 3-way merge keeps a maintainer's local `ignore` rule (UDF `:135`). Only matters on removal. Covered in Trace C.
+- **Ecosystem labels:** `nuget` adds a third ecosystem with no Terraform label (see Open questions). Covered under GitHub settings.
+
 **Generator**
 
 | Thing | Comes from | Gets there by |
@@ -528,6 +559,7 @@ Retired: `.brownserve_repository_manifest` (UDF `:103`).
 - **A3. Nothing settles how packages get into the dependency manifest at set-up.** The template never holds versions, so even shared packages need `dotnet add package`. UDF suggests a Copier migration or task (`:256`); only a task fits at set-up, because migrations run when an update crosses a version (UDF `:136`). Not verified (UDF V4, `:296`); Paket D7 (`:182`) is still open. For `bsdev` every package is shared by all capabilities, so a capability bringing its own package comes up in later traces.
 - **A4. Nothing settles where the template's pin comes from, or whether it ever moves.** Dependabot owns the pin (UDF `:262`), but the stub is rendered from the template, so the first pin has to come from it. Copier's 3-way merge keeps Dependabot's bump only if the template leaves that line alone (UDF V1, `:293`). If the template pins `ci` at `v1.0.0`, Dependabot bumps `bsdev` to `v1.2.0`, and the next template release moves its pin to `v1.1.0` so new repos start more current, `copier update` sees both sides change the same line and commits a conflict (UDF `:147`). The manifest versions had the same shape and were answered by the template never holding versions (UDF `:254`); the research has no equivalent for pins.
 - **A5. Publish targets have two proposed homes.** The project config holds publish targets (IBT `:142`), and dispatch inputs live in the stub (GHA `:85`). Today's `publish_to` is a per-run choice with a default (`release.yaml:5-10`). Nothing says whether the stub still offers that choice, or how its default relates to the config's list. Both follow the capabilities (`container` brings GHCR and DockerHub), so removing `container` would need both changed.
+- **A6. Nothing creates or checks the files the capabilities expect the maintainer to write.** The shared tasks assume the root `Cargo.toml` has `[workspace.package]` with a `version` (`build_tasks.ps1:316-320`, or `StageRelease` fails), the binary in `cli/Cargo.toml` is named `BinaryName` (`:567-571`, or `Package` can't find it), and a Dockerfile sits in the Docker context (`:131`, `:184`, or `BuildImage` fails). The binary name and Docker context are also in the project config (IBT `:142`), with no route between the two. A new `rust-app` repo made with `cargo new` has no `[workspace.package]`, so it builds and tests fine until its first `StageRelease`. The research's scaffold class (class 6) lists only `LICENSE`, `CHANGELOG.md`, `README.md` and the Astro scaffold (UDF `:81`, `:102`).
 
 ### Trace A: declare `rust-app` + `container`
 
@@ -536,6 +568,7 @@ A maintainer sets up a new repository and declares it's `rust-app` + `container`
 - **Declaration.** Reached: answers file, project config. Problems: A1. The workflow stubs' `capabilities` input (GHA `:108`) isn't a separate source: Copier renders the stubs from the answers (UDF `:89`, `:262`).
 - **Build.** Reached: shared tasks and stock tests (through the task package), bootstrap, project build script, project tests, dependency manifest and lock file, `nuget.config`. Problems: A2, A3. Clears T4, and T2 for the tests (the template no longer writes the test file).
 - **CI workflows.** Reached: shared workflow logic (through the stubs), stubs for `ci`, `pr-checks`, `stage-release`, `release` and template sync, and their pins. Problems: A4, A5. Narrows T1 to A4: a conflict only when the template moves its own pin, rather than every regeneration reverting it. Clears T2 for `publish_to`: the input becomes part of the template, and a hand edit in a stub is kept by the 3-way merge (UDF `:135`), so T2 is fully cleared.
+- **Dependency tooling.** Reached: `dependabot.yml`, with `cargo` from `rust-app`, `docker` at the Docker context from `container`, plus `github-actions` and `nuget`, Brownserve refs grouped and excluded from cooldown. The `Cargo.toml` files, `Cargo.lock` and `image/Dockerfile` aren't reached: they stay with the maintainer. Problems: A6. Carries T3 over unchanged; the fix would now live in the task package. Completes the T4 clear with the `nuget` entry.
 
 ## Phase 3: Decisions
 
