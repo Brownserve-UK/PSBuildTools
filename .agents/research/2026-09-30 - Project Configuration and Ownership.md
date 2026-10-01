@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 2: Change traces.** 2.3 done: Trace A (declare `rust-app` + `container`) has filled in every group of the proposed map. 2.4 done: the `docs-astro` inventory and its today's-map rows are written (hypothetical, generator only; no repo uses it). 2.5 in progress: Trace B declaration, Build, CI workflows, Dependency tooling, Dev environment, Repository hygiene and Docs done. Next: Install scripts.
+**Phase 2: Change traces.** 2.3 done: Trace A (declare `rust-app` + `container`) has filled in every group of the proposed map. 2.4 done: the `docs-astro` inventory and its today's-map rows are written (hypothetical, generator only; no repo uses it). 2.5 in progress: Trace B declaration, Build, CI workflows, Dependency tooling, Dev environment, Repository hygiene, Docs and Install scripts done. Next: Generator.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -690,7 +690,7 @@ References: UDF makes them class 4, or class 1 if moved into a release asset or 
 Retired: `rustapp_install.sh.template`, `rustapp_install.ps1.template` and the generator's install script handling (`Compare-BrownserveRepository.ps1:2218-2280`).
 
 - **New repos:** `bsdev` keeps its current scripts. A new `rust-app` repo starts with no installers and gets them only if the maintainer writes them.
-- **Later:** if binary-producing repos become common, the installers could come back as a template scaffold or a release artefact built by `Package` (UDF `:101`, class 1). Only the artefact route clears A11, because the same task would name the assets and write the installer.
+- **Later:** if binary-producing repos become common, the installers could come back as a template scaffold or a release artefact built by `Package` (UDF `:101`, class 1). Only the artefact route clears A11, because the same task would name the assets and write the installer. A `docs-astro` site could also serve them from a fixed address under `docs.brownserve.co.uk`, which is UDF's shared URL route (`:101`). That goes against installers being per project and isn't verified.
 - **Repeated information:** the installers' copy of the binary name stays, now held by the maintainer alongside the project config's (IBT `:142`).
 
 **Generator**
@@ -773,6 +773,7 @@ An existing `rust-app` + `container` repo adds `docs-astro`. This is hypothetica
 - **Dev environment.** Reached: the dev container toolset (Node) and the stub's reference to it. Not reached: `extensions.json`, `settings.json` and `.editorconfig`; the default `.editorconfig` section already covers Astro's files. Problems: B6, A7 (widened), B3 (widened). No T problems in this group.
 - **Repository hygiene.** Reached: `.gitignore`, with a `docs-astro` section (`node_modules/`, plus `dist/` and `.astro/` under the docs path). Not reached: `.markdownlint.json`, which is the same for every type. Problems: B7, A1 (the docs path), B4 (widened). No T problems in this group.
 - **Docs.** Reached: the Astro scaffold (`package.json`, `astro.config.mjs`, `index.astro`) through `copier copy` (scaffold); a `docs-astro` section in `CONTRIBUTING.md` and an item in the PR template. Not reached: `README.md`, `CHANGELOG.md`, `LICENSE` and `CLAUDE.md`. Problems: A1 (the docs path in both files), B7 (widened). Carries T5 over: the URL moves to `docs.brownserve.co.uk`, but the scaffold is still never re-rendered.
+- **Install scripts.** Not reached: `docs-astro` doesn't write them today or in the proposal, so `install.sh` and `install.ps1` stay with the maintainer. Problems: none new; A11 is unchanged. No T problems in this group.
 
 ## Phase 3: Decisions
 
