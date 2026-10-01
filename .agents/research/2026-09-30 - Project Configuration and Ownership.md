@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 2: Change traces.** 2.3 in progress, Trace A (declare `rust-app` + `container`): declaration, Build, CI workflows, Dependency tooling and Dev environment done. Next: Repository hygiene.
+**Phase 2: Change traces.** 2.3 in progress, Trace A (declare `rust-app` + `container`): declaration, Build, CI workflows, Dependency tooling, Dev environment and Repository hygiene done. Next: Docs.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -564,6 +564,21 @@ References: the devcontainer files become class 1 plus a class 4 stub, through p
 - **Repeated information:** Ubuntu focal moves into the published image, so its three copies go. The extension list is in both `extensions.json` and `devcontainer.json` today; the research doesn't say whether the stub still carries it.
 - **Ecosystem labels:** the `/.devcontainer` entry adds another ecosystem with no Terraform label. Covered under GitHub settings.
 
+**Repository hygiene**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| `.gitignore`, template sections | Template | `copier copy` |
+| `.gitignore`, maintainer additions (`image/proto/node_modules/`) ⚠ A8 | Maintainer | Hand edit |
+| `.markdownlint.json` ⚠ A9 | Template | `copier copy` |
+
+References: `.gitignore` is class 5 (UDF `:99`). Its sections follow the capabilities: `target/` and `**/*.rs.bk` from `rust-app`, `.docker/` from `container` (UDF `:134`, `:244`). `.markdownlint.json` is class 3 if `extends` can reach a shared file without npm, otherwise class 4 (UDF `:96`, V6 `:298`).
+
+- **Paket entries:** an unconditional template section, since every repo has the build. `paket.lock` and `paket-files/` go (Paket `:170`). The new `packages.lock.json` has to be committed, because Dependabot bumps it with the manifest (Paket `:97`); today's comment says the lock is ignored on purpose (`.gitignore:4`). `packages/` stays only if restore stays repo-local (Paket D4, `:179`). The restore project's `obj/` and `bin/` need ignoring (Paket V8, `:195`).
+- **If V6 holds:** `.markdownlint.json` becomes an `extends` stub, still through `copier copy`, plus a shared file. No research doc says where the shared file lives or how it reaches the repo.
+- **Manual sections:** `.gitignore` loses its manual section marker; the 3-way merge carries a local line instead (UDF `:245`).
+- **Removal:** dropping a capability should drop its ignore lines. Covered in Trace C.
+
 **Generator**
 
 | Thing | Comes from | Gets there by |
@@ -584,6 +599,7 @@ Retired: `.brownserve_repository_manifest` (UDF `:103`).
 - **A6. Nothing creates or checks the files the capabilities expect the maintainer to write.** The shared tasks assume the root `Cargo.toml` has `[workspace.package]` with a `version` (`build_tasks.ps1:316-320`, or `StageRelease` fails), the binary in `cli/Cargo.toml` is named `BinaryName` (`:567-571`, or `Package` can't find it), and a Dockerfile sits in the Docker context (`:131`, `:184`, or `BuildImage` fails). The binary name and Docker context are also in the project config (IBT `:142`), with no route between the two. A new `rust-app` repo made with `cargo new` has no `[workspace.package]`, so it builds and tests fine until its first `StageRelease`. The research's scaffold class (class 6) lists only `LICENSE`, `CHANGELOG.md`, `README.md` and the Astro scaffold (UDF `:81`, `:102`).
 - **A7. The dev container toolset has no settled source.** `bsdev` needs PowerShell (every repo, because the build runs in `pwsh`), Rust (`rust-app`) and Docker tooling (`container`, missing today, see the Phase 1 Dev environment table). A dev container uses one image, so an image per capability can't be combined, and an image per combination grows with every new mix. A base image plus one Feature per capability combines, but each Feature has to be built and published. Images or Features is still open (UDF D4, `:283`), and no research doc says which repo builds and publishes them, or with what workflow.
 - **A8. Additions from the template and the repo to the same list can conflict.** When both append to the end of a list in a class 5 file, their edits touch the same or adjacent lines. In JSON, appending also adds a comma to the previous last line. If the maintainer adds `"bsdev"` after `"yzhang"` in the cSpell words (`settings.json:15`), and the next template release also adds a word at the end, both sides change `"yzhang"` to `"yzhang",` and `copier update` commits a conflict. UDF's "a cSpell word the template didn't touch is kept" (`:135`) holds only when the template's change is elsewhere in the list. The same applies to `extensions.json` and `.gitignore`. Not verified: this is how git-style 3-way merges treat adjacent edits, not tested with Copier. If V6 holds, cSpell words move to a shared list and drop out of this.
+- **A9. Nothing keeps a file identical across repos once Copier merges.** Today `.markdownlint.json` is overwritten whole so that no repo drifts (`Compare-BrownserveRepository.ps1:1704-1748`). Copier's 3-way merge keeps any local edit the template didn't touch (UDF `:135`). That includes class 4 files, whose "overwrite is fine" (UDF `:79`) isn't how Copier updates them. As class 3, the local half exists to hold local rules (UDF `:78`, `:245`). Either way a repo could switch a rule back on and keep it on without ejecting, though ejecting is the research's visible route for divergence (UDF `:246`). The research doesn't say whether the "no local changes" rule should survive.
 
 ### Trace A: declare `rust-app` + `container`
 
@@ -594,6 +610,7 @@ A maintainer sets up a new repository and declares it's `rust-app` + `container`
 - **CI workflows.** Reached: shared workflow logic (through the stubs), stubs for `ci`, `pr-checks`, `stage-release`, `release` and template sync, and their pins. Problems: A4, A5. Narrows T1 to A4: a conflict only when the template moves its own pin, rather than every regeneration reverting it. Clears T2 for `publish_to`: the input becomes part of the template, and a hand edit in a stub is kept by the 3-way merge (UDF `:135`), so T2 is fully cleared.
 - **Dependency tooling.** Reached: `dependabot.yml`, with `cargo` from `rust-app`, `docker` at the Docker context from `container`, plus `github-actions` and `nuget`, Brownserve refs grouped and excluded from cooldown. The `Cargo.toml` files, `Cargo.lock` and `image/Dockerfile` aren't reached: they stay with the maintainer. Problems: A6. Carries T3 over unchanged; the fix would now live in the task package. Completes the T4 clear with the `nuget` entry.
 - **Dev environment.** Reached: `devcontainer.json` stub and its reference, `extensions.json`, `settings.json` and `.editorconfig`, with the Rust and Docker entries from the capabilities, plus a `dependabot.yml` entry at `/.devcontainer`. The toolset (today's `.devcontainer/Dockerfile`) isn't reached: its source isn't settled. Problems: A4 (widened), A7, A8. No T problems in this group.
+- **Repository hygiene.** Reached: `.gitignore`, with `target/` and `**/*.rs.bk` from `rust-app`, `.docker/` from `container`, and its Paket entries replaced by the NuGet ones; `.markdownlint.json`. Problems: A8 (applies to `.gitignore`), A9. No T problems in this group.
 
 ## Phase 3: Decisions
 
