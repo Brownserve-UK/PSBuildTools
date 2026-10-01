@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 2: Change traces.** 2.3 done: Trace A (declare `rust-app` + `container`) has filled in every group of the proposed map. 2.4 done: the `docs-astro` inventory and its today's-map rows are written (hypothetical, generator only; no repo uses it). Next: 2.5, Trace B (add `docs-astro`).
+**Phase 2: Change traces.** 2.3 done: Trace A (declare `rust-app` + `container`) has filled in every group of the proposed map. 2.4 done: the `docs-astro` inventory and its today's-map rows are written (hypothetical, generator only; no repo uses it). 2.5 in progress: Trace B declaration done. Next: Build.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -521,10 +521,13 @@ Unlike today's map, a row is also given to anything that replaces a file committ
 
 **Routes**
 
+Every `copier copy` route, apart from `copier copy` (scaffold), is kept current afterwards by `copier update`.
+
 | Route | What it does |
 | --- | --- |
 | **`copier copy`** | Runs once, when the repo is set up. Copier asks the maintainer its questions, fills in the template, and writes the files plus `.copier-answers.yml` (UDF `:127`, `:266`). |
 | **`copier copy` (scaffold)** | Written once at set-up; template updates never touch it again (`_skip_if_exists`, UDF `:138`). |
+| **`copier update`** | Re-renders the template with the recorded answers, or changed ones, and 3-way merges the result (UDF `:127`). The maintainer runs it to change an answer; the template sync runs it with `--defaults` for each template release (UDF `:141`, `:235`). |
 | **Copier task** | A command the template runs after rendering, e.g. `dotnet add package` (UDF `:256`). |
 | **Package restore** | `_init.ps1` restores packages into `packages/` (not committed), at the versions in the lock file (Paket `:93`). |
 | **Workflow call** | GitHub runs the shared workflow at the version the stub pins (GHA `:46-47`, `:103`). Nothing is copied into the repo. |
@@ -720,6 +723,7 @@ References: Terraform stays the owner of settings, secrets and the consumer list
 - **A11. Nothing ties the installers to the release they install.** Each installer hard-codes the asset name (`install.sh:42`, `install.ps1:26`), the targets (`install.sh:26`, `:32`, `install.ps1:25`) and the binary name (from the repo name). In the proposal these are decided by the task package's `Package` task (IBT `:131`), the `release` stub's targets input (GHA `:133`) and the project config (IBT `:142`). Nothing checks them today either (see the Phase 1 Install scripts table), but today the installers and the build tasks come from the same generator and change together. Proposed, they have separate owners and releases. If a task package major release changes the asset layout (a breaking change, IBT `:182`), or the stub drops `aarch64-apple-darwin`, CI stays green and the breakage only shows up when someone runs the `README.md` one-liner.
 - **A12. Terraform keeps its own record of what each repo is.** A repo declares its capabilities in the Copier answers (UDF `:265`), but Terraform decides what the repo gets from `issue_types` and its hand-kept lists, and nothing links the two. Declare `container` and Terraform also has to add the repo to a new Docker Hub secret list, or the first `Release` fails at `CheckPublishingParameters` (IBT `:37`). Every repo needs to be in `brownserve_ci_app_repos`, or the template sync can't get an App token and the repo never receives template updates. Remove `container` and the secrets stay behind unless Terraform is changed too. GHA C5 (`:161`) names the boundary but doesn't say which side is the source. The maintainer plans to refactor the Terraform set-up to link labels, secrets and contributors (not yet researched). That could let the module call work out the lists from one declaration, but it would still be separate from the Copier answers unless one reads the other.
 - **A13. A required check name is built from three sources.** `<caller job>` comes from the template (the stub's job name), `<called job>` from the shared workflows (GHA `:158`), and the full string is stated in Terraform's `required_status_checks` (`repos.tf:211`). Today there are two: the job name in `builds.yaml:98` and Terraform. If a shared workflow release renames its gate job, each repo's Dependabot bump PR reports the new name and never the old one, and strict protection with `enforce_admins` (`repository.tf:46`, `:59`) stops it merging. If Terraform changes first, every repo that hasn't taken the bump is blocked instead. Whether `rust-app`'s matrix and `container`'s smoke test sit behind one gate job with a fixed name (GHA `:129`) isn't settled; if the name varies by capability, Terraform has to know the capabilities too, which ties A13 to A12. Not verified (GHA V6, `:191`).
+- **B1. Adding a capability has no route of its own.** The template sync runs `copier update --defaults` (UDF `:141`), which reuses the recorded answers, so changing a capability needs a manual `copier update`. That needs Python (`:145`), `--trust` (`:149`) and a clean tree (`:150`). By default it also moves the repo to the newest template release, so the PR adding `docs-astro` can carry unrelated template changes and conflicts. How Copier takes a changed answer, and whether it can stay on the current template version, are not verified. The maintainer considers this a heavy-handed way to change a repo's capabilities, and wants the approach considered properly in Phase 3.
 
 ### Trace A: declare `rust-app` + `container`
 
@@ -734,6 +738,12 @@ A maintainer sets up a new repository and declares it's `rust-app` + `container`
 - **Docs.** Reached: `CONTRIBUTING.md` and the PR template, with the Rust prerequisite and `cargo` items from `rust-app` and nothing from `container`; the `CHANGELOG.md` scaffold; `README.md` and `LICENSE` from repo creation. `CLAUDE.md` isn't reached: it stays with the maintainer. Problems: A8 (applies to both checklist files), A10. No T problems in this group.
 - **Install scripts.** Not reached: neither capability writes them, so `install.sh` and `install.ps1` stay with the maintainer (the maintainer's decision, differing from UDF `:101`). Problems: A11. No T problems in this group.
 - **GitHub settings.** Reached by Copier: only `packages: write` in the `release` stub, from `container`. Everything else is a separate Terraform change: required checks in the `<caller job> / <called job>` form, the CI app install (now also needed for template sync), the Docker Hub secrets for `container`, labels and the licence. `rust-app` needs nothing in Terraform. Problems: A12, A13. No T problems in this group.
+
+### Trace B: add `docs-astro`
+
+An existing `rust-app` + `container` repo adds `docs-astro`. This is hypothetical: no repo uses it (see [Extra inventory: `docs-astro`](#extra-inventory-docs-astro)). One line per chunk: the declaration, then each group in turn.
+
+- **Declaration.** Reached: answers file, then the same readers as Trace A (project config, `Extends` list, the stubs' `capabilities` input), plus Terraform for Pages. Route: a manual `copier update`, not the template sync. Problems: B1, plus A1 and A2 again (IBT has a `docs-astro` base script, `:117`). No T problems.
 
 ## Phase 3: Decisions
 
