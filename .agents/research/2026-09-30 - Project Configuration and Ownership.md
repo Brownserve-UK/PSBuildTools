@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 2: Change traces.** 2.3 done: Trace A (declare `rust-app` + `container`) has filled in every group of the proposed map. 2.4 done: the `docs-astro` inventory and its today's-map rows are written (hypothetical, generator only; no repo uses it). 2.5 in progress: Trace B declaration, Build and CI workflows done. Next: Dependency tooling.
+**Phase 2: Change traces.** 2.3 done: Trace A (declare `rust-app` + `container`) has filled in every group of the proposed map. 2.4 done: the `docs-astro` inventory and its today's-map rows are written (hypothetical, generator only; no repo uses it). 2.5 in progress: Trace B declaration, Build, CI workflows and Dependency tooling done. Next: Dev environment.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -595,6 +595,8 @@ References: tiers and stub contents (GHA `:53-64`, `:85-88`, `:108`); stub owner
 | `Cargo.lock` ⚠ T3 | Cargo | Cargo build; Dependabot PR; Staged release |
 | `image/Dockerfile` ⚠ A6 | Maintainer | Hand edit |
 | `image/Dockerfile`, base image tag | Upstream | Dependabot PR (may do nothing, see Open questions) |
+| `package.json`, dependency versions ⚠ B5 | Template (first version); Upstream | `copier copy` (scaffold); Dependabot PR |
+| `package-lock.json` ⚠ B4 | Not settled | Not settled |
 
 References: `dependabot.yml` is class 4, owned by the template (UDF `:79`, `:98`, `:262`), rendered from the answers. Its entries:
 
@@ -603,6 +605,7 @@ References: `dependabot.yml` is class 4, owned by the template (UDF `:79`, `:98`
 - `cargo` at `/`, from `rust-app`.
 - `docker` at the Docker context, from `container` (UDF `:134`).
 - `docker` or `devcontainers` at `/.devcontainer`, for the dev container reference (UDF `:94`). Covered under Dev environment.
+- `npm` at the docs path, from `docs-astro` (today `/pages`, `Compare-BrownserveRepository.ps1:822`).
 
 Brownserve refs (`Brownserve-UK/*` actions, `Brownserve.*` packages) are grouped into one PR and excluded from the cooldown (GHA `:139`, Paket `:161`). Without that, a Tier 1 fix could take two 30-day cooldowns to arrive. Not verified (GHA V7 `:192`, Paket V2 `:189`).
 
@@ -733,6 +736,8 @@ References: Terraform stays the owner of settings, secrets and the consumer list
 - **B1. Adding a capability has no route of its own.** The template sync runs `copier update --defaults` (UDF `:141`), which reuses the recorded answers, so changing a capability needs a manual `copier update`. That needs Python (`:145`), `--trust` (`:149`) and a clean tree (`:150`). By default it also moves the repo to the newest template release, so the PR adding `docs-astro` can carry unrelated template changes and conflicts. How Copier takes a changed answer, and whether it can stay on the current template version, are not verified. The maintainer considers this a heavy-handed way to change a repo's capabilities, and wants the approach considered properly in Phase 3.
 - **B2. Nothing says which entry point the site build hooks into.** Today it's part of `Build` (`skillsrepo_build_tasks.ps1.template:391`), and IBT's entry points table lists no docs hook (`:125-133`). `bsdev`'s PR check runs `BuildTestAndCheck` on three OSes (`builds.yaml:48-49`, `:67`). If `docs-astro` hooks `Build` the way today's task does, every PR builds the site three times, and the Linux, macOS and Windows runners all need Node. The maintainer expects the builds to be restructured as part of the main work, and the site build to be placed properly then.
 - **B3. The Node version has two owners.** The shared workflow's `setup-node` sets the Node version CI installs, while the repo's `package.json` states the range Astro needs (`>=22.12.0`, `skillsrepo_astro_package.json.template:16`), scaffolded once and then the maintainer's. Today the generator writes both, plus the two workflow copies (`skillsrepo_github_builds.yaml.template:50`, `skillsrepo_github_release.yaml.template:79`), so they change together. If an Astro major needs a newer Node, Dependabot's `astro` bump PR fails until a shared workflow release raises the version and the repo takes that bump: two hops, slowed by the cooldown unless Brownserve refs are excluded (GHA `:139`). Whether `setup-node` can read the version from `package.json` instead (`node-version-file`) is not verified.
+- **B4. Nothing settles whether `docs-astro` commits a lock file.** Today none is scaffolded, and both npm steps run `npm install` (`skillsrepo_build_tasks.ps1.template:378`, `skillsrepo_github_release.yaml.template:84`), so every CI run resolves again and a new Astro minor or patch reaches the deployed site with no Dependabot PR: the same shape as T3. The NuGet proposal commits its lock and fails the build if the manifest and lock disagree (Paket `:93`, `:97-98`); no research doc proposes the same for npm. With a lock, the base script should run `npm ci`, which fails without one, so the task package and the scaffold have to agree. The first lock would also need a Copier task running `npm install`, since a template with no versions can't ship one: the same shape as A3.
+- **B5. The template holds the scaffold's Astro version, and nothing updates it.** The `package.json` scaffold carries `astro ^7.3.5` (`skillsrepo_astro_package.json.template:13`), against UDF's rule that the template never contains versions (`:255`). `_skip_if_exists` keeps it from fighting Dependabot once a repo exists, but Dependabot can't bump the template's copy, so a new repo starts on whatever version was last set by hand and its first Dependabot PRs catch it up. That's the brief's GitHub Actions problem 1 in a smaller form (`2026-09-29 - Refactor.md:60`). A Copier task running `npm install astro`, as UDF suggests for NuGet (`:256`), would pick the current version instead.
 
 ### Trace A: declare `rust-app` + `container`
 
@@ -755,6 +760,7 @@ An existing `rust-app` + `container` repo adds `docs-astro`. This is hypothetica
 - **Declaration.** Reached: answers file, then the same readers as Trace A (project config, `Extends` list, the stubs' `capabilities` input), plus Terraform for Pages. Route: a manual `copier update`, not the template sync. Problems: B1, plus A1 and A2 again (IBT has a `docs-astro` base script, `:117`). No T problems.
 - **Build.** Reached: shared tasks (the `docs-astro` base script, through the task package), the `Extends` list, the docs path in the project config. Not reached: the dependency manifest, since Astro needs no NuGet package. Problems: B2, A1 (widened), A2. T6 is carried to CI workflows.
 - **CI workflows.** Reached: shared workflow logic (Node setup, site build and docs deploy, switched on by the `capabilities` input); the `ci` and `release` stubs (the `capabilities` input, and the docs path in the `ci` path filter). Problems: B3, A1 (path filter), A4. Narrows the `docs-astro` part of T1 to A4. Carries T6 over: it clears only if the deploy publishes the task package's build.
+- **Dependency tooling.** Reached: `dependabot.yml`, with an `npm` entry at the docs path from `docs-astro`; `package.json` dependency versions, first from the scaffold, then Dependabot. Not reached: `package-lock.json`, whose route isn't settled. Problems: B4, B5, A1 (the `npm` entry's directory). No T problems in this group.
 
 ## Phase 3: Decisions
 
