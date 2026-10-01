@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 2: Change traces.** 2.3 in progress, Trace A (declare `rust-app` + `container`): declaration and Build done. Next: CI workflows.
+**Phase 2: Change traces.** 2.3 in progress, Trace A (declare `rust-app` + `container`): declaration, Build and CI workflows done. Next: Dependency tooling.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -62,6 +62,8 @@ These describe what a word refers to, not decisions. New terms are added as they
 | **Project config** | The settings file [Invoke-Build Tasks](./2026-09-30%20-%20Invoke-Build%20Tasks.md) proposes for each repo (`:142`): its capabilities and their settings (binary name, image name, Docker context, publish targets). The build tasks read it. Replaces today's `ModuleInfo.json` and the hard-coded defaults in `build.ps1` and `build_tasks.ps1`. Format and location not decided (`:199`, `:217`). |
 | **Task package** | The NuGet package of shared Invoke-Build tasks proposed in [Invoke-Build Tasks](./2026-09-30%20-%20Invoke-Build%20Tasks.md) (`:85`). It has one base script per capability, and the repo loads them with `Extends`. Name not decided (D8, `:222`). |
 | **Dependency manifest** | The file that lists the NuGet packages a repo's build needs. Today that's `paket.dependencies`, which has no versions. Under [Paket](./2026-09-30%20-%20Paket.md) option C it's a small `.csproj` used only for this, with versions, plus a committed lock file, `packages.lock.json` (`:72-78`, `:97`). Name and location not decided; the research's example is `.build/dependencies.csproj` (`:119`). Doesn't cover the `Cargo.toml` files. |
+| **Shared workflow** | A reusable GitHub Actions workflow (`on: workflow_call`) kept in a central Brownserve repo and run by other repos. It holds the jobs themselves: matrices, build steps, the gate job. Tier 2 in [GitHub Actions](./2026-09-30%20-%20GitHub%20Actions.md) (`:59-60`, `:72-79`). Repo name not decided (D5, `:178`). |
+| **Stub** | A short workflow file kept in each repo (Tier 3 in [GitHub Actions](./2026-09-30%20-%20GitHub%20Actions.md), `:81-110`). It has no jobs of its own: it says when to run (triggers), what the run may do (permissions), which secrets to pass and which capabilities apply, then hands over to a shared workflow pinned at a version. GitHub calls this a caller workflow (`:47`). |
 | **Information** | A single fact about a repository that something reads, e.g. its capabilities, the binary name, the Docker context. |
 | **Source of truth** | The one place a piece of information is authoritatively stated. Two places both treated as authoritative for the same information are *competing* sources of truth. |
 | **Reader** | Anything that uses a piece of information, inside the repository (build tasks, workflows, Dependabot) or outside it (Terraform). |
@@ -455,7 +457,8 @@ Unlike today's map, a row is also given to anything that replaces a file committ
 | **Maintainer** | Anything written by hand in the repo, including the answers given to Copier. |
 | **Template** | The Copier template repo, released with version tags (UDF `:133`). |
 | **Task package** | The shared build tasks, one base script per capability (IBT `:85`), plus the stock Pester tests, which read the binary name from the project config (UDF `:92`). |
-| **Upstream** | New releases of packages (the task package, the Brownserve modules, Invoke-Build, Pester). |
+| **Shared workflows** | The Tier 2 reusable workflows, which call the Tier 1 actions (GHA `:53-79`). |
+| **Upstream** | New releases of packages (the task package, the Brownserve modules, Invoke-Build, Pester) and of the shared workflows. |
 | **NuGet** | Dependency resolution from the dependency manifest. Same role as Cargo today. |
 
 **Routes**
@@ -466,6 +469,7 @@ Unlike today's map, a row is also given to anything that replaces a file committ
 | **`copier copy` (scaffold)** | Written once at set-up; template updates never touch it again (`_skip_if_exists`, UDF `:138`). |
 | **Copier task** | A command the template runs after rendering, e.g. `dotnet add package` (UDF `:256`). |
 | **Package restore** | `_init.ps1` restores packages into `packages/` (not committed), at the versions in the lock file (Paket `:93`). |
+| **Workflow call** | GitHub runs the shared workflow at the version the stub pins (GHA `:46-47`, `:103`). Nothing is copied into the repo. |
 | **Hand edit** | Someone edits the file in the repo. |
 | **Dependabot PR** | Dependabot opens a PR. |
 
@@ -491,6 +495,22 @@ Versions and the lock file each have two routes, but at different times: the Cop
 
 Retired: `paket.dependencies`, and the Paket entry in `.config/dotnet-tools.json` (Paket `:170`). Paket is the only entry in `bsdev`'s file (see the Phase 1 Build table), so the whole file goes.
 
+**CI workflows**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| Shared workflow logic (today's jobs: matrices, build steps, gate job, artifacts, Slack) | Shared workflows | Workflow call |
+| Stubs (`ci`, `pr-checks`, `stage-release`, `release`), everything except the pin | Template | `copier copy` |
+| `release` stub, `publish_to` input ⚠ A5 | Template | `copier copy` |
+| Template sync stub | Template | `copier copy` |
+| Stub pins ⚠ A4 | Template (first pin); Upstream | `copier copy`; Dependabot PR |
+
+References: tiers and stub contents (GHA `:53-64`, `:85-88`, `:108`); stub ownership, template except the pin (UDF `:89`, `:262`); lifecycle workflows (GHA `:119-121`, D3); `label-pr` as its own workflow or folded into `pr-checks` (GHA D7, `:180`); template sync stub (UDF `:235`). Inputs reach the build as environment variables (IBT `:170`), which removes the script injection in today's `publish_to` (GHA `:32`).
+
+- **Repo name:** the shared workflow does the checkout, so the stubs don't need it. Whether the checkout still has to use a folder named after the repo is open (GHA `:19`, C4 `:160`).
+- **Required checks:** through a reusable workflow a check is named `<caller job> / <called job>` (GHA `:168`, V6 `:191`). Covered under GitHub settings.
+- **Dependabot:** the `github-actions` entry exists today; Brownserve refs need excluding from the 30-day cooldown (GHA `:139`). Covered under Dependency tooling.
+
 **Generator**
 
 | Thing | Comes from | Gets there by |
@@ -506,6 +526,8 @@ Retired: `.brownserve_repository_manifest` (UDF `:103`).
 - **A1. How the project config gets written isn't settled.** It could be the answers file itself, rendered from it, or written by hand (UDF `:264`, `:285`). If it's written by hand, the capabilities and settings such as the Docker context would be stated in two files: Copier needs the Docker context to render `dependabot.yml` and the CI stub's path filter (UDF `:134`), and the build tasks read it from the project config (IBT `:142`).
 - **A2. Nothing settles who writes the `Extends` list.** The project build script's `Extends` list names the capabilities (IBT `:147-155`), a third place they're stated after the answers file and the project config. If the template renders it, the maintainer's project-only tasks sit in a template-owned file. If the maintainer writes it, it can drift from the answers (removing `container` wouldn't touch it). It might instead be worked out at run time from the project config (IBT V4, `:231`), which could make the build script identical everywhere and shippable in the package (IBT `:162`, D6 `:220`).
 - **A3. Nothing settles how packages get into the dependency manifest at set-up.** The template never holds versions, so even shared packages need `dotnet add package`. UDF suggests a Copier migration or task (`:256`); only a task fits at set-up, because migrations run when an update crosses a version (UDF `:136`). Not verified (UDF V4, `:296`); Paket D7 (`:182`) is still open. For `bsdev` every package is shared by all capabilities, so a capability bringing its own package comes up in later traces.
+- **A4. Nothing settles where the template's pin comes from, or whether it ever moves.** Dependabot owns the pin (UDF `:262`), but the stub is rendered from the template, so the first pin has to come from it. Copier's 3-way merge keeps Dependabot's bump only if the template leaves that line alone (UDF V1, `:293`). If the template pins `ci` at `v1.0.0`, Dependabot bumps `bsdev` to `v1.2.0`, and the next template release moves its pin to `v1.1.0` so new repos start more current, `copier update` sees both sides change the same line and commits a conflict (UDF `:147`). The manifest versions had the same shape and were answered by the template never holding versions (UDF `:254`); the research has no equivalent for pins.
+- **A5. Publish targets have two proposed homes.** The project config holds publish targets (IBT `:142`), and dispatch inputs live in the stub (GHA `:85`). Today's `publish_to` is a per-run choice with a default (`release.yaml:5-10`). Nothing says whether the stub still offers that choice, or how its default relates to the config's list. Both follow the capabilities (`container` brings GHCR and DockerHub), so removing `container` would need both changed.
 
 ### Trace A: declare `rust-app` + `container`
 
@@ -513,6 +535,7 @@ A maintainer sets up a new repository and declares it's `rust-app` + `container`
 
 - **Declaration.** Reached: answers file, project config. Problems: A1. The workflow stubs' `capabilities` input (GHA `:108`) isn't a separate source: Copier renders the stubs from the answers (UDF `:89`, `:262`).
 - **Build.** Reached: shared tasks and stock tests (through the task package), bootstrap, project build script, project tests, dependency manifest and lock file, `nuget.config`. Problems: A2, A3. Clears T4, and T2 for the tests (the template no longer writes the test file).
+- **CI workflows.** Reached: shared workflow logic (through the stubs), stubs for `ci`, `pr-checks`, `stage-release`, `release` and template sync, and their pins. Problems: A4, A5. Narrows T1 to A4: a conflict only when the template moves its own pin, rather than every regeneration reverting it. Clears T2 for `publish_to`: the input becomes part of the template, and a hand edit in a stub is kept by the 3-way merge (UDF `:135`), so T2 is fully cleared.
 
 ## Phase 3: Decisions
 
