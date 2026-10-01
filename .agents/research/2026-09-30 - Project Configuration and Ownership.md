@@ -6,11 +6,11 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 2: Change traces.** Next: 2.2, build today's map from the Phase 1 inventory.
+**Phase 2: Change traces.** Next: 2.3, Trace A (declare `rust` + `container`).
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
-- [ ] 2.2 Today's map, built from the Phase 1 inventory
+- [x] 2.2 Today's map, built from the Phase 1 inventory
 - [ ] 2.3 Trace A: declare `rust` + `container`, filling in the proposed rows it reaches
 - [ ] 2.4 Extra inventory for `docs-astro`, plus its rows in today's map
 - [ ] 2.5 Trace B: add `docs-astro`, filling in its proposed rows
@@ -299,7 +299,145 @@ Information stated in more than one place. Groups that cover it are in brackets.
 
 ## Phase 2: Change traces
 
-Not started.
+In progress.
+
+### Today's map
+
+References for each row are in the matching Phase 1 table.
+
+**Sources**
+
+| Source | What it is |
+| --- | --- |
+| **Generator** | PSBuildTools templates, config files and code, selected by the `bsdev` project type. Repo name and owner are filled in at run time. |
+| **Maintainer** | Anything written by hand in `bsdev`, including by AI agents. |
+| **Upstream** | New releases of actions, crates and base images. |
+| **Cargo** | Dependency resolution from the `Cargo.toml` files. |
+| **Release history** | The previous version, the release type and the PRs merged since. |
+| **.NET SDK** | `dotnet` commands the generator runs. |
+| **SPDX list** | Licence texts fetched from GitHub. |
+| **Terraform** | The Terraform repo. |
+
+**Routes**
+
+Every Regen route is a manual run of `Initialize-` or `Update-BrownserveRepository`.
+
+| Route | What it does |
+| --- | --- |
+| **Regen** | The generator replaces the whole file. |
+| **Regen (section)** | The generator replaces everything except the file's manual section. |
+| **Regen (add-only)** | The generator adds missing entries and never removes any. |
+| **Regen (if missing)** | The generator writes the file only if it doesn't exist. |
+| **Hand edit** | Someone edits the file in `bsdev`. |
+| **Dependabot PR** | Dependabot opens a PR. |
+| **Cargo build** | Cargo rewrites the lock file when a build sees a manifest change. |
+| **Staged release** | The `StageRelease` tasks write the file. |
+| **Terraform apply** | GitLab CI applies Terraform on merge to `main`. |
+| **Hand-set in GitHub** | Someone sets it in the repository settings on GitHub. |
+
+**Build**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| `_init.ps1`, generated part | Generator | Regen (section) |
+| `_init.ps1`, user section (empty) | Maintainer | Hand edit |
+| `build.ps1` | Generator | Regen |
+| `build_tasks.ps1` | Generator | Regen |
+| `Basic.Binary.Tests.ps1`, template tests | Generator | Regen |
+| `Basic.Binary.Tests.ps1:38-47` ⚠ T2 | Maintainer | Hand edit |
+| `paket.dependencies`, auto section | Generator | Regen (section) |
+| `paket.dependencies`, manual section (empty) | Maintainer | Hand edit |
+| `nuget.config` | .NET SDK | Regen |
+| `.config/dotnet-tools.json` ⚠ T4 | .NET SDK | Regen (if missing) |
+
+**CI workflows**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| `builds.yaml` | Generator | Regen |
+| `stage-release.yaml` | Generator | Regen |
+| `release.yaml` | Generator | Regen |
+| `release.yaml`, `publish_to` input ⚠ T2 | Maintainer | Hand edit |
+| `label-pr.yaml` | Generator | Regen |
+| Action pins in all four ⚠ T1 | Upstream; Generator | Dependabot PR; Regen |
+
+**Dependency tooling**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| `dependabot.yml` | Generator | Regen |
+| Root `Cargo.toml`, members and edition | Maintainer | Hand edit |
+| Root `Cargo.toml`, `[workspace.package]` version | Release history | Staged release |
+| `cli/` and `core/` `Cargo.toml`, packages, binary name, dependency list | Maintainer | Hand edit |
+| `cli/` and `core/` `Cargo.toml`, dependency versions | Upstream | Dependabot PR |
+| `Cargo.lock` ⚠ T3 | Cargo | Cargo build; Dependabot PR; Staged release |
+| `image/Dockerfile` | Maintainer | Hand edit |
+| `image/Dockerfile`, base image tag | Upstream | Dependabot PR (may do nothing, see Open questions) |
+
+**Dev environment**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| `devcontainer.json` | Generator | Regen |
+| `.devcontainer/Dockerfile` | Generator | Regen |
+| `extensions.json`, config entries | Generator | Regen (add-only) |
+| `extensions.json`, maintainer additions (none today) | Maintainer | Hand edit |
+| `settings.json`, config entries | Generator | Regen (add-only) |
+| `settings.json`, maintainer edits (none today) | Maintainer | Hand edit |
+| `.editorconfig`, generated sections | Generator | Regen (section) |
+| `.editorconfig`, manual section (empty) | Maintainer | Hand edit |
+
+**Repository hygiene**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| `.gitignore`, generated sections | Generator | Regen (section) |
+| `.gitignore`, manual section (`image/proto/node_modules/`) | Maintainer | Hand edit |
+| `.markdownlint.json` | Generator | Regen |
+
+**Docs**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| `README.md` | Maintainer | Hand edit |
+| `CHANGELOG.md`, header | Generator | Regen (if missing) |
+| `CHANGELOG.md`, entries | Release history | Staged release |
+| `LICENSE` | SPDX list | Regen (if missing) |
+| `CLAUDE.md` | Maintainer | Hand edit |
+| `CONTRIBUTING.md` | Generator | Regen |
+| `pull_request_template.md` | Generator | Regen |
+
+**Install scripts**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| `install.sh` | Generator | Regen |
+| `install.ps1` | Generator | Regen |
+
+**Generator**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| `.brownserve_repository_manifest` | Maintainer (the `-ProjectType` argument) | Regen (`Initialize-BrownserveRepository`) |
+
+**GitHub settings**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| Required checks, labels, branch protection | Terraform | Terraform apply |
+| CI app install and its secrets | Terraform | Terraform apply |
+| `SLACK_WEBHOOK_BUILD` | Terraform | Terraform apply |
+| `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` | Maintainer | Hand-set in GitHub |
+| GHCR push access | Generator | Regen (`packages: write` in `release.yaml`) |
+
+Not mapped, because they aren't committed: `paket.lock`, `packages/`, `.tmp/`, `target/`.
+
+**Problems**
+
+- **T1. Action pins arrive by two routes.** Dependabot bumps the pins in all four workflows, and a regeneration puts the template's older pins back (`builds.yaml:57`, `:82`; `Compare-BrownserveRepository.ps1:1863-1876`).
+- **T2. Hand edits inside files the generator replaces whole.** These are the `publish_to` input in `release.yaml` (`:5-10`, `:96`) and the extra tests at `Basic.Binary.Tests.ps1:38-47`. A regeneration drops both.
+- **T3. `Cargo.lock` moves outside Dependabot.** On every staged release, `UpdateCargoVersion` runs `cargo generate-lockfile` (`build_tasks.ps1:330`), which moves every dependency to its latest compatible version without a Dependabot PR.
+- **T4. The Paket version has no update route except a hand edit.** It's only written when the file is missing (`Compare-BrownserveRepository.ps1:1326`), and `bsdev` has no Dependabot `nuget` entry. The PowerShell module types do have one (`:426`, `:488`).
 
 ## Phase 3: Decisions
 
