@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 1: Inventory.** Groups agreed. Build, CI workflows, Dependency tooling, Dev environment, Repository hygiene and Docs done. Next: Install scripts.
+**Phase 1: Inventory.** Groups agreed. Build, CI workflows, Dependency tooling, Dev environment, Repository hygiene, Docs, Install scripts and Generator done. Next: GitHub settings.
 
 ## Purpose
 
@@ -245,6 +245,39 @@ Only `rust` shows up in the generated docs (CONTRIBUTING prerequisites, both fil
 - Changelog labels: `New-BrownserveChangelogEntry -Auto` sorts entries by the labels `label-pr.yaml` applies (confirmed by the maintainer), so the `removed`/`removal` mismatch reaches the changelog too.
 - Build commands (`cargo build`, `cargo test`, `BuildTestAndCheck`): `README.md`, `CLAUDE.md`, `CONTRIBUTING.md`, the PR template.
 - Scaffold contract (binary name, `[workspace.package]` version): restated in `CLAUDE.md`.
+
+### Install scripts
+
+| File | Holds | Comes from | Written by | Read by | Changes when |
+| --- | --- | --- | --- | --- | --- |
+| `scripts/install.sh` | Owner, repo and binary name (`:7-9`), with the binary set to the repo name; the latest release tag from the GitHub API (`:11-13`); OS/arch to target triple: Linux `x86_64` and macOS `arm64` only (`:23-40`); asset name `<binary>-<tag>-<triple>.tar.gz` (`:42`); install paths (`:53-61`) | `rustapp_install.sh.template` with `OWNER` and `REPO_NAME` filled in (`:770-776`, `:2229-2236`), which `bsdev` shares with `RustApp` (`:670-674`). Matches | The generator, whole file, whenever it differs (`:2218-2280`) | People, through the one-liner in `README.md:31`, which fetches it from `main` | A regeneration picks up a template, repo name or owner change |
+| `scripts/install.ps1` | Owner, repo and binary name (`:13-15`); the latest release tag from the GitHub API (`:17-18`); a single target `x86_64-pc-windows-msvc` (`:25`); asset name `<binary>-<tag>-<triple>.zip` (`:26`); install paths and PATH update (`:42-62`) | `rustapp_install.ps1.template`, same substitutions (`:777-781`). Matches | The generator, whole file, whenever it differs | People, through the one-liner in `README.md:36` | Same as `install.sh` |
+
+Neither script is touched by `container`. They rely on what the `rust` capability's release produces: `Package` names archives `<BinaryName>-v<version>-<triple>` with `.zip` on Windows and `.tar.gz` elsewhere (`build_tasks.ps1:577`, `:584`), and `PublishRelease` uploads them as release assets (`:627-649`). The scripts have no check that these names agree; a mismatch only shows up when someone runs the installer.
+
+The template fills `BINARY` from the repo name, but the build takes `BinaryName` as a parameter (`build.ps1:177`, default repo name at `build_tasks.ps1:19`). If the two ever differ, the installers would look for an asset that doesn't exist.
+
+**Repeats added:**
+
+- Owner, repo and binary name: both scripts.
+- Rust target triples: the installers each list a subset by hand (`install.sh:26`, `:32`; `install.ps1:25`), separate from `release.yaml:21-25`. All three match today.
+- Release asset naming: `Package` (`build_tasks.ps1:577`, `:584`) and both installers (`install.sh:42`, `install.ps1:26`).
+
+### Generator
+
+| File | Holds | Comes from | Written by | Read by | Changes when |
+| --- | --- | --- | --- | --- | --- |
+| `.brownserve_repository_manifest` | `RepositoryType: bsdev` and `ManifestVersion: 1.0.0` (`:2-3`) | Built in code, with no config file (`:370-373`). `RepositoryType` is the `-ProjectType` passed to `Initialize-BrownserveRepository` (`:14-15`, `:98`), one of the `BrownserveRepoProjectType` enum values (`Module/Private/Classes.ps1:564-573`) | The generator, whole file, whenever it differs (`:1245-1280`) | `Update-BrownserveRepository`, which takes the project type from it (`:81-95`, `:121`); `Compare-BrownserveRepository`, which refuses a different type without `-Force` (`:222-246`); `Get-BrownserveRepositoryPaths` (`:30-43`), which nothing in the PSTools repos, `bsdev` or Terraform calls | Only by running `Initialize-BrownserveRepository -Force` with a different type |
+
+This is the only place a repository says what it is. Everything generated in the groups above follows from this one value plus the generator's built-in settings for each type.
+
+It doesn't record the owner or repo name. Each run gets them again: the owner from the `-Owner` default `Brownserve-UK` (`Update-BrownserveRepository.ps1:14`), and the repo name from the directory name unless `-RepoName` is passed (`Compare-BrownserveRepository.ps1:42-46`, `:1995-1998`). Running `Update-BrownserveRepository` from a clone in a directory with a different name would bake that name into every generated file that uses it.
+
+`ManifestVersion` is written but nothing reads it.
+
+**Repeats added:**
+
+- Project type: the manifest, and the `bsdev` branch of the generator's type switch (`:690-783`), which hard-codes every per-type choice listed in the groups above.
 
 ## Phase 2: Change traces
 
