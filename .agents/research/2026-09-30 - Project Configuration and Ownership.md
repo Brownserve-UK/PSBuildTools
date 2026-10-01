@@ -6,12 +6,12 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 2: Change traces.** 2.3 in progress, Trace A (declare `rust-app` + `container`): declaration, Build, CI workflows, Dependency tooling, Dev environment, Repository hygiene, Docs and Install scripts done. Next: GitHub settings.
+**Phase 2: Change traces.** 2.3 done: Trace A (declare `rust-app` + `container`) has filled in every group of the proposed map. Next: 2.4, extra inventory for `docs-astro`.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
 - [x] 2.2 Today's map, built from the Phase 1 inventory
-- [ ] 2.3 Trace A: declare `rust-app` + `container`, filling in the proposed rows it reaches
+- [x] 2.3 Trace A: declare `rust-app` + `container`, filling in the proposed rows it reaches
 - [ ] 2.4 Extra inventory for `docs-astro`, plus its rows in today's map
 - [ ] 2.5 Trace B: add `docs-astro`, filling in its proposed rows
 - [ ] 2.6 Trace C: remove `container`
@@ -628,6 +628,28 @@ Retired: `rustapp_install.sh.template`, `rustapp_install.ps1.template` and the g
 
 Retired: `.brownserve_repository_manifest` (UDF `:103`).
 
+**GitHub settings**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| Required checks ⚠ A13 | Terraform | Terraform apply |
+| Issue labels | Terraform | Terraform apply |
+| Branch protection, push restriction, signed commits, code owner reviews | Terraform | Terraform apply |
+| CI app install and its secrets, now also needed for template sync ⚠ A12 | Terraform | Terraform apply |
+| CI app key as a Dependabot secret (variant G only) | Terraform | Terraform apply (new, not verified) |
+| `SLACK_WEBHOOK_BUILD` | Terraform | Terraform apply |
+| `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` ⚠ A12 | Terraform | Terraform apply |
+| GHCR push (`packages: write` in the `release` stub) | Template | `copier copy` |
+| Licence choice (`license_template`, new module variable) | Terraform | Terraform apply (create only) |
+
+References: Terraform stays the owner of settings, secrets and the consumer list (UDF `:186`); set-up is a Terraform change, then `copier copy` (UDF `:266`). The Terraform boundary is GHA C5 (`:161`), not yet written. Check names through a reusable workflow (GHA `:168`, V6 `:191`) and emitted check names as part of the shared workflow contract (GHA C2, `:158`). The permission ceiling lives in the stub (GHA `:86`). The App installation list doubles as the template sync's consumer list (UDF `:230`); variant G needs the App key as a Dependabot secret (UDF `:207`, V9 `:301`).
+
+- **Terraform's own classification:** Terraform doesn't use project types or capabilities. It has `issue_types` (`application`, `powershell` and others, `variables.tf:117-125`; `bsdev` is `application`) and hand-kept lists that each grant something: `release_secrets_repos` (`secrets.tf:125-134`), `powershell_module_secrets_repos` (`:153-160`, in effect a `powershell-module` list), `brownserve_ci_app_repos` (`apps.tf:34-63`) and the two team lists (`teams.tf:10-18`, `:37-47`).
+- **Docker Hub secrets:** move from hand-set to Terraform (maintainer's decision). `secrets.tf` has no list for them today, so a new one is needed alongside `powershell_module_secrets_repos`.
+- **Labels:** the title-to-label mapping moves to the Tier 1 `action-label-pr` (GHA `:127`), released separately from Terraform's label list, so the `removed`/`removal` mismatch carries over. `nuget` and the dev container ecosystem add cases to the Dependabot ecosystem labels question (see Open questions). The template's `dependabot.yml` could set `labels:` per entry so Dependabot only applies labels Terraform defines. Not verified.
+- **Unused secrets:** `bsdev` doesn't read `GH_TOKEN_*` or `GPG_KEY_AUTOMATED_BUILD`. Retiring them is out of scope here (GHA `:197`).
+- **Repeated information:** the three release-participating lists become four in effect, because the App list is now also the template sync's consumer list.
+
 **Problems**
 
 - **A1. How the project config gets written isn't settled.** It could be the answers file itself, rendered from it, or written by hand (UDF `:264`, `:285`). If it's written by hand, the capabilities and settings such as the Docker context would be stated in two files: Copier needs the Docker context to render `dependabot.yml` and the CI stub's path filter (UDF `:134`), and the build tasks read it from the project config (IBT `:142`).
@@ -641,6 +663,8 @@ Retired: `.brownserve_repository_manifest` (UDF `:103`).
 - **A9. Nothing keeps a file identical across repos once Copier merges.** Today `.markdownlint.json` is overwritten whole so that no repo drifts (`Compare-BrownserveRepository.ps1:1704-1748`). Copier's 3-way merge keeps any local edit the template didn't touch (UDF `:135`). That includes class 4 files, whose "overwrite is fine" (UDF `:79`) isn't how Copier updates them. As class 3, the local half exists to hold local rules (UDF `:78`, `:245`). Either way a repo could switch a rule back on and keep it on without ejecting, though ejecting is the research's visible route for divergence (UDF `:246`). The research doesn't say whether the "no local changes" rule should survive.
 - **A10. Nothing ties the changelog scaffold to the parser that reads it.** Today the header and its `v0.0.0` placeholder come from `New-BrownserveChangelogHeader.ps1:7-20`, and `Read-BrownserveChangelog` detects that exact placeholder (`Read-BrownserveChangelog.ps1:203`). Both live in PSBuildTools and release together. As a scaffold, the placeholder moves into the template, while the parser stays in a Brownserve module the task package uses. If the parser's format changes, a repo set up from an older template release gets a placeholder the parser doesn't recognise, and its first staged release treats `v0.0.0` as a real release. It only matters before a repo's first release.
 - **A11. Nothing ties the installers to the release they install.** Each installer hard-codes the asset name (`install.sh:42`, `install.ps1:26`), the targets (`install.sh:26`, `:32`, `install.ps1:25`) and the binary name (from the repo name). In the proposal these are decided by the task package's `Package` task (IBT `:131`), the `release` stub's targets input (GHA `:133`) and the project config (IBT `:142`). Nothing checks them today either (see the Phase 1 Install scripts table), but today the installers and the build tasks come from the same generator and change together. Proposed, they have separate owners and releases. If a task package major release changes the asset layout (a breaking change, IBT `:182`), or the stub drops `aarch64-apple-darwin`, CI stays green and the breakage only shows up when someone runs the `README.md` one-liner.
+- **A12. Terraform keeps its own record of what each repo is.** A repo declares its capabilities in the Copier answers (UDF `:265`), but Terraform decides what the repo gets from `issue_types` and its hand-kept lists, and nothing links the two. Declare `container` and Terraform also has to add the repo to a new Docker Hub secret list, or the first `Release` fails at `CheckPublishingParameters` (IBT `:37`). Every repo needs to be in `brownserve_ci_app_repos`, or the template sync can't get an App token and the repo never receives template updates. Remove `container` and the secrets stay behind unless Terraform is changed too. GHA C5 (`:161`) names the boundary but doesn't say which side is the source. The maintainer plans to refactor the Terraform set-up to link labels, secrets and contributors (not yet researched). That could let the module call work out the lists from one declaration, but it would still be separate from the Copier answers unless one reads the other.
+- **A13. A required check name is built from three sources.** `<caller job>` comes from the template (the stub's job name), `<called job>` from the shared workflows (GHA `:158`), and the full string is stated in Terraform's `required_status_checks` (`repos.tf:211`). Today there are two: the job name in `builds.yaml:98` and Terraform. If a shared workflow release renames its gate job, each repo's Dependabot bump PR reports the new name and never the old one, and strict protection with `enforce_admins` (`repository.tf:46`, `:59`) stops it merging. If Terraform changes first, every repo that hasn't taken the bump is blocked instead. Whether `rust-app`'s matrix and `container`'s smoke test sit behind one gate job with a fixed name (GHA `:129`) isn't settled; if the name varies by capability, Terraform has to know the capabilities too, which ties A13 to A12. Not verified (GHA V6, `:191`).
 
 ### Trace A: declare `rust-app` + `container`
 
@@ -654,6 +678,7 @@ A maintainer sets up a new repository and declares it's `rust-app` + `container`
 - **Repository hygiene.** Reached: `.gitignore`, with `target/` and `**/*.rs.bk` from `rust-app`, `.docker/` from `container`, and its Paket entries replaced by the NuGet ones; `.markdownlint.json`. Problems: A8 (applies to `.gitignore`), A9. No T problems in this group.
 - **Docs.** Reached: `CONTRIBUTING.md` and the PR template, with the Rust prerequisite and `cargo` items from `rust-app` and nothing from `container`; the `CHANGELOG.md` scaffold; `README.md` and `LICENSE` from repo creation. `CLAUDE.md` isn't reached: it stays with the maintainer. Problems: A8 (applies to both checklist files), A10. No T problems in this group.
 - **Install scripts.** Not reached: neither capability writes them, so `install.sh` and `install.ps1` stay with the maintainer (the maintainer's decision, differing from UDF `:101`). Problems: A11. No T problems in this group.
+- **GitHub settings.** Reached by Copier: only `packages: write` in the `release` stub, from `container`. Everything else is a separate Terraform change: required checks in the `<caller job> / <called job>` form, the CI app install (now also needed for template sync), the Docker Hub secrets for `container`, labels and the licence. `rust-app` needs nothing in Terraform. Problems: A12, A13. No T problems in this group.
 
 ## Phase 3: Decisions
 
