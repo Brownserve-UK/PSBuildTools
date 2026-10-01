@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 1: Inventory.** Groups agreed. Build, CI workflows, Dependency tooling, Dev environment, Repository hygiene, Docs, Install scripts and Generator done. Next: GitHub settings.
+**Phase 1: Inventory.** All groups drafted. Next: review the whole inventory, then start Phase 2.
 
 ## Purpose
 
