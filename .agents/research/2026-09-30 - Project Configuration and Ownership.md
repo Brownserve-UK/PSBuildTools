@@ -6,12 +6,12 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 2: Change traces.** Next: 2.3, Trace A (declare `rust` + `container`).
+**Phase 2: Change traces.** 2.3 in progress, Trace A (declare `rust-app` + `container`): declaration done. Next: Build.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
 - [x] 2.2 Today's map, built from the Phase 1 inventory
-- [ ] 2.3 Trace A: declare `rust` + `container`, filling in the proposed rows it reaches
+- [ ] 2.3 Trace A: declare `rust-app` + `container`, filling in the proposed rows it reaches
 - [ ] 2.4 Extra inventory for `docs-astro`, plus its rows in today's map
 - [ ] 2.5 Trace B: add `docs-astro`, filling in its proposed rows
 - [ ] 2.6 Trace C: remove `container`
@@ -58,7 +58,8 @@ These describe what a word refers to, not decisions. New terms are added as they
 | Term | Meaning |
 | --- | --- |
 | **Project type** | Today's model: one label per repository (`bsdev`, `PowerShellModule`) that selects every generated file. Being replaced by capabilities. |
-| **Capability** | A named piece of shared process that a repository opts into, e.g. `rust`, `container`, `powershell-module`. A repository can combine several. |
+| **Capability** | A named piece of shared process that a repository opts into, e.g. `rust-app`, `container`, `powershell-module`. A repository can combine several. |
+| **Project config** | The settings file [Invoke-Build Tasks](./2026-09-30%20-%20Invoke-Build%20Tasks.md) proposes for each repo (`:142`): its capabilities and their settings (binary name, image name, Docker context, publish targets). The build tasks read it. Replaces today's `ModuleInfo.json` and the hard-coded defaults in `build.ps1` and `build_tasks.ps1`. Format and location not decided (`:199`, `:217`). |
 | **Information** | A single fact about a repository that something reads, e.g. its capabilities, the binary name, the Docker context. |
 | **Source of truth** | The one place a piece of information is authoritatively stated. Two places both treated as authoritative for the same information are *competing* sources of truth. |
 | **Reader** | Anything that uses a piece of information, inside the repository (build tasks, workflows, Dependabot) or outside it (Terraform). |
@@ -79,8 +80,8 @@ This is being done slowly and carefully to assess each area in turn with the use
 Three phases and a final pass. Each finishes with a stable output before the next starts, so work can be handed off between sessions.
 File edits must be agreed with the user before writing.
 
-1. **Inventory (facts only).** Every piece of information the `rust` and `container` capabilities involve in `bsdev` today: where it's stated (every place), what reads it, what writes it, when it changes. No proposals, no owners. Complete when every group has been checked against the sources below and reviewed.
-2. **Change traces (facts plus research proposals).** Build today's map from the inventory, then trace three changes: declare `rust` + `container`, add `docs-astro`, remove `container`. Each trace fills in the proposed map rows it reaches from what the research docs propose. No decisions. Complete when every problem is listed and their order for Phase 3 is agreed.
+1. **Inventory (facts only).** Every piece of information the `rust-app` and `container` capabilities involve in `bsdev` today: where it's stated (every place), what reads it, what writes it, when it changes. No proposals, no owners. Complete when every group has been checked against the sources below and reviewed.
+2. **Change traces (facts plus research proposals).** Build today's map from the inventory, then trace three changes: declare `rust-app` + `container`, add `docs-astro`, remove `container`. Each trace fills in the proposed map rows it reaches from what the research docs propose. No decisions. Complete when every problem is listed and their order for Phase 3 is agreed.
 3. **Decisions.** One problem at a time, each fixing a row of the proposed map, set out as: question, today, readers, options (with consequences for `bsdev` on declare, add and remove), knock-on for the research docs, recommendation and confidence. Whether a declaration exists, what it holds and where it lives are decided last.
 4. **Final pass.** Settle the final map and unresolved questions. Re-run the three traces against the final map; anything still ambiguous reopens a decision or becomes an unresolved question. Proposed rows no trace reached are filled in or marked as unaffected by capabilities.
 
@@ -207,7 +208,7 @@ Three merge behaviours: the devcontainer files are replaced whole, `.vscode/*` o
 
 `.docker/` is ignored, but nothing in `bsdev`'s `.build/` or `.github/` creates it. It comes along with the container config entry.
 
-`.markdownlint.json` is the first file deliberately identical across every type, with no local customisation allowed. Neither `rust` nor `container` affects it.
+`.markdownlint.json` is the first file deliberately identical across every type, with no local customisation allowed. Neither `rust-app` nor `container` affects it.
 
 ### Docs
 
@@ -222,7 +223,7 @@ Three merge behaviours: the devcontainer files are replaced whole, `.vscode/*` o
 
 Three write behaviours: CONTRIBUTING and the PR template are replaced whole; `CHANGELOG.md` and `LICENSE` are only created if missing; `README.md` and `CLAUDE.md` aren't generated at all.
 
-Only `rust` shows up in the generated docs (CONTRIBUTING prerequisites, both files' cargo commands). Neither generated doc mentions `container`: there's no `BuildImage` or Docker step in either. The image only appears in the maintainer-owned `README.md` and `CLAUDE.md`.
+Only `rust-app` shows up in the generated docs (CONTRIBUTING prerequisites, both files' cargo commands). Neither generated doc mentions `container`: there's no `BuildImage` or Docker step in either. The image only appears in the maintainer-owned `README.md` and `CLAUDE.md`.
 
 `New-SPDXLicense` runs on every regeneration (`:1216-1222`) even though its output is only used when `LICENSE` is missing, so every regeneration needs to reach GitHub.
 
@@ -233,7 +234,7 @@ Only `rust` shows up in the generated docs (CONTRIBUTING prerequisites, both fil
 | `scripts/install.sh` | Owner, repo and binary name (`:7-9`), with the binary set to the repo name; the latest release tag from the GitHub API (`:11-13`); OS/arch to target triple: Linux `x86_64` and macOS `arm64` only (`:23-40`); asset name `<binary>-<tag>-<triple>.tar.gz` (`:42`); install paths (`:53-61`) | `rustapp_install.sh.template` with `OWNER` and `REPO_NAME` filled in (`:770-776`, `:2229-2236`), which `bsdev` shares with `RustApp` (`:670-674`). Matches | The generator, whole file, whenever it differs (`:2218-2280`) | People, through the one-liner in `README.md:31`, which fetches it from `main` | A regeneration picks up a template, repo name or owner change |
 | `scripts/install.ps1` | Owner, repo and binary name (`:13-15`); the latest release tag from the GitHub API (`:17-18`); a single target `x86_64-pc-windows-msvc` (`:25`); asset name `<binary>-<tag>-<triple>.zip` (`:26`); install paths and PATH update (`:42-62`) | `rustapp_install.ps1.template`, same substitutions (`:777-781`). Matches | The generator, whole file, whenever it differs | People, through the one-liner in `README.md:36` | Same as `install.sh` |
 
-Neither script is touched by `container`. They rely on what the `rust` capability's release produces: `Package` names archives `<BinaryName>-v<version>-<triple>` with `.zip` on Windows and `.tar.gz` elsewhere (`build_tasks.ps1:577`, `:584`), and `PublishRelease` uploads them as release assets (`:627-649`). The scripts have no check that these names agree; a mismatch only shows up when someone runs the installer.
+Neither script is touched by `container`. They rely on what the `rust-app` capability's release produces: `Package` names archives `<BinaryName>-v<version>-<triple>` with `.zip` on Windows and `.tar.gz` elsewhere (`build_tasks.ps1:577`, `:584`), and `PublishRelease` uploads them as release assets (`:627-649`). The scripts have no check that these names agree; a mismatch only shows up when someone runs the installer.
 
 The template fills `BINARY` from the repo name, but the build takes `BinaryName` as a parameter (`build.ps1:177`, default repo name at `build_tasks.ps1:19`). If the two ever differ, the installers would look for an asset that doesn't exist.
 
@@ -267,7 +268,7 @@ One row per setting, showing what in `bsdev` has to agree with it.
 | Push restricted to Build Automation; Codeowners bypass PR reviews; signed commits | `repos.tf:208-209`; `teams.tf:15`, `:44`; `variables.tf:35` (default) | Not referred to | None |
 | Code owner reviews required | `repos.tf:212` | No `CODEOWNERS` file | None |
 
-Nothing in Terraform depends on `rust` or `container`. `container` shows up only in settings that are outside Terraform: the hand-set Docker Hub secrets, and GHCR, which works off the workflow's own token. So today, adding or removing a capability changes nothing in Terraform.
+Nothing in Terraform depends on `rust-app` or `container`. `container` shows up only in settings that are outside Terraform: the hand-set Docker Hub secrets, and GHCR, which works off the workflow's own token. So today, adding or removing a capability changes nothing in Terraform.
 
 Every link between a setting and `bsdev` is by name only (check names, label names, secret names), and nothing checks that the two sides agree. The `removed`/`removal` mismatch is one that has already drifted.
 
@@ -439,13 +440,51 @@ Not mapped, because they aren't committed: `paket.lock`, `packages/`, `.tmp/`, `
 - **T3. `Cargo.lock` moves outside Dependabot.** On every staged release, `UpdateCargoVersion` runs `cargo generate-lockfile` (`build_tasks.ps1:330`), which moves every dependency to its latest compatible version without a Dependabot PR.
 - **T4. The Paket version has no update route except a hand edit.** It's only written when the file is missing (`Compare-BrownserveRepository.ps1:1326`), and `bsdev` has no Dependabot `nuget` entry. The PowerShell module types do have one (`:426`, `:488`).
 
+### Proposed map
+
+Filled in by the traces. Group names match today's map so the two line up. References are to the research docs: [Updating Distributed Files](./2026-09-30%20-%20Updating%20Distributed%20Files.md) (UDF), [Invoke-Build Tasks](./2026-09-30%20-%20Invoke-Build%20Tasks.md) (IBT) and [GitHub Actions](./2026-09-30%20-%20GitHub%20Actions.md) (GHA).
+
+**Sources**
+
+| Source | What it is |
+| --- | --- |
+| **Maintainer** | Anything written by hand in the repo, including the answers given to Copier. |
+| **Template** | The Copier template repo, released with version tags (UDF `:133`). |
+
+**Routes**
+
+| Route | What it does |
+| --- | --- |
+| **`copier copy`** | Runs once, when the repo is set up. Copier asks the maintainer its questions, fills in the template, and writes the files plus `.copier-answers.yml` (UDF `:127`, `:266`). |
+| **Hand edit** | Someone edits the file in the repo. |
+
+**Generator**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| `.copier-answers.yml`, answers (capabilities, plus any settings the template needs) | Maintainer | `copier copy` |
+| `.copier-answers.yml`, template version (`_commit`) | Template | `copier copy` |
+| Project config ⚠ A1 | Maintainer | Not settled: the same file as the answers, rendered from them, or a hand edit |
+
+Retired: `.brownserve_repository_manifest` (UDF `:103`).
+
+**Problems**
+
+- **A1. How the project config gets written isn't settled.** It could be the answers file itself, rendered from it, or written by hand (UDF `:264`, `:285`). If it's written by hand, the capabilities and settings such as the Docker context would be stated in two files: Copier needs the Docker context to render `dependabot.yml` and the CI stub's path filter (UDF `:134`), and the build tasks read it from the project config (IBT `:142`).
+
+### Trace A: declare `rust-app` + `container`
+
+A maintainer sets up a new repository and declares it's `rust-app` + `container`. Set-up is a Terraform change followed by `copier copy` (UDF `:266`). One line per chunk: the declaration, then each group in turn.
+
+- **Declaration.** Reached: answers file, project config. Problems: A1. The workflow stubs' `capabilities` input (GHA `:108`) isn't a separate source: Copier renders the stubs from the answers (UDF `:89`, `:262`).
+
 ## Phase 3: Decisions
 
 Not started.
 
 ## Open questions
 
-- **`removed` vs `removal` label.** `label-pr.yaml:88` applies `removed`, but Terraform defines `removal` (`modules/github-brownserve_repo/issues.tf:93`). Terraform's labels are authoritative (`issues.tf:2-3`). This isn't specific to `rust` or `container`, but it's two sources of the same information that disagree. The changelog groups entries by these labels, so the mismatch reaches `CHANGELOG.md` too.
+- **`removed` vs `removal` label.** `label-pr.yaml:88` applies `removed`, but Terraform defines `removal` (`modules/github-brownserve_repo/issues.tf:93`). Terraform's labels are authoritative (`issues.tf:2-3`). This isn't specific to `rust-app` or `container`, but it's two sources of the same information that disagree. The changelog groups entries by these labels, so the mismatch reaches `CHANGELOG.md` too.
 - **Dependabot `docker` entry may do nothing.** `image/Dockerfile:8` uses `archlinux:latest` with no version or digest. Dependabot bumps versioned tags or digests, so this entry (`dependabot.yml:18-23`) probably never opens a PR. Not verified.
 - **Dependabot ecosystem labels.** Terraform has `dependencies` and `github_actions`, but no label for `cargo` or `docker` (`issues.tf:56-97`). Because the label set is authoritative, any label Dependabot creates would be deleted on the next apply. Not verified.
 - **Org `CODE_OF_CONDUCT.md` not verified.** `bsdev`'s PR template links to it in the `.github` repo (`repos.tf:123`), which isn't checked out locally.
