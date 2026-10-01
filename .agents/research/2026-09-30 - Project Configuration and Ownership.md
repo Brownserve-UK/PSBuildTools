@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 2: Change traces.** 2.3 in progress, Trace A (declare `rust-app` + `container`): declaration, Build, CI workflows, Dependency tooling, Dev environment, Repository hygiene and Docs done. Next: Install scripts.
+**Phase 2: Change traces.** 2.3 in progress, Trace A (declare `rust-app` + `container`): declaration, Build, CI workflows, Dependency tooling, Dev environment, Repository hygiene, Docs and Install scripts done. Next: GitHub settings.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -603,6 +603,21 @@ References: CONTRIBUTING and the PR template are class 2 (org `.github` defaults
 - **README scaffold:** `auto_init` (`modules/github-brownserve_repo/repository.tf:9`) already writes `README.md`, so a Copier scaffold under `_skip_if_exists` would be skipped. This differs from UDF `:81`, `:102`. Not verified against a Brownserve repo.
 - **Repeated information:** the Conventional Commits table stays in the template's CONTRIBUTING, while the title-to-label mapping moves to the shared workflows (GHA D7). Still two copies, now in two separately released sources. `CLAUDE.md` still restates facts the capabilities own (binary name, GHCR).
 
+**Install scripts**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| `install.sh` ⚠ A11 | Maintainer | Hand edit |
+| `install.ps1` ⚠ A11 | Maintainer | Hand edit |
+
+References: UDF makes them class 4, or class 1 if moved into a release asset or a shared URL (UDF `:101`). The maintainer's position is that they're project-specific and not distributed at all, which differs from UDF `:101`.
+
+Retired: `rustapp_install.sh.template`, `rustapp_install.ps1.template` and the generator's install script handling (`Compare-BrownserveRepository.ps1:2218-2280`).
+
+- **New repos:** `bsdev` keeps its current scripts. A new `rust-app` repo starts with no installers and gets them only if the maintainer writes them.
+- **Later:** if binary-producing repos become common, the installers could come back as a template scaffold or a release artefact built by `Package` (UDF `:101`, class 1). Only the artefact route clears A11, because the same task would name the assets and write the installer.
+- **Repeated information:** the installers' copy of the binary name stays, now held by the maintainer alongside the project config's (IBT `:142`).
+
 **Generator**
 
 | Thing | Comes from | Gets there by |
@@ -625,6 +640,7 @@ Retired: `.brownserve_repository_manifest` (UDF `:103`).
 - **A8. Additions from the template and the repo to the same list can conflict.** When both append to the end of a list in a class 5 file, their edits touch the same or adjacent lines. In JSON, appending also adds a comma to the previous last line. If the maintainer adds `"bsdev"` after `"yzhang"` in the cSpell words (`settings.json:15`), and the next template release also adds a word at the end, both sides change `"yzhang"` to `"yzhang",` and `copier update` commits a conflict. UDF's "a cSpell word the template didn't touch is kept" (`:135`) holds only when the template's change is elsewhere in the list. The same applies to `extensions.json` and `.gitignore`. Not verified: this is how git-style 3-way merges treat adjacent edits, not tested with Copier. If V6 holds, cSpell words move to a shared list and drop out of this.
 - **A9. Nothing keeps a file identical across repos once Copier merges.** Today `.markdownlint.json` is overwritten whole so that no repo drifts (`Compare-BrownserveRepository.ps1:1704-1748`). Copier's 3-way merge keeps any local edit the template didn't touch (UDF `:135`). That includes class 4 files, whose "overwrite is fine" (UDF `:79`) isn't how Copier updates them. As class 3, the local half exists to hold local rules (UDF `:78`, `:245`). Either way a repo could switch a rule back on and keep it on without ejecting, though ejecting is the research's visible route for divergence (UDF `:246`). The research doesn't say whether the "no local changes" rule should survive.
 - **A10. Nothing ties the changelog scaffold to the parser that reads it.** Today the header and its `v0.0.0` placeholder come from `New-BrownserveChangelogHeader.ps1:7-20`, and `Read-BrownserveChangelog` detects that exact placeholder (`Read-BrownserveChangelog.ps1:203`). Both live in PSBuildTools and release together. As a scaffold, the placeholder moves into the template, while the parser stays in a Brownserve module the task package uses. If the parser's format changes, a repo set up from an older template release gets a placeholder the parser doesn't recognise, and its first staged release treats `v0.0.0` as a real release. It only matters before a repo's first release.
+- **A11. Nothing ties the installers to the release they install.** Each installer hard-codes the asset name (`install.sh:42`, `install.ps1:26`), the targets (`install.sh:26`, `:32`, `install.ps1:25`) and the binary name (from the repo name). In the proposal these are decided by the task package's `Package` task (IBT `:131`), the `release` stub's targets input (GHA `:133`) and the project config (IBT `:142`). Nothing checks them today either (see the Phase 1 Install scripts table), but today the installers and the build tasks come from the same generator and change together. Proposed, they have separate owners and releases. If a task package major release changes the asset layout (a breaking change, IBT `:182`), or the stub drops `aarch64-apple-darwin`, CI stays green and the breakage only shows up when someone runs the `README.md` one-liner.
 
 ### Trace A: declare `rust-app` + `container`
 
@@ -637,6 +653,7 @@ A maintainer sets up a new repository and declares it's `rust-app` + `container`
 - **Dev environment.** Reached: `devcontainer.json` stub and its reference, `extensions.json`, `settings.json` and `.editorconfig`, with the Rust and Docker entries from the capabilities, plus a `dependabot.yml` entry at `/.devcontainer`. The toolset (today's `.devcontainer/Dockerfile`) isn't reached: its source isn't settled. Problems: A4 (widened), A7, A8. No T problems in this group.
 - **Repository hygiene.** Reached: `.gitignore`, with `target/` and `**/*.rs.bk` from `rust-app`, `.docker/` from `container`, and its Paket entries replaced by the NuGet ones; `.markdownlint.json`. Problems: A8 (applies to `.gitignore`), A9. No T problems in this group.
 - **Docs.** Reached: `CONTRIBUTING.md` and the PR template, with the Rust prerequisite and `cargo` items from `rust-app` and nothing from `container`; the `CHANGELOG.md` scaffold; `README.md` and `LICENSE` from repo creation. `CLAUDE.md` isn't reached: it stays with the maintainer. Problems: A8 (applies to both checklist files), A10. No T problems in this group.
+- **Install scripts.** Not reached: neither capability writes them, so `install.sh` and `install.ps1` stay with the maintainer (the maintainer's decision, differing from UDF `:101`). Problems: A11. No T problems in this group.
 
 ## Phase 3: Decisions
 
