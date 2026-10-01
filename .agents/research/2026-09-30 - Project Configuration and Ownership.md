@@ -73,6 +73,7 @@ Rules:
 - Decisions rely only on earlier ones. If a later finding shows an earlier decision was wrong, it's reopened explicitly.
 - The Status section is updated at the end of each session.
 - No git history of Brownserve repositories is consulted (per the brief).
+- This document is not updated until the user agrees to it
 
 Sources checked:
 
