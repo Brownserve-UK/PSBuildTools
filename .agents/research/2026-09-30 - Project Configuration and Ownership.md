@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 1: Inventory.** Groups agreed. Build done. Next: CI workflows.
+**Phase 1: Inventory.** Groups agreed. Build and CI workflows done. Next: Dependency tooling.
 
 ## Purpose
 
@@ -115,6 +115,7 @@ Out of scope:
 Confirmed by the maintainer:
 
 - `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` were added to `bsdev` by hand. They aren't in Terraform yet.
+- The `publish_to` input in `bsdev`'s `release.yaml` was added by the maintainer. The generated version was wrong, so it was patched in place and never carried back to the template.
 
 Generator references below are to `Compare-BrownserveRepository.ps1` unless stated.
 
@@ -138,6 +139,32 @@ The generator only runs when someone runs `Initialize-BrownserveRepository` (`Mo
 - Repo name: worked out at run time in `_init.ps1:64`, and baked in by the generator elsewhere.
 - Owner: `build.ps1:69`.
 
+### CI workflows
+
+| File | Holds | Comes from | Written by | Read by | Changes when |
+| --- | --- | --- | --- | --- | --- |
+| `.github/workflows/builds.yaml` | Runs on PRs to `main`. Change filters for Rust/build paths (`Cargo.toml`, `Cargo.lock`, `*.rs`, `.build/`, `.config/`, `nuget.config`, `:28`) and for `image/` (`:35`); OS matrix (`:49`); repo name `bsdev` (`:59`, `:65`, `:84`, `:90`); build targets `BuildTestAndCheck` (`:67`) and `BuildImage` (`:92`); a gate job named `BuildTestAndCheck` (`:98`); action pins (`:57`, `:82`) | `bsdev_github_builds.yaml.template` with the repo name filled in. Matches apart from the action pins | The generator, whole file (`:1824`, `:1863-1876`); Dependabot (`github-actions`) for the pins | GitHub Actions; Terraform requires a check named `BuildTestAndCheck` (`repos.tf:211`) | A regeneration, which would put the pins back to the template's older SHAs; a Dependabot pin bump |
+| `.github/workflows/stage-release.yaml` | Manual trigger with a `release_type` input (`:5-14`); repo name (`:34`, `:48`); Rust toolchain install for `UpdateCargoVersion` (`:39`); target `StageRelease`; CI app secrets (`:28-29`) | `rustapp_github_stage-release.yaml.template`, which `bsdev` shares with `RustApp` (`:749`), with the repo name filled in. Matches apart from the action pin | The generator, whole file; Dependabot for the pins | GitHub Actions (manual dispatch) | A regeneration; a Dependabot pin bump |
+| `.github/workflows/release.yaml` | Manual trigger with a `publish_to` input that defaults to GitHub, GHCR, DockerHub (`:5-10`); a matrix of OS and Rust target triples (`:19-25`); targets `Package` and `Release`; artifact name `binary-*` and path `bsdev/.tmp/output/` (`:50-51`, `:80`); `packages: write` for GHCR (`:61`); secrets: CI app (`:68-69`), `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` (`:89-90`), `SLACK_WEBHOOK_BUILD` (`:110`); `GITHUB_TOKEN` for GHCR (`:88`) | `bsdev_github_release.yaml.template` with the repo name filled in. Differs by more than pins: the `publish_to` input and `PublishTo = ${{ inputs.publish_to }}` (`:96`), where the template hard-codes `@('GitHub', 'GHCR', 'DockerHub')` | The generator, whole file; Dependabot for the pins; the maintainer, for `publish_to` (a fix made in place, never carried back to the template) | GitHub Actions (manual dispatch) | A regeneration, which would drop `publish_to` and put the pins back; a Dependabot pin bump |
+| `.github/workflows/label-pr.yaml` | Mapping from PR title prefix to changelog label (`:79-90`); labelling for Dependabot PRs (`:93-119`); skips `release/` branches (`:73`); job name `label-pr` | `psmodule_github_label-pr.yaml.template`, no substitutions (`New-BrownserveGitHubLabelPRWorkflow.ps1:11`). Content is identical. Every project type that has workflows gets it (`:409`, `:470`, `:526`, `:613`, `:712`, `:805`) | The generator, whole file (`:1910-1937`); Dependabot could bump the `github-script` pin, which still matches the template | GitHub Actions (`pull_request_target`); Terraform requires a check named `label-pr` (`repos.tf:211`) | A regeneration picks up a template change; a Dependabot pin bump |
+
+**Secrets the workflows read:**
+
+- `BROWNSERVE_CI_APP_ID` and `BROWNSERVE_CI_APP_PRIVATE_KEY` are org secrets shared with selected repos, including `bsdev` (`apps.tf:52-53`, `:90-96`).
+- `SLACK_WEBHOOK_BUILD` is an org secret visible to every repo (`secrets.tf:74`, `:178-183`).
+- `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` were set by hand (see above).
+- `bsdev` also gets `GH_TOKEN_RELEASE`, `GH_TOKEN_STAGE_RELEASE` and `GPG_KEY_AUTOMATED_BUILD` (`secrets.tf:131`, `:186-192`). None of its workflows read them.
+
+**Repeats added:**
+
+- Repo name: written into the workflows nine more times.
+- Docker context `image/`: `builds.yaml:35`, and the default in `build_tasks.ps1:131`.
+- Rust target triples: `release.yaml:21-25`, `install.ps1:25`, `install.sh:26`, `:32`.
+- Publish destinations: `release.yaml:9`, the `ValidateSet` in `build.ps1:59`, and a hard-coded list in the release template.
+- Build target names: the workflows call `BuildTestAndCheck`, `BuildImage`, `Package`, `Release` and `StageRelease`, so these must exist in `build.ps1:28-36`.
+- Required check names: the `BuildTestAndCheck` and `label-pr` jobs, and `repos.tf:211`.
+- Changelog labels: `label-pr.yaml:79` and Terraform `modules/github-brownserve_repo/issues.tf`. They don't match (see Open questions).
+
 ## Phase 2: Change traces
 
 Not started.
@@ -148,4 +175,4 @@ Not started.
 
 ## Open questions
 
-None yet.
+- **`removed` vs `removal` label.** `label-pr.yaml:88` applies `removed`, but Terraform defines `removal` (`modules/github-brownserve_repo/issues.tf:93`). Terraform's labels are authoritative (`issues.tf:2-3`). This isn't specific to `rust` or `container`, but it's two sources of the same information that disagree.
