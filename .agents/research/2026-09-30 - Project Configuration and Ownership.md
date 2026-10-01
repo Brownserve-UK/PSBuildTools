@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 2: Change traces.** 2.3 in progress, Trace A (declare `rust-app` + `container`): declaration done. Next: Build.
+**Phase 2: Change traces.** 2.3 in progress, Trace A (declare `rust-app` + `container`): declaration and Build done. Next: CI workflows.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -60,6 +60,8 @@ These describe what a word refers to, not decisions. New terms are added as they
 | **Project type** | Today's model: one label per repository (`bsdev`, `PowerShellModule`) that selects every generated file. Being replaced by capabilities. |
 | **Capability** | A named piece of shared process that a repository opts into, e.g. `rust-app`, `container`, `powershell-module`. A repository can combine several. |
 | **Project config** | The settings file [Invoke-Build Tasks](./2026-09-30%20-%20Invoke-Build%20Tasks.md) proposes for each repo (`:142`): its capabilities and their settings (binary name, image name, Docker context, publish targets). The build tasks read it. Replaces today's `ModuleInfo.json` and the hard-coded defaults in `build.ps1` and `build_tasks.ps1`. Format and location not decided (`:199`, `:217`). |
+| **Task package** | The NuGet package of shared Invoke-Build tasks proposed in [Invoke-Build Tasks](./2026-09-30%20-%20Invoke-Build%20Tasks.md) (`:85`). It has one base script per capability, and the repo loads them with `Extends`. Name not decided (D8, `:222`). |
+| **Dependency manifest** | The file that lists the NuGet packages a repo's build needs. Today that's `paket.dependencies`, which has no versions. Under [Paket](./2026-09-30%20-%20Paket.md) option C it's a small `.csproj` used only for this, with versions, plus a committed lock file, `packages.lock.json` (`:72-78`, `:97`). Name and location not decided; the research's example is `.build/dependencies.csproj` (`:119`). Doesn't cover the `Cargo.toml` files. |
 | **Information** | A single fact about a repository that something reads, e.g. its capabilities, the binary name, the Docker context. |
 | **Source of truth** | The one place a piece of information is authoritatively stated. Two places both treated as authoritative for the same information are *competing* sources of truth. |
 | **Reader** | Anything that uses a piece of information, inside the repository (build tasks, workflows, Dependabot) or outside it (Terraform). |
@@ -442,7 +444,9 @@ Not mapped, because they aren't committed: `paket.lock`, `packages/`, `.tmp/`, `
 
 ### Proposed map
 
-Filled in by the traces. Group names match today's map so the two line up. References are to the research docs: [Updating Distributed Files](./2026-09-30%20-%20Updating%20Distributed%20Files.md) (UDF), [Invoke-Build Tasks](./2026-09-30%20-%20Invoke-Build%20Tasks.md) (IBT) and [GitHub Actions](./2026-09-30%20-%20GitHub%20Actions.md) (GHA).
+Filled in by the traces. Group names match today's map so the two line up. References are to the research docs: [Updating Distributed Files](./2026-09-30%20-%20Updating%20Distributed%20Files.md) (UDF), [Invoke-Build Tasks](./2026-09-30%20-%20Invoke-Build%20Tasks.md) (IBT), [GitHub Actions](./2026-09-30%20-%20GitHub%20Actions.md) (GHA) and [Paket](./2026-09-30%20-%20Paket.md).
+
+Unlike today's map, a row is also given to anything that replaces a file committed today, even if the replacement isn't committed (e.g. the shared tasks, restored into `packages/`).
 
 **Sources**
 
@@ -450,13 +454,42 @@ Filled in by the traces. Group names match today's map so the two line up. Refer
 | --- | --- |
 | **Maintainer** | Anything written by hand in the repo, including the answers given to Copier. |
 | **Template** | The Copier template repo, released with version tags (UDF `:133`). |
+| **Task package** | The shared build tasks, one base script per capability (IBT `:85`), plus the stock Pester tests, which read the binary name from the project config (UDF `:92`). |
+| **Upstream** | New releases of packages (the task package, the Brownserve modules, Invoke-Build, Pester). |
+| **NuGet** | Dependency resolution from the dependency manifest. Same role as Cargo today. |
 
 **Routes**
 
 | Route | What it does |
 | --- | --- |
 | **`copier copy`** | Runs once, when the repo is set up. Copier asks the maintainer its questions, fills in the template, and writes the files plus `.copier-answers.yml` (UDF `:127`, `:266`). |
+| **`copier copy` (scaffold)** | Written once at set-up; template updates never touch it again (`_skip_if_exists`, UDF `:138`). |
+| **Copier task** | A command the template runs after rendering, e.g. `dotnet add package` (UDF `:256`). |
+| **Package restore** | `_init.ps1` restores packages into `packages/` (not committed), at the versions in the lock file (Paket `:93`). |
 | **Hand edit** | Someone edits the file in the repo. |
+| **Dependabot PR** | Dependabot opens a PR. |
+
+**Build**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| Shared tasks (today's `build_tasks.ps1`) | Task package | Package restore |
+| Stock tests (today's `Basic.Binary.Tests.ps1`, apart from lines 38-47) | Task package | Package restore |
+| Bootstrap (`build.ps1`, `_init.ps1`) | Template | `copier copy` |
+| Project build script, `Extends` list ⚠ A2 | Not settled | Not settled |
+| Project build script, project-only tasks (none in `bsdev`) | Maintainer | Hand edit |
+| Project tests (today's `Basic.Binary.Tests.ps1:38-47`) | Maintainer | Hand edit |
+| Dependency manifest, scaffold | Template | `copier copy` (scaffold) |
+| Dependency manifest, package list ⚠ A3 | Template | Copier task |
+| Dependency manifest, versions | Upstream | Copier task (first version); Dependabot PR |
+| Dependency manifest, lock file | NuGet | Copier task; Dependabot PR |
+| `nuget.config` | Template | `copier copy` |
+
+References: shared tasks and base scripts (IBT `:85`, `:111-115`); stock and project tests (UDF `:92`, IBT `:143`); bootstrap (UDF `:91`); project build script `.build/project.build.ps1` (IBT `:101`, `:141`); dependency manifest (Paket `:70-93`, UDF `:255-256`); `nuget.config` (UDF `:98`).
+
+Versions and the lock file each have two routes, but at different times: the Copier task runs once at set-up, and Dependabot acts after that. Local builds aren't a third route, because `dotnet restore --locked-mode` fails rather than rewriting the lock (Paket `:93`, `:98`; not verified, V5 `:192`). The Dependabot route needs a `nuget` entry in `dependabot.yml`, covered under Dependency tooling.
+
+Retired: `paket.dependencies`, and the Paket entry in `.config/dotnet-tools.json` (Paket `:170`). Paket is the only entry in `bsdev`'s file (see the Phase 1 Build table), so the whole file goes.
 
 **Generator**
 
@@ -471,12 +504,15 @@ Retired: `.brownserve_repository_manifest` (UDF `:103`).
 **Problems**
 
 - **A1. How the project config gets written isn't settled.** It could be the answers file itself, rendered from it, or written by hand (UDF `:264`, `:285`). If it's written by hand, the capabilities and settings such as the Docker context would be stated in two files: Copier needs the Docker context to render `dependabot.yml` and the CI stub's path filter (UDF `:134`), and the build tasks read it from the project config (IBT `:142`).
+- **A2. Nothing settles who writes the `Extends` list.** The project build script's `Extends` list names the capabilities (IBT `:147-155`), a third place they're stated after the answers file and the project config. If the template renders it, the maintainer's project-only tasks sit in a template-owned file. If the maintainer writes it, it can drift from the answers (removing `container` wouldn't touch it). It might instead be worked out at run time from the project config (IBT V4, `:231`), which could make the build script identical everywhere and shippable in the package (IBT `:162`, D6 `:220`).
+- **A3. Nothing settles how packages get into the dependency manifest at set-up.** The template never holds versions, so even shared packages need `dotnet add package`. UDF suggests a Copier migration or task (`:256`); only a task fits at set-up, because migrations run when an update crosses a version (UDF `:136`). Not verified (UDF V4, `:296`); Paket D7 (`:182`) is still open. For `bsdev` every package is shared by all capabilities, so a capability bringing its own package comes up in later traces.
 
 ### Trace A: declare `rust-app` + `container`
 
 A maintainer sets up a new repository and declares it's `rust-app` + `container`. Set-up is a Terraform change followed by `copier copy` (UDF `:266`). One line per chunk: the declaration, then each group in turn.
 
 - **Declaration.** Reached: answers file, project config. Problems: A1. The workflow stubs' `capabilities` input (GHA `:108`) isn't a separate source: Copier renders the stubs from the answers (UDF `:89`, `:262`).
+- **Build.** Reached: shared tasks and stock tests (through the task package), bootstrap, project build script, project tests, dependency manifest and lock file, `nuget.config`. Problems: A2, A3. Clears T4, and T2 for the tests (the template no longer writes the test file).
 
 ## Phase 3: Decisions
 
