@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 2: Change traces.** 2.3 in progress, Trace A (declare `rust-app` + `container`): declaration, Build, CI workflows and Dependency tooling done. Next: Dev environment.
+**Phase 2: Change traces.** 2.3 in progress, Trace A (declare `rust-app` + `container`): declaration, Build, CI workflows, Dependency tooling and Dev environment done. Next: Repository hygiene.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -476,6 +476,7 @@ Unlike today's map, a row is also given to anything that replaces a file committ
 | **Dependabot PR** | Dependabot opens a PR. |
 | **Cargo build** | Cargo rewrites the lock file when a build sees a manifest change. |
 | **Staged release** | The task package's `StageRelease` tasks write the file, run through the `stage-release` shared workflow. |
+| **Dev container build** | VS Code pulls the image and any Features at the version the stub references. Nothing is copied into the repo. |
 
 **Build**
 
@@ -534,6 +535,7 @@ References: `dependabot.yml` is class 4, owned by the template (UDF `:79`, `:98`
 - `nuget` at the dependency manifest's folder, new (Paket `:97`, `:119`, `:161`).
 - `cargo` at `/`, from `rust-app`.
 - `docker` at the Docker context, from `container` (UDF `:134`).
+- `docker` or `devcontainers` at `/.devcontainer`, for the dev container reference (UDF `:94`). Covered under Dev environment.
 
 Brownserve refs (`Brownserve-UK/*` actions, `Brownserve.*` packages) are grouped into one PR and excluded from the cooldown (GHA `:139`, Paket `:161`). Without that, a Tier 1 fix could take two 30-day cooldowns to arrive. Not verified (GHA V7 `:192`, Paket V2 `:189`).
 
@@ -541,6 +543,26 @@ No research doc distributes the `Cargo.toml` files, `Cargo.lock` or `image/Docke
 
 - **Local edits to `dependabot.yml`:** the file is owned by the template (UDF `:79`), but Copier's 3-way merge keeps a maintainer's local `ignore` rule (UDF `:135`). Only matters on removal. Covered in Trace C.
 - **Ecosystem labels:** `nuget` adds a third ecosystem with no Terraform label (see Open questions). Covered under GitHub settings.
+
+**Dev environment**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| `devcontainer.json` stub | Template | `copier copy` |
+| Dev container reference (image tag or Feature versions) ⚠ A4 | Template (first pin); Upstream | `copier copy`; Dependabot PR |
+| Dev container toolset (today's `.devcontainer/Dockerfile`) ⚠ A7 | Not settled | Dev container build |
+| `extensions.json`, template entries | Template | `copier copy` |
+| `extensions.json`, maintainer additions ⚠ A8 | Maintainer | Hand edit |
+| `settings.json`, template settings (including cSpell) | Template | `copier copy` |
+| `settings.json`, maintainer edits ⚠ A8 | Maintainer | Hand edit |
+| `.editorconfig` | Template | `copier copy` |
+
+References: the devcontainer files become class 1 plus a class 4 stub, through published images (Dependabot `docker`) or dev container Features (Dependabot `devcontainers`) (UDF `:94`, D4 `:283`). `.editorconfig` is class 4 (UDF `:98`). `extensions.json` and `settings.json` are class 5 (UDF `:99`). cSpell words are class 3 if `import` can reach a shared list, otherwise class 5 (UDF `:97`, V6 `:298`). `.editorconfig` sections follow the capabilities: Rust and TOML from `rust-app`, Dockerfile and shell from `container` (UDF `:134`, `:244`).
+
+- **Manual sections:** `.editorconfig` loses its manual section marker; the 3-way merge carries a local rule instead (UDF `:245`). `bsdev`'s is empty, so it has no maintainer row.
+- **Removal:** today's add-only merge leaves a removed capability's extensions and settings behind (see the Phase 1 Dev environment table). Capability conditionals should remove them instead. Covered in Trace C.
+- **Repeated information:** Ubuntu focal moves into the published image, so its three copies go. The extension list is in both `extensions.json` and `devcontainer.json` today; the research doesn't say whether the stub still carries it.
+- **Ecosystem labels:** the `/.devcontainer` entry adds another ecosystem with no Terraform label. Covered under GitHub settings.
 
 **Generator**
 
@@ -557,9 +579,11 @@ Retired: `.brownserve_repository_manifest` (UDF `:103`).
 - **A1. How the project config gets written isn't settled.** It could be the answers file itself, rendered from it, or written by hand (UDF `:264`, `:285`). If it's written by hand, the capabilities and settings such as the Docker context would be stated in two files: Copier needs the Docker context to render `dependabot.yml` and the CI stub's path filter (UDF `:134`), and the build tasks read it from the project config (IBT `:142`).
 - **A2. Nothing settles who writes the `Extends` list.** The project build script's `Extends` list names the capabilities (IBT `:147-155`), a third place they're stated after the answers file and the project config. If the template renders it, the maintainer's project-only tasks sit in a template-owned file. If the maintainer writes it, it can drift from the answers (removing `container` wouldn't touch it). It might instead be worked out at run time from the project config (IBT V4, `:231`), which could make the build script identical everywhere and shippable in the package (IBT `:162`, D6 `:220`).
 - **A3. Nothing settles how packages get into the dependency manifest at set-up.** The template never holds versions, so even shared packages need `dotnet add package`. UDF suggests a Copier migration or task (`:256`); only a task fits at set-up, because migrations run when an update crosses a version (UDF `:136`). Not verified (UDF V4, `:296`); Paket D7 (`:182`) is still open. For `bsdev` every package is shared by all capabilities, so a capability bringing its own package comes up in later traces.
-- **A4. Nothing settles where the template's pin comes from, or whether it ever moves.** Dependabot owns the pin (UDF `:262`), but the stub is rendered from the template, so the first pin has to come from it. Copier's 3-way merge keeps Dependabot's bump only if the template leaves that line alone (UDF V1, `:293`). If the template pins `ci` at `v1.0.0`, Dependabot bumps `bsdev` to `v1.2.0`, and the next template release moves its pin to `v1.1.0` so new repos start more current, `copier update` sees both sides change the same line and commits a conflict (UDF `:147`). The manifest versions had the same shape and were answered by the template never holding versions (UDF `:254`); the research has no equivalent for pins.
+- **A4. Nothing settles where the template's pin comes from, or whether it ever moves.** Dependabot owns the pin (UDF `:262`), but the stub is rendered from the template, so the first pin has to come from it. Copier's 3-way merge keeps Dependabot's bump only if the template leaves that line alone (UDF V1, `:293`). If the template pins `ci` at `v1.0.0`, Dependabot bumps `bsdev` to `v1.2.0`, and the next template release moves its pin to `v1.1.0` so new repos start more current, `copier update` sees both sides change the same line and commits a conflict (UDF `:147`). The manifest versions had the same shape and were answered by the template never holding versions (UDF `:254`); the research has no equivalent for pins. The dev container stub's image or Feature reference has the same shape (see Dev environment).
 - **A5. Publish targets have two proposed homes.** The project config holds publish targets (IBT `:142`), and dispatch inputs live in the stub (GHA `:85`). Today's `publish_to` is a per-run choice with a default (`release.yaml:5-10`). Nothing says whether the stub still offers that choice, or how its default relates to the config's list. Both follow the capabilities (`container` brings GHCR and DockerHub), so removing `container` would need both changed.
 - **A6. Nothing creates or checks the files the capabilities expect the maintainer to write.** The shared tasks assume the root `Cargo.toml` has `[workspace.package]` with a `version` (`build_tasks.ps1:316-320`, or `StageRelease` fails), the binary in `cli/Cargo.toml` is named `BinaryName` (`:567-571`, or `Package` can't find it), and a Dockerfile sits in the Docker context (`:131`, `:184`, or `BuildImage` fails). The binary name and Docker context are also in the project config (IBT `:142`), with no route between the two. A new `rust-app` repo made with `cargo new` has no `[workspace.package]`, so it builds and tests fine until its first `StageRelease`. The research's scaffold class (class 6) lists only `LICENSE`, `CHANGELOG.md`, `README.md` and the Astro scaffold (UDF `:81`, `:102`).
+- **A7. The dev container toolset has no settled source.** `bsdev` needs PowerShell (every repo, because the build runs in `pwsh`), Rust (`rust-app`) and Docker tooling (`container`, missing today, see the Phase 1 Dev environment table). A dev container uses one image, so an image per capability can't be combined, and an image per combination grows with every new mix. A base image plus one Feature per capability combines, but each Feature has to be built and published. Images or Features is still open (UDF D4, `:283`), and no research doc says which repo builds and publishes them, or with what workflow.
+- **A8. Additions from the template and the repo to the same list can conflict.** When both append to the end of a list in a class 5 file, their edits touch the same or adjacent lines. In JSON, appending also adds a comma to the previous last line. If the maintainer adds `"bsdev"` after `"yzhang"` in the cSpell words (`settings.json:15`), and the next template release also adds a word at the end, both sides change `"yzhang"` to `"yzhang",` and `copier update` commits a conflict. UDF's "a cSpell word the template didn't touch is kept" (`:135`) holds only when the template's change is elsewhere in the list. The same applies to `extensions.json` and `.gitignore`. Not verified: this is how git-style 3-way merges treat adjacent edits, not tested with Copier. If V6 holds, cSpell words move to a shared list and drop out of this.
 
 ### Trace A: declare `rust-app` + `container`
 
@@ -569,6 +593,7 @@ A maintainer sets up a new repository and declares it's `rust-app` + `container`
 - **Build.** Reached: shared tasks and stock tests (through the task package), bootstrap, project build script, project tests, dependency manifest and lock file, `nuget.config`. Problems: A2, A3. Clears T4, and T2 for the tests (the template no longer writes the test file).
 - **CI workflows.** Reached: shared workflow logic (through the stubs), stubs for `ci`, `pr-checks`, `stage-release`, `release` and template sync, and their pins. Problems: A4, A5. Narrows T1 to A4: a conflict only when the template moves its own pin, rather than every regeneration reverting it. Clears T2 for `publish_to`: the input becomes part of the template, and a hand edit in a stub is kept by the 3-way merge (UDF `:135`), so T2 is fully cleared.
 - **Dependency tooling.** Reached: `dependabot.yml`, with `cargo` from `rust-app`, `docker` at the Docker context from `container`, plus `github-actions` and `nuget`, Brownserve refs grouped and excluded from cooldown. The `Cargo.toml` files, `Cargo.lock` and `image/Dockerfile` aren't reached: they stay with the maintainer. Problems: A6. Carries T3 over unchanged; the fix would now live in the task package. Completes the T4 clear with the `nuget` entry.
+- **Dev environment.** Reached: `devcontainer.json` stub and its reference, `extensions.json`, `settings.json` and `.editorconfig`, with the Rust and Docker entries from the capabilities, plus a `dependabot.yml` entry at `/.devcontainer`. The toolset (today's `.devcontainer/Dockerfile`) isn't reached: its source isn't settled. Problems: A4 (widened), A7, A8. No T problems in this group.
 
 ## Phase 3: Decisions
 
