@@ -30,6 +30,8 @@ One worked example: a repository combining Rust and container capabilities, as e
 
 Out of scope for now: file formats, exact field names, package names and implementation sequencing. The research's preferred tools stay provisional where their behaviour still needs verification.
 
+This is not being treated as what a migration of `bsdev` would look like, we are simply using the shape of `bsdev` as a reference point.
+
 ## Deliverable
 
 A short ownership table and any unresolved questions exposed by the example.
