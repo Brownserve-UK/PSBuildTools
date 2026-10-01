@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 2: Change traces.** 2.3 in progress, Trace A (declare `rust-app` + `container`): declaration, Build, CI workflows, Dependency tooling, Dev environment and Repository hygiene done. Next: Docs.
+**Phase 2: Change traces.** 2.3 in progress, Trace A (declare `rust-app` + `container`): declaration, Build, CI workflows, Dependency tooling, Dev environment, Repository hygiene and Docs done. Next: Install scripts.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -462,6 +462,7 @@ Unlike today's map, a row is also given to anything that replaces a file committ
 | **NuGet** | Dependency resolution from the dependency manifest. Same role as Cargo. |
 | **Cargo** | Dependency resolution from the `Cargo.toml` files. |
 | **Release history** | The previous version, the release type and the PRs merged since. |
+| **Terraform** | The repo's module call in the Terraform repo. |
 
 **Routes**
 
@@ -477,6 +478,7 @@ Unlike today's map, a row is also given to anything that replaces a file committ
 | **Cargo build** | Cargo rewrites the lock file when a build sees a manifest change. |
 | **Staged release** | The task package's `StageRelease` tasks write the file, run through the `stage-release` shared workflow. |
 | **Dev container build** | VS Code pulls the image and any Features at the version the stub references. Nothing is copied into the repo. |
+| **Repo creation** | When Terraform creates the repo, GitHub writes these files into its first commit. Runs once. |
 
 **Build**
 
@@ -579,6 +581,28 @@ References: `.gitignore` is class 5 (UDF `:99`). Its sections follow the capabil
 - **Manual sections:** `.gitignore` loses its manual section marker; the 3-way merge carries a local line instead (UDF `:245`).
 - **Removal:** dropping a capability should drop its ignore lines. Covered in Trace C.
 
+**Docs**
+
+| Thing | Comes from | Gets there by |
+| --- | --- | --- |
+| `README.md` | GitHub (auto-init), then Maintainer | Repo creation; Hand edit |
+| `CHANGELOG.md`, header and placeholder ⚠ A10 | Template | `copier copy` (scaffold) |
+| `CHANGELOG.md`, entries | Release history | Staged release |
+| `LICENSE` | GitHub's licence list, chosen in Terraform | Repo creation |
+| `CLAUDE.md` | Maintainer | Hand edit |
+| `CONTRIBUTING.md`, baseline and capability sections | Template | `copier copy` |
+| `CONTRIBUTING.md`, repo additions ⚠ A8 | Maintainer | Hand edit |
+| `pull_request_template.md`, baseline and capability items | Template | `copier copy` |
+| `pull_request_template.md`, repo additions ⚠ A8 | Maintainer | Hand edit |
+
+References: CONTRIBUTING and the PR template are class 2 (org `.github` defaults) or class 4 (UDF `:95`, D3 `:282`). `CHANGELOG.md` is a class 6 scaffold through `_skip_if_exists` (UDF `:81`, `:102`, `:138`). Capability sections follow the capabilities (UDF `:134`, `:244`); a repo addition is carried by the 3-way merge (UDF `:245`), or the file is ejected (UDF `:246`).
+
+- **Per-repo variation:** CONTRIBUTING and the PR template share a baseline, and repos (even with the same capabilities) add their own items (confirmed by the maintainer). That rules out class 2: GitHub only falls back to the org copy when the repo has none (UDF `:77`), and doesn't merge the two, so one extra item would cut the repo off from baseline updates. Today nothing carries a repo addition: both files are compared whole and replaced (`Compare-BrownserveRepository.ps1:1962-1974`, `:2019-2031`), with no manual section marker.
+- **`container` gap:** neither file mentions `container` today (see the Phase 1 Docs table). No research doc says what a `container` section would hold, so the gap carries over until one is written.
+- **Licence:** set with `license_template` on the repo's module call (maintainer's proposal). GitHub keeps the licence texts, so the template doesn't ship a `LICENSE` and `New-SPDXLicense` retires. It's create-only: whether changing it later forces the repo to be replaced, and which name the copyright line uses, are not verified.
+- **README scaffold:** `auto_init` (`modules/github-brownserve_repo/repository.tf:9`) already writes `README.md`, so a Copier scaffold under `_skip_if_exists` would be skipped. This differs from UDF `:81`, `:102`. Not verified against a Brownserve repo.
+- **Repeated information:** the Conventional Commits table stays in the template's CONTRIBUTING, while the title-to-label mapping moves to the shared workflows (GHA D7). Still two copies, now in two separately released sources. `CLAUDE.md` still restates facts the capabilities own (binary name, GHCR).
+
 **Generator**
 
 | Thing | Comes from | Gets there by |
@@ -600,6 +624,7 @@ Retired: `.brownserve_repository_manifest` (UDF `:103`).
 - **A7. The dev container toolset has no settled source.** `bsdev` needs PowerShell (every repo, because the build runs in `pwsh`), Rust (`rust-app`) and Docker tooling (`container`, missing today, see the Phase 1 Dev environment table). A dev container uses one image, so an image per capability can't be combined, and an image per combination grows with every new mix. A base image plus one Feature per capability combines, but each Feature has to be built and published. Images or Features is still open (UDF D4, `:283`), and no research doc says which repo builds and publishes them, or with what workflow.
 - **A8. Additions from the template and the repo to the same list can conflict.** When both append to the end of a list in a class 5 file, their edits touch the same or adjacent lines. In JSON, appending also adds a comma to the previous last line. If the maintainer adds `"bsdev"` after `"yzhang"` in the cSpell words (`settings.json:15`), and the next template release also adds a word at the end, both sides change `"yzhang"` to `"yzhang",` and `copier update` commits a conflict. UDF's "a cSpell word the template didn't touch is kept" (`:135`) holds only when the template's change is elsewhere in the list. The same applies to `extensions.json` and `.gitignore`. Not verified: this is how git-style 3-way merges treat adjacent edits, not tested with Copier. If V6 holds, cSpell words move to a shared list and drop out of this.
 - **A9. Nothing keeps a file identical across repos once Copier merges.** Today `.markdownlint.json` is overwritten whole so that no repo drifts (`Compare-BrownserveRepository.ps1:1704-1748`). Copier's 3-way merge keeps any local edit the template didn't touch (UDF `:135`). That includes class 4 files, whose "overwrite is fine" (UDF `:79`) isn't how Copier updates them. As class 3, the local half exists to hold local rules (UDF `:78`, `:245`). Either way a repo could switch a rule back on and keep it on without ejecting, though ejecting is the research's visible route for divergence (UDF `:246`). The research doesn't say whether the "no local changes" rule should survive.
+- **A10. Nothing ties the changelog scaffold to the parser that reads it.** Today the header and its `v0.0.0` placeholder come from `New-BrownserveChangelogHeader.ps1:7-20`, and `Read-BrownserveChangelog` detects that exact placeholder (`Read-BrownserveChangelog.ps1:203`). Both live in PSBuildTools and release together. As a scaffold, the placeholder moves into the template, while the parser stays in a Brownserve module the task package uses. If the parser's format changes, a repo set up from an older template release gets a placeholder the parser doesn't recognise, and its first staged release treats `v0.0.0` as a real release. It only matters before a repo's first release.
 
 ### Trace A: declare `rust-app` + `container`
 
@@ -611,6 +636,7 @@ A maintainer sets up a new repository and declares it's `rust-app` + `container`
 - **Dependency tooling.** Reached: `dependabot.yml`, with `cargo` from `rust-app`, `docker` at the Docker context from `container`, plus `github-actions` and `nuget`, Brownserve refs grouped and excluded from cooldown. The `Cargo.toml` files, `Cargo.lock` and `image/Dockerfile` aren't reached: they stay with the maintainer. Problems: A6. Carries T3 over unchanged; the fix would now live in the task package. Completes the T4 clear with the `nuget` entry.
 - **Dev environment.** Reached: `devcontainer.json` stub and its reference, `extensions.json`, `settings.json` and `.editorconfig`, with the Rust and Docker entries from the capabilities, plus a `dependabot.yml` entry at `/.devcontainer`. The toolset (today's `.devcontainer/Dockerfile`) isn't reached: its source isn't settled. Problems: A4 (widened), A7, A8. No T problems in this group.
 - **Repository hygiene.** Reached: `.gitignore`, with `target/` and `**/*.rs.bk` from `rust-app`, `.docker/` from `container`, and its Paket entries replaced by the NuGet ones; `.markdownlint.json`. Problems: A8 (applies to `.gitignore`), A9. No T problems in this group.
+- **Docs.** Reached: `CONTRIBUTING.md` and the PR template, with the Rust prerequisite and `cargo` items from `rust-app` and nothing from `container`; the `CHANGELOG.md` scaffold; `README.md` and `LICENSE` from repo creation. `CLAUDE.md` isn't reached: it stays with the maintainer. Problems: A8 (applies to both checklist files), A10. No T problems in this group.
 
 ## Phase 3: Decisions
 
