@@ -279,6 +279,33 @@ It doesn't record the owner or repo name. Each run gets them again: the owner fr
 
 - Project type: the manifest, and the `bsdev` branch of the generator's type switch (`:690-783`), which hard-codes every per-type choice listed in the groups above.
 
+### GitHub settings
+
+These are org and repo settings, not files in `bsdev`. The maintainer writes the Terraform-managed ones by hand in the Terraform repo, and GitLab CI applies them on merge to `main` (`Terraform/.gitlab-ci.yml:130-147`). Nothing generates them and nothing in `bsdev` writes them. The others were set by hand in GitHub.
+
+One row per setting, showing what in `bsdev` has to agree with it.
+
+| Setting | Stated in | Referred to in `bsdev` | Capability |
+| --- | --- | --- | --- |
+| Required checks `BuildTestAndCheck`, `label-pr` (strict) | `repos.tf:211`; `repository.tf:56-62` | Job names in `builds.yaml:98` and `label-pr.yaml` | None. The gate job covers both the Rust and image builds (`builds.yaml:97-120`) |
+| Issue labels, `application` set, authoritative | `repos.tf:207`; `issues.tf:2-3`, `:8-97`, `:153` | Labels applied by `label-pr.yaml:79-90`, `:93-119`; changelog grouping | None |
+| CI app install, `BROWNSERVE_CI_APP_ID` and `BROWNSERVE_CI_APP_PRIVATE_KEY` | `apps.tf:51-54`, `:84-96` | `stage-release.yaml:28-29`, `release.yaml:68-69` | None |
+| `SLACK_WEBHOOK_BUILD` | `secrets.tf:72-77`, `:178-183` (every repo) | `release.yaml:110` | None |
+| `GH_TOKEN_RELEASE`, `GH_TOKEN_STAGE_RELEASE`, `GPG_KEY_AUTOMATED_BUILD` | `secrets.tf:131` | Not read | None |
+| `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` | Set by hand in repo settings | `release.yaml:89-90`; `DockerHub` in `publish_to` (`release.yaml:9`, `build.ps1:59`) | `container` |
+| GHCR push | Not in Terraform; the workflow grants `packages: write` (`release.yaml:61`) to `GITHUB_TOKEN` (`:88`) | `GHCR` in `publish_to` | `container` |
+| Push restricted to Build Automation; Codeowners bypass PR reviews; signed commits | `repos.tf:208-209`; `teams.tf:15`, `:44`; `variables.tf:35` (default) | Not referred to | None |
+| Code owner reviews required | `repos.tf:212` | No `CODEOWNERS` file | None |
+
+Nothing in Terraform depends on `rust` or `container`. `container` shows up only in settings that are outside Terraform: the hand-set Docker Hub secrets, and GHCR, which works off the workflow's own token. So today, adding or removing a capability changes nothing in Terraform.
+
+Every link between a setting and `bsdev` is by name only (check names, label names, secret names), and nothing checks that the two sides agree. The `removed`/`removal` mismatch is one that has already drifted.
+
+**Repeats added:**
+
+- Repos that take part in releases: `secrets.tf:125-134`, `apps.tf:34-63` and `teams.tf:10-47`. These are three hand-maintained lists that mostly overlap, and `bsdev` is in all three.
+- Owner `Brownserve-UK`: `provider.tf:32`.
+
 ## Phase 2: Change traces
 
 Not started.
@@ -291,4 +318,5 @@ Not started.
 
 - **`removed` vs `removal` label.** `label-pr.yaml:88` applies `removed`, but Terraform defines `removal` (`modules/github-brownserve_repo/issues.tf:93`). Terraform's labels are authoritative (`issues.tf:2-3`). This isn't specific to `rust` or `container`, but it's two sources of the same information that disagree. The changelog groups entries by these labels, so the mismatch reaches `CHANGELOG.md` too.
 - **Dependabot `docker` entry may do nothing.** `image/Dockerfile:8` uses `archlinux:latest` with no version or digest. Dependabot bumps versioned tags or digests, so this entry (`dependabot.yml:18-23`) probably never opens a PR. Not verified.
+- **Dependabot ecosystem labels.** Terraform has `dependencies` and `github_actions`, but no label for `cargo` or `docker` (`issues.tf:56-97`). Because the label set is authoritative, any label Dependabot creates would be deleted on the next apply. Not verified.
 - **Org `CODE_OF_CONDUCT.md` not verified.** `bsdev`'s PR template links to it in the `.github` repo (`repos.tf:123`), which isn't checked out locally.
