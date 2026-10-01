@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 1: Inventory.** Groups agreed. Build, CI workflows and Dependency tooling done. Next: Dev environment.
+**Phase 1: Inventory.** Groups agreed. Build, CI workflows, Dependency tooling and Dev environment done. Next: Repository hygiene.
 
 ## Purpose
 
@@ -183,6 +183,27 @@ Only `dependabot.yml` is generated here; the rest is maintainer-owned. Its `dock
 - Docker context `image/`: `dependabot.yml:19`, from the generator at `:729`. Three places in total.
 - Binary name: `cli/Cargo.toml:7`, which must match `BinaryName`.
 - Version: `Cargo.toml:6`, twice in `Cargo.lock`, and the latest `CHANGELOG.md` entry (`:10`). `UpdateCargoVersion` keeps them in step.
+
+### Dev environment
+
+| File | Holds | Comes from | Written by | Read by | Changes when |
+| --- | --- | --- | --- | --- | --- |
+| `.devcontainer/devcontainer.json` | Name `Ubuntu`, build arg `VARIANT: focal`, `remoteUser: vscode` (`:2-8`, `:23`); the extension list (`:11-19`) | `New-VSCodeDevcontainer` (`Module/Private/VSCode/New-VSCodeDevcontainer.ps1:44-59`). The values are hard-coded, apart from the extensions, which are the same list as `extensions.json` (`:1144`). Matches exactly | The generator, whole file, whenever it differs (`:1527-1578`) | VS Code Dev Containers | A regeneration picks up a change to the extension list or `New-VSCodeDevcontainer` |
+| `.devcontainer/Dockerfile` | Ubuntu focal base (`:5-6`); PowerShell (`:15-29`); Rust build dependencies and rustup (`:31-39`). No Docker tooling. Header says manual changes will be lost (`:1`) | `Module/Private/VSCode/devcontainer/Dockerfile_RustApp`, which `bsdev` shares with `RustApp` (`devcontainer_config.json:10-17`). Matches exactly | The generator, whole file (`:1581-1609`). No Dependabot entry covers `.devcontainer/` | `devcontainer.json:7` | A regeneration picks up a template change or a change to the Dockerfile mapping |
+| `.vscode/extensions.json` | Seven recommended extensions, including `rust-analyzer` and `even-better-toml` (Rust) and `vscode-docker` (container) | `repository_vscode_extensions.json`: defaults (`:2-23`) plus `bsdev` (`:80-113`). Same set as the config but in a different order, because the generator puts the extensions already in the file first and then adds the config's (`:270`, `:993-994`) | The generator, whole file. It only ever adds: an extension already in the file is never removed | VS Code | A regeneration adds any new extensions from the config; the maintainer adds extensions, which are kept |
+| `.vscode/settings.json` | cSpell language and words (`:2-16`); PowerShell formatting settings (`:17-23`) | The `CustomSettings` of the same config entries, merged and sorted alphabetically (`:1006-1054`). Matches the config | The generator, whole file. It deep-merges with the existing settings; the repo's values win unless `-Force` is used (`:1024-1036`). Like extensions, nothing is removed | VS Code | A regeneration adds new settings from the config; the maintainer edits settings, which are kept |
+| `.editorconfig` | A default for all files (`:12-16`); sections for PowerShell (`:19-23`), Rust (`:26-30`), TOML (`:33-37`), and Dockerfiles and shell scripts (`:40-44`); a manual section (`:46`), which is empty | `editorconfig_config.json`: defaults (`:2-13`) plus `bsdev` (`:66-115`). Matches exactly. `bsdev`'s list is `RustApp`'s plus the Dockerfile and shell section | The generator, apart from the manual section, which it keeps (`:1155-1182`, `:1617-1659`) | Editors through the EditorConfig extension | A regeneration picks up a config change; the maintainer edits the manual section |
+
+Three merge behaviours: the devcontainer files are replaced whole, `.vscode/*` only adds, and `.editorconfig` keeps a manual section. Because `.vscode/*` only adds, removing a capability today would leave its extensions and settings behind (e.g. `vscode-docker` after `container` is removed).
+
+`.devcontainer/` is an Ubuntu VS Code container for working on the repo. It's unrelated to the `container` capability, which is the Arch image `bsdev` ships from `image/`.
+
+**Repeats added:**
+
+- Extension list: `extensions.json` and `devcontainer.json:11-19`, both written from one list in the same run (`:1144`).
+- Ubuntu focal: `devcontainer.json:5`, `Dockerfile:5`, and the `ubuntu/20.04` package URL (`Dockerfile:19`).
+- Rust and container each show up in three configs: extensions (`rust-analyzer`, `even-better-toml`, `vscode-docker`), editorconfig sections (`*.rs`, `*.toml`, `Dockerfile`), and the devcontainer, which has the Rust toolchain but no Docker tooling.
+- PowerShell formatting settings: copied into five type entries in `repository_vscode_extensions.json` (`:31-39`, `:60-70`, `:93-104`, `:115-126`, `:137-148`). Generator-side, not in `bsdev`.
 
 ## Phase 2: Change traces
 
