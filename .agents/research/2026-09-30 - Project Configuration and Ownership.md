@@ -6,13 +6,13 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 2: Change traces.** 2.3 done: Trace A (declare `rust-app` + `container`) has filled in every group of the proposed map. Next: 2.4, extra inventory for `docs-astro`.
+**Phase 2: Change traces.** 2.3 done: Trace A (declare `rust-app` + `container`) has filled in every group of the proposed map. 2.4 done: the `docs-astro` inventory and its today's-map rows are written (hypothetical, generator only; no repo uses it). Next: 2.5, Trace B (add `docs-astro`).
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
 - [x] 2.2 Today's map, built from the Phase 1 inventory
 - [x] 2.3 Trace A: declare `rust-app` + `container`, filling in the proposed rows it reaches
-- [ ] 2.4 Extra inventory for `docs-astro`, plus its rows in today's map
+- [x] 2.4 Extra inventory for `docs-astro`, plus its rows in today's map
 - [ ] 2.5 Trace B: add `docs-astro`, filling in its proposed rows
 - [ ] 2.6 Trace C: remove `container`
 - [ ] 2.7 Problem list: duplicates removed, dependencies noted, order agreed for Phase 3
@@ -302,6 +302,37 @@ Information stated in more than one place. Groups that cover it are in brackets.
 - **`Cargo.lock` committed** (Repository hygiene, Dependency tooling): `.gitignore:21`.
 - **PowerShell formatting settings** (Dev environment): five type entries in `repository_vscode_extensions.json` (`:31-39`, `:60-70`, `:93-104`, `:115-126`, `:137-148`). Generator-side, not in `bsdev`.
 
+### Extra inventory: `docs-astro`
+
+No repository uses Astro docs (confirmed by the maintainer). This is what the generator would write, recorded only so Trace B has a starting point. `ai-skills` is a skills repo but was never generated: it has only `README.md` and `skills/`.
+
+Astro isn't its own switch. Only the `SkillsRepo` type turns it on (`:810`; default off at `:161`), and its parts are mixed into the skills templates and config.
+
+| Thing | Group | Holds | How the generator writes it |
+| --- | --- | --- | --- |
+| `pages/package.json` | Docs | Name `<repo>-docs`, `astro ^7.3.5`, Node `>=22.12.0` | Only if missing (`:2383-2394`), repo name filled in |
+| `pages/astro.config.mjs` | Docs | Site URL `https://<owner lowercase>.github.io/<repo>` | Only if missing, owner and repo filled in (`:2379-2382`) |
+| `pages/src/pages/index.astro` | Docs | Repo name as title; "Documentation for our agent skills" (`skillsrepo_astro_index.astro.template:14`) | Only if missing |
+| `pages` path (`BrownserveRepoPagesDirectory`) | Build | Path set by `_init.ps1` | `repository_paths_config.json:131-136`, through `_init.ps1` |
+| `BuildDocs` task | Build | `npm install` and `npm run build` in `pages/` (`skillsrepo_build_tasks.ps1.template:373-385`), part of `Build` (`:391`) | Whole file, in the skills build tasks |
+| `builds.yaml`, `pages/` filter and Node setup | CI workflows | `pages/` in the change filter (`skillsrepo_github_builds.yaml.template:26`); `setup-node` with Node `22` (`:46-50`) | Whole file, in the skills builds template |
+| `release.yaml`, `deploy-docs` job | CI workflows | Runs after `release`, builds with npm directly, force-pushes `pages/dist` to `gh-pages` with `GITHUB_TOKEN` and `contents: write` (`skillsrepo_github_release.yaml.template:62-98`) | Whole file, in the skills release template |
+| `dependabot.yml`, `npm` at `/pages` | Dependency tooling | Weekly, 30-day cooldown | `:822`, whole file |
+| `.gitignore` entry | Repository hygiene | `node_modules/`, `pages/dist/`, `pages/.astro/` | `gitignore_config.json:64-73`, the whole `SkillsRepo` entry |
+| `CONTRIBUTING.md`, "Documentation site" section | Docs | `cd pages`, `npm install`, `npm run dev` (`SkillsRepo_github_contributing.md.template:12-20`) | Whole file, in the skills template |
+| PR template checklist item | Docs | "site still builds if `pages/` was changed" (`SkillsRepo_github_pull_request_template.md.template:15`) | Whole file, in the skills template |
+| GitHub Pages | GitHub settings | `legacy` build type from the `gh-pages` branch, per repo (`modules/github-brownserve_repo/variables.tf:127-143`) | Terraform. Set for PSTools and the three modules (`repos.tf:35`, `:145`, `:168`, `:191`), not for `bsdev` (`:200-214`) or `ai-skills` (`:237`) |
+
+Astro adds nothing to VS Code extensions, `.editorconfig`, the devcontainer (`SkillsRepo` has none, and no devcontainer installs Node) or Paket.
+
+- **Can't be added on its own.** The task, workflow, CONTRIBUTING and PR template parts are written into the skills templates, not switched on separately, so the generator can't give Astro docs to any other type.
+- **Built two ways.** PR checks build the site through `BuildDocs`; `deploy-docs` builds it again with its own npm steps (`skillsrepo_github_release.yaml.template:84-85`). The deployed site isn't built by the code the PR check ran.
+- **`Release` doesn't build the docs.** It runs `CheckPublishingParameters, SetReleaseVariables, PublishRelease` (`skillsrepo_build_tasks.ps1.template:514`); only `deploy-docs` does.
+- **`pages/` is shared with MkDocs.** The MkDocs scaffold writes to `pages/` too (`:2289`), and the PowerShell modules use it today, so the two docs capabilities can't sit together or be swapped without a clash.
+- **Site URL is set once and has to match Terraform.** `astro.config.mjs` is only written if missing, so a repo rename or owner change leaves it wrong. The site only goes live if Terraform has a `pages` block for the repo.
+- **Node version in three places:** `22` in both workflow steps and `>=22.12.0` in `package.json`.
+- **Versions.** No lock file is scaffolded and CI runs `npm install`. The template's `^7.3.5` only affects new repos; after that, Dependabot `npm` takes over.
+
 ## Phase 2: Change traces
 
 In progress.
@@ -318,6 +349,7 @@ References for each row are in the matching Phase 1 table.
 | **Maintainer** | Anything written by hand in `bsdev`, including by AI agents. |
 | **Upstream** | New releases of actions, crates and base images. |
 | **Cargo** | Dependency resolution from the `Cargo.toml` files. |
+| **npm** | Dependency resolution from `package.json` (`docs-astro` only). |
 | **Release history** | The previous version, the release type and the PRs merged since. |
 | **.NET SDK** | `dotnet` commands the generator runs. |
 | **SPDX list** | Licence texts fetched from GitHub. |
@@ -336,6 +368,7 @@ Every Regen route is a manual run of `Initialize-` or `Update-BrownserveReposito
 | **Hand edit** | Someone edits the file in `bsdev`. |
 | **Dependabot PR** | Dependabot opens a PR. |
 | **Cargo build** | Cargo rewrites the lock file when a build sees a manifest change. |
+| **npm install** | npm rewrites the lock file (`docs-astro` only). |
 | **Staged release** | The `StageRelease` tasks write the file. |
 | **Terraform apply** | GitLab CI applies Terraform on merge to `main`. |
 | **Hand-set in GitHub** | Someone sets it in the repository settings on GitHub. |
@@ -435,14 +468,36 @@ Every Regen route is a manual run of `Initialize-` or `Update-BrownserveReposito
 | `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` | Maintainer | Hand-set in GitHub |
 | GHCR push access | Generator | Regen (`packages: write` in `release.yaml`) |
 
-Not mapped, because they aren't committed: `paket.lock`, `packages/`, `.tmp/`, `target/`.
+**`docs-astro` (hypothetical, generator only)**
+
+No repo uses it; see [Extra inventory: `docs-astro`](#extra-inventory-docs-astro) for references.
+
+| Group | Thing | Comes from | Gets there by |
+| --- | --- | --- | --- |
+| Docs | `pages/` scaffold (`package.json`, `astro.config.mjs`, `index.astro`) ⚠ T5 | Generator | Regen (if missing) |
+| Docs | `pages/` content after scaffolding | Maintainer | Hand edit |
+| Dependency tooling | `package.json` dependency versions | Upstream | Dependabot PR |
+| Dependency tooling | `package-lock.json` (not scaffolded; only if the maintainer commits one) | npm | npm install; Dependabot PR |
+| Build | `pages` path in `_init.ps1` | Generator | Regen (section) |
+| Build | `BuildDocs` in `build_tasks.ps1` ⚠ T6 | Generator | Regen |
+| CI workflows | `builds.yaml`, `pages/` filter and Node setup | Generator | Regen |
+| CI workflows | `release.yaml`, `deploy-docs` job ⚠ T6 | Generator | Regen |
+| CI workflows | `setup-node` pins ⚠ T1 | Upstream; Generator | Dependabot PR; Regen |
+| Dependency tooling | `dependabot.yml`, `npm` entry | Generator | Regen |
+| Repository hygiene | `.gitignore` entry | Generator | Regen (section) |
+| Docs | CONTRIBUTING section, PR template item | Generator | Regen |
+| GitHub settings | GitHub Pages (`legacy`, `gh-pages`) | Terraform | Terraform apply |
+
+Not mapped, because they aren't committed: `paket.lock`, `packages/`, `.tmp/`, `target/`; for `docs-astro`, `node_modules/`, `pages/dist/` and `pages/.astro/`. The `gh-pages` branch isn't mapped either: `deploy-docs` rebuilds and force-pushes it on every release rather than it being committed from `main`.
 
 **Problems**
 
-- **T1. Action pins arrive by two routes.** Dependabot bumps the pins in all four workflows, and a regeneration puts the template's older pins back (`builds.yaml:57`, `:82`; `Compare-BrownserveRepository.ps1:1863-1876`).
+- **T1. Action pins arrive by two routes.** Dependabot bumps the pins in all four workflows, and a regeneration puts the template's older pins back (`builds.yaml:57`, `:82`; `Compare-BrownserveRepository.ps1:1863-1876`). The same applies to the `docs-astro` `setup-node` pins.
 - **T2. Hand edits inside files the generator replaces whole.** These are the `publish_to` input in `release.yaml` (`:5-10`, `:96`) and the extra tests at `Basic.Binary.Tests.ps1:38-47`. A regeneration drops both.
 - **T3. `Cargo.lock` moves outside Dependabot.** On every staged release, `UpdateCargoVersion` runs `cargo generate-lockfile` (`build_tasks.ps1:330`), which moves every dependency to its latest compatible version without a Dependabot PR.
 - **T4. The Paket version has no update route except a hand edit.** It's only written when the file is missing (`Compare-BrownserveRepository.ps1:1326`), and `bsdev` has no Dependabot `nuget` entry. The PowerShell module types do have one (`:426`, `:488`).
+- **T5. The `docs-astro` site URL has no update route except a hand edit.** `astro.config.mjs` is only written if missing (`Compare-BrownserveRepository.ps1:2391-2394`), so a repo rename or owner change never reaches it. It also has to match the Pages setting in Terraform, and nothing checks the two agree.
+- **T6. The `docs-astro` site is built two ways.** PR checks build it through `BuildDocs` (`skillsrepo_build_tasks.ps1.template:373-385`); `deploy-docs` runs its own npm steps (`skillsrepo_github_release.yaml.template:84-85`). A change to one doesn't reach the other.
 
 ### Proposed map
 
