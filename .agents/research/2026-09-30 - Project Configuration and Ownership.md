@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 1: Inventory.** All groups drafted. Next: review the whole inventory, then start Phase 2.
+**Phase 1: Inventory.** Complete. Next: start Phase 2 with the first change trace (declare `rust` + `container`).
 
 ## Purpose
 
@@ -78,12 +78,12 @@ Rules:
 Sources checked:
 
 - `bsdev`: `~/host-repos/Brownserve/bsdev`
-- The generator: `Module/Private/Build/Compare-BrownserveRepository.ps1`, `Module/Private/.config/`, `Module/Private/Build/templates/`
-- Terraform: `~/host-repos/Brownserve/Terraform/GitHub`
+- The generator: `Module/Private/Build/Compare-BrownserveRepository.ps1`, `Module/Private/.config/`, `Module/Private/Build/templates/`, and the `Module/` functions it calls
+- Terraform: `~/host-repos/Brownserve/Terraform/GitHub`, and `~/host-repos/Brownserve/Terraform/.gitlab-ci.yml`
 
 ## Phase 1: Inventory
 
-In progress.
+Complete.
 
 Files are grouped by the part of the repository that reads them. Each group has a table with one row per file and these columns:
 
@@ -93,7 +93,7 @@ Files are grouped by the part of the repository that reads them. Each group has 
 - **Read by:** what uses the file.
 - **Changes when:** what causes the file to change.
 
-Information stated in more than one file shows up as repeats across rows.
+Information stated in more than one place is collected in [Repeated information](#repeated-information).
 
 | Group | Files |
 | --- | --- |
@@ -133,12 +133,6 @@ The generator only runs when someone runs `Initialize-BrownserveRepository` (`Mo
 | `nuget.config` | One package source, nuget.org | `dotnet new nugetconfig`, run during generation (`:1083-1087`) | The generator, whenever it differs (`:1283-1310`) | `dotnet` tooling | A regeneration where `dotnet new nugetconfig` output has changed (depends on the installed .NET SDK) |
 | `.config/dotnet-tools.json` | Paket `10.3.1` | `dotnet tool install Paket`, run when first generated (`:1109-1118`) | The generator, only if missing (`:1326`). No Dependabot `nuget` entry for `bsdev`; the PowerShell module types have one (`:426`, `:488`) | `_init.ps1:129` (`dotnet tool restore`) | Only a hand edit, or a regeneration after the file is deleted |
 
-**Repeats so far:**
-
-- Binary name: `build.ps1:177`, `Basic.Binary.Tests.ps1` (four times), and the default in `build_tasks.ps1:19`.
-- Repo name: worked out at run time in `_init.ps1:64`, and baked in by the generator elsewhere.
-- Owner: `build.ps1:69`.
-
 ### CI workflows
 
 | File | Holds | Comes from | Written by | Read by | Changes when |
@@ -148,22 +142,7 @@ The generator only runs when someone runs `Initialize-BrownserveRepository` (`Mo
 | `.github/workflows/release.yaml` | Manual trigger with a `publish_to` input that defaults to GitHub, GHCR, DockerHub (`:5-10`); a matrix of OS and Rust target triples (`:19-25`); targets `Package` and `Release`; artifact name `binary-*` and path `bsdev/.tmp/output/` (`:50-51`, `:80`); `packages: write` for GHCR (`:61`); secrets: CI app (`:68-69`), `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` (`:89-90`), `SLACK_WEBHOOK_BUILD` (`:110`); `GITHUB_TOKEN` for GHCR (`:88`) | `bsdev_github_release.yaml.template` with the repo name filled in. Differs by more than pins: the `publish_to` input and `PublishTo = ${{ inputs.publish_to }}` (`:96`), where the template hard-codes `@('GitHub', 'GHCR', 'DockerHub')` | The generator, whole file; Dependabot for the pins; the maintainer, for `publish_to` (a fix made in place, never carried back to the template) | GitHub Actions (manual dispatch) | A regeneration, which would drop `publish_to` and put the pins back; a Dependabot pin bump |
 | `.github/workflows/label-pr.yaml` | Mapping from PR title prefix to changelog label (`:79-90`); labelling for Dependabot PRs (`:93-119`); skips `release/` branches (`:73`); job name `label-pr` | `psmodule_github_label-pr.yaml.template`, no substitutions (`New-BrownserveGitHubLabelPRWorkflow.ps1:11`). Content is identical. Every project type that has workflows gets it (`:409`, `:470`, `:526`, `:613`, `:712`, `:805`) | The generator, whole file (`:1910-1937`); Dependabot could bump the `github-script` pin, which still matches the template | GitHub Actions (`pull_request_target`); Terraform requires a check named `label-pr` (`repos.tf:211`) | A regeneration picks up a template change; a Dependabot pin bump |
 
-**Secrets the workflows read:**
-
-- `BROWNSERVE_CI_APP_ID` and `BROWNSERVE_CI_APP_PRIVATE_KEY` are org secrets shared with selected repos, including `bsdev` (`apps.tf:52-53`, `:90-96`).
-- `SLACK_WEBHOOK_BUILD` is an org secret visible to every repo (`secrets.tf:74`, `:178-183`).
-- `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` were set by hand (see above).
-- `bsdev` also gets `GH_TOKEN_RELEASE`, `GH_TOKEN_STAGE_RELEASE` and `GPG_KEY_AUTOMATED_BUILD` (`secrets.tf:131`, `:186-192`). None of its workflows read them.
-
-**Repeats added:**
-
-- Repo name: written into the workflows nine more times.
-- Docker context `image/`: `builds.yaml:35`, and the default in `build_tasks.ps1:131`.
-- Rust target triples: `release.yaml:21-25`, `install.ps1:25`, `install.sh:26`, `:32`.
-- Publish destinations: `release.yaml:9`, the `ValidateSet` in `build.ps1:59`, and a hard-coded list in the release template.
-- Build target names: the workflows call `BuildTestAndCheck`, `BuildImage`, `Package`, `Release` and `StageRelease`, so these must exist in `build.ps1:28-36`.
-- Required check names: the `BuildTestAndCheck` and `label-pr` jobs, and `repos.tf:211`.
-- Changelog labels: `label-pr.yaml:79` and Terraform `modules/github-brownserve_repo/issues.tf`. They don't match (see Open questions).
+**Secrets the workflows read:** see [GitHub settings](#github-settings).
 
 ### Dependency tooling
 
@@ -177,12 +156,6 @@ The generator only runs when someone runs `Initialize-BrownserveRepository` (`Mo
 | `image/Dockerfile` | Base image `archlinux:latest` with no version or digest (`:8`); the full toolset, including Rust (`:22-74`); login user `bsdev` (`:10`, `:118`); files copied in from `image/` (`:91-112`) | Not generated. The generator's Dockerfile handling covers `.devcontainer/` (`:208`), not `image/` | The maintainer | `BuildImage`, through the Docker context `image` (`build_tasks.ps1:131`, `:184`); Dependabot (`docker`, `/image`); the `builds.yaml` `image/` filter (`:35`) | The maintainer changes the image |
 
 Only `dependabot.yml` is generated here; the rest is maintainer-owned. Its `docker` entry is the only difference from `RustApp`.
-
-**Repeats added:**
-
-- Docker context `image/`: `dependabot.yml:19`, from the generator at `:729`. Three places in total.
-- Binary name: `cli/Cargo.toml:7`, which must match `BinaryName`.
-- Version: `Cargo.toml:6`, twice in `Cargo.lock`, and the latest `CHANGELOG.md` entry (`:10`). `UpdateCargoVersion` keeps them in step.
 
 ### Dev environment
 
@@ -198,13 +171,6 @@ Three merge behaviours: the devcontainer files are replaced whole, `.vscode/*` o
 
 `.devcontainer/` is an Ubuntu VS Code container for working on the repo. It's unrelated to the `container` capability, which is the Arch image `bsdev` ships from `image/`.
 
-**Repeats added:**
-
-- Extension list: `extensions.json` and `devcontainer.json:11-19`, both written from one list in the same run (`:1144`).
-- Ubuntu focal: `devcontainer.json:5`, `Dockerfile:5`, and the `ubuntu/20.04` package URL (`Dockerfile:19`).
-- Rust and container each show up in three configs: extensions (`rust-analyzer`, `even-better-toml`, `vscode-docker`), editorconfig sections (`*.rs`, `*.toml`, `Dockerfile`), and the devcontainer, which has the Rust toolchain but no Docker tooling.
-- PowerShell formatting settings: copied into five type entries in `repository_vscode_extensions.json` (`:31-39`, `:60-70`, `:93-104`, `:115-126`, `:137-148`). Generator-side, not in `bsdev`.
-
 ### Repository hygiene
 
 | File | Holds | Comes from | Written by | Read by | Changes when |
@@ -215,11 +181,6 @@ Three merge behaviours: the devcontainer files are replaced whole, `.vscode/*` o
 `.docker/` is ignored, but nothing in `bsdev`'s `.build/` or `.github/` creates it. It comes along with the container config entry.
 
 `.markdownlint.json` is the first file deliberately identical across every type, with no local customisation allowed. Neither `rust` nor `container` affects it.
-
-**Repeats added:**
-
-- Ephemeral paths: `.tmp/` and `paket.lock` are ignored here and also wiped and recreated by `_init.ps1` (`:77-79`).
-- Cargo.lock: "intentionally NOT ignored" (`:21`), matching the Dependency tooling row.
 
 ### Docs
 
@@ -238,14 +199,6 @@ Only `rust` shows up in the generated docs (CONTRIBUTING prerequisites, both fil
 
 `New-SPDXLicense` runs on every regeneration (`:1216-1222`) even though its output is only used when `LICENSE` is missing, so every regeneration needs to reach GitHub.
 
-**Repeats added:**
-
-- Owner and repo name: `README.md` install URLs, every `CHANGELOG.md` entry link, `LICENSE`, and the PR template.
-- Conventional Commits prefix table: `CONTRIBUTING.md:36-42`, and the title mapping in `label-pr.yaml:79-90`.
-- Changelog labels: `New-BrownserveChangelogEntry -Auto` sorts entries by the labels `label-pr.yaml` applies (confirmed by the maintainer), so the `removed`/`removal` mismatch reaches the changelog too.
-- Build commands (`cargo build`, `cargo test`, `BuildTestAndCheck`): `README.md`, `CLAUDE.md`, `CONTRIBUTING.md`, the PR template.
-- Scaffold contract (binary name, `[workspace.package]` version): restated in `CLAUDE.md`.
-
 ### Install scripts
 
 | File | Holds | Comes from | Written by | Read by | Changes when |
@@ -256,12 +209,6 @@ Only `rust` shows up in the generated docs (CONTRIBUTING prerequisites, both fil
 Neither script is touched by `container`. They rely on what the `rust` capability's release produces: `Package` names archives `<BinaryName>-v<version>-<triple>` with `.zip` on Windows and `.tar.gz` elsewhere (`build_tasks.ps1:577`, `:584`), and `PublishRelease` uploads them as release assets (`:627-649`). The scripts have no check that these names agree; a mismatch only shows up when someone runs the installer.
 
 The template fills `BINARY` from the repo name, but the build takes `BinaryName` as a parameter (`build.ps1:177`, default repo name at `build_tasks.ps1:19`). If the two ever differ, the installers would look for an asset that doesn't exist.
-
-**Repeats added:**
-
-- Owner, repo and binary name: both scripts.
-- Rust target triples: the installers each list a subset by hand (`install.sh:26`, `:32`; `install.ps1:25`), separate from `release.yaml:21-25`. All three match today.
-- Release asset naming: `Package` (`build_tasks.ps1:577`, `:584`) and both installers (`install.sh:42`, `install.ps1:26`).
 
 ### Generator
 
@@ -274,10 +221,6 @@ This is the only place a repository says what it is. Everything generated in the
 It doesn't record the owner or repo name. Each run gets them again: the owner from the `-Owner` default `Brownserve-UK` (`Update-BrownserveRepository.ps1:14`), and the repo name from the directory name unless `-RepoName` is passed (`Compare-BrownserveRepository.ps1:42-46`, `:1995-1998`). Running `Update-BrownserveRepository` from a clone in a directory with a different name would bake that name into every generated file that uses it.
 
 `ManifestVersion` is written but nothing reads it.
-
-**Repeats added:**
-
-- Project type: the manifest, and the `bsdev` branch of the generator's type switch (`:690-783`), which hard-codes every per-type choice listed in the groups above.
 
 ### GitHub settings
 
@@ -301,10 +244,31 @@ Nothing in Terraform depends on `rust` or `container`. `container` shows up only
 
 Every link between a setting and `bsdev` is by name only (check names, label names, secret names), and nothing checks that the two sides agree. The `removed`/`removal` mismatch is one that has already drifted.
 
-**Repeats added:**
+### Repeated information
 
-- Repos that take part in releases: `secrets.tf:125-134`, `apps.tf:34-63` and `teams.tf:10-47`. These are three hand-maintained lists that mostly overlap, and `bsdev` is in all three.
-- Owner `Brownserve-UK`: `provider.tf:32`.
+Information stated in more than one place. Groups that cover it are in brackets.
+
+- **Repo name** (Build, CI workflows, Docs, Install scripts, Generator): worked out at run time in `_init.ps1:64`. Everywhere else the generator bakes it in from the directory name (`Compare-BrownserveRepository.ps1:42-46`): `build.ps1`, `Basic.Binary.Tests.ps1`, nine times in the workflows, the PR template (`:1`), both install scripts, the `README.md` install URLs (`:31`, `:36`) and every `CHANGELOG.md` entry link.
+- **Owner `Brownserve-UK`** (Build, Docs, Install scripts, Generator, GitHub settings): `build.ps1:69`, `README.md:31`, `:36`, `CHANGELOG.md` links, `LICENSE`, the PR template (`:12-13`), `install.sh:7`, `install.ps1:13`, the `-Owner` default (`Update-BrownserveRepository.ps1:14`) and `provider.tf:32`.
+- **Binary name** (Build, Dependency tooling, Install scripts, Docs): `build.ps1:177`, `Basic.Binary.Tests.ps1` (`:4`, `:8`, `:12`, `:35`), the `build_tasks.ps1:19` default, `cli/Cargo.toml:7` (which must match `BinaryName`), both install scripts (taken from the repo name) and `CLAUDE.md:130-132`.
+- **Version** (Dependency tooling, Docs): `Cargo.toml:6`, `Cargo.lock` (`:148-149`, `:159-160`) and the latest `CHANGELOG.md` entry (`:10`). `UpdateCargoVersion` keeps them in step; `CLAUDE.md:11-12` describes it.
+- **Docker context `image/`** (CI workflows, Dependency tooling): the `build_tasks.ps1:131` default, `builds.yaml:35` and `dependabot.yml:19`.
+- **Rust target triples** (CI workflows, Install scripts): `release.yaml:21-25`, `install.sh:26`, `:32` and `install.ps1:25`. The installers each cover a subset; all match today.
+- **Release asset naming** (Install scripts): `build_tasks.ps1:577`, `:584`, `install.sh:42` and `install.ps1:26`.
+- **Publish destinations** (CI workflows): `release.yaml:9`, the `ValidateSet` in `build.ps1:59` and a hard-coded list in the release template.
+- **Build target names** (CI workflows): the workflows call `BuildTestAndCheck`, `BuildImage`, `Package`, `Release` and `StageRelease`, which must exist in `build.ps1:28-36`.
+- **Build commands** (Docs): `cargo build`, `cargo test` and `BuildTestAndCheck` in `README.md`, `CLAUDE.md`, `CONTRIBUTING.md` and the PR template.
+- **Required check names** (CI workflows, GitHub settings): the `BuildTestAndCheck` job (`builds.yaml:98`), the `label-pr` job and `repos.tf:211`.
+- **Changelog labels** (CI workflows, Docs, GitHub settings): `label-pr.yaml:79` and `issues.tf:8-97`. `New-BrownserveChangelogEntry -Auto` sorts entries by the labels `label-pr.yaml` applies (confirmed by the maintainer). They disagree (see Open questions), and the mismatch reaches `CHANGELOG.md`.
+- **Conventional Commits prefix table** (Docs): `CONTRIBUTING.md:36-42`, the title mapping in `label-pr.yaml:79-90`, and the "label missing" comment the workflow posts (`label-pr.yaml:171-184`).
+- **Release-participating repos** (GitHub settings): `secrets.tf:125-134`, `apps.tf:34-63` and `teams.tf:10-47`. Three hand-maintained lists that mostly overlap; `bsdev` is in all three.
+- **Project type** (Generator): `.brownserve_repository_manifest:2`, and the `bsdev` branch of the generator's type switch (`:690-783`).
+- **Extension list** (Dev environment): `extensions.json` and `devcontainer.json:11-19`, written from one list in the same run (`:1144`).
+- **Ubuntu focal** (Dev environment): `devcontainer.json:5`, `.devcontainer/Dockerfile:5` and the `ubuntu/20.04` URL (`:19`).
+- **Rust and container dev config** (Dev environment): each shows up in three places: extensions, `.editorconfig` sections, and the devcontainer (Rust toolchain only).
+- **Ephemeral paths** (Repository hygiene): `.tmp/` and `paket.lock` are ignored in `.gitignore` and wiped and recreated by `_init.ps1:77-79`.
+- **`Cargo.lock` committed** (Repository hygiene, Dependency tooling): `.gitignore:21`.
+- **PowerShell formatting settings** (Dev environment): five type entries in `repository_vscode_extensions.json` (`:31-39`, `:60-70`, `:93-104`, `:115-126`, `:137-148`). Generator-side, not in `bsdev`.
 
 ## Phase 2: Change traces
 
