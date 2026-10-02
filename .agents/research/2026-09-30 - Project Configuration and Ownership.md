@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 2: Change traces.** 2.3 done: Trace A (declare `rust-app` + `container`) has filled in every group of the proposed map. 2.4 done: the `docs-astro` inventory and its today's-map rows are written (hypothetical, generator only; no repo uses it). 2.5 in progress: Trace B declaration, Build, CI workflows, Dependency tooling, Dev environment, Repository hygiene, Docs and Install scripts done. Next: Generator.
+**Phase 2: Change traces.** 2.3 done: Trace A (declare `rust-app` + `container`) has filled in every group of the proposed map. 2.4 done: the `docs-astro` inventory and its today's-map rows are written (hypothetical, generator only; no repo uses it). 2.5 in progress: Trace B declaration, Build, CI workflows, Dependency tooling, Dev environment, Repository hygiene, Docs, Install scripts and Generator done. Next: GitHub settings.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -456,7 +456,7 @@ Every Regen route is a manual run of `Initialize-` or `Update-BrownserveReposito
 
 | Thing | Comes from | Gets there by |
 | --- | --- | --- |
-| `.brownserve_repository_manifest` | Maintainer (the `-ProjectType` argument) | Regen (`Initialize-BrownserveRepository`) |
+| `.brownserve_repository_manifest` ⚠ T7 | Maintainer (the `-ProjectType` argument) | Regen (`Initialize-BrownserveRepository`) |
 
 **GitHub settings**
 
@@ -498,6 +498,7 @@ Not mapped, because they aren't committed: `paket.lock`, `packages/`, `.tmp/`, `
 - **T4. The Paket version has no update route except a hand edit.** It's only written when the file is missing (`Compare-BrownserveRepository.ps1:1326`), and `bsdev` has no Dependabot `nuget` entry. The PowerShell module types do have one (`:426`, `:488`).
 - **T5. The `docs-astro` site URL has no update route except a hand edit.** `astro.config.mjs` is only written if missing (`Compare-BrownserveRepository.ps1:2391-2394`), so a repo rename or owner change never reaches it. It also has to match the Pages setting in Terraform, and nothing checks the two agree.
 - **T6. The `docs-astro` site is built two ways.** PR checks build it through `BuildDocs` (`skillsrepo_build_tasks.ps1.template:373-385`); `deploy-docs` runs its own npm steps (`skillsrepo_github_release.yaml.template:84-85`). A change to one doesn't reach the other.
+- **T7. `docs-astro` can't be added on its own.** A repo has one project type (`Module/Private/Classes.ps1:564-573`), and only `SkillsRepo` turns Astro on (`Compare-BrownserveRepository.ps1:810`), with its parts written into the skills templates. Giving `bsdev` Astro means either switching it to `SkillsRepo` with `-Force` (`:236-239`), which drops the Rust and container files, or changing the `bsdev` branch of the generator (`:690-783`) and releasing it.
 
 ### Proposed map
 
@@ -698,10 +699,12 @@ Retired: `rustapp_install.sh.template`, `rustapp_install.ps1.template` and the g
 | Thing | Comes from | Gets there by |
 | --- | --- | --- |
 | `.copier-answers.yml`, answers (capabilities, plus any settings the template needs) | Maintainer | `copier copy` |
-| `.copier-answers.yml`, template version (`_commit`) | Template | `copier copy` |
+| `.copier-answers.yml`, template version (`_commit`) ⚠ B1 | Template | `copier copy` |
 | Project config ⚠ A1 | Maintainer | Not settled: the same file as the answers, rendered from them, or a hand edit |
 
 Retired: `.brownserve_repository_manifest` (UDF `:103`).
+
+- **`docs-astro`:** adds one setting, the docs path (today `pages`, `repository_paths_config.json:131-136`), needed only when `docs-astro` is declared. Whether Copier can ask it only for that capability, and whether `copier update` prompts for a new question or needs it passed in, are not verified.
 
 **GitHub settings**
 
@@ -774,6 +777,7 @@ An existing `rust-app` + `container` repo adds `docs-astro`. This is hypothetica
 - **Repository hygiene.** Reached: `.gitignore`, with a `docs-astro` section (`node_modules/`, plus `dist/` and `.astro/` under the docs path). Not reached: `.markdownlint.json`, which is the same for every type. Problems: B7, A1 (the docs path), B4 (widened). No T problems in this group.
 - **Docs.** Reached: the Astro scaffold (`package.json`, `astro.config.mjs`, `index.astro`) through `copier copy` (scaffold); a `docs-astro` section in `CONTRIBUTING.md` and an item in the PR template. Not reached: `README.md`, `CHANGELOG.md`, `LICENSE` and `CLAUDE.md`. Problems: A1 (the docs path in both files), B7 (widened). Carries T5 over: the URL moves to `docs.brownserve.co.uk`, but the scaffold is still never re-rendered.
 - **Install scripts.** Not reached: `docs-astro` doesn't write them today or in the proposal, so `install.sh` and `install.ps1` stay with the maintainer. Problems: none new; A11 is unchanged. No T problems in this group.
+- **Generator.** Reached: `.copier-answers.yml`, with `docs-astro` in the capabilities, the docs path as a new answer and `_commit` moved to the newest template release; the project config, with the docs path. Problems: B1, A1. Clears T7: the capability is added on its own, without a type change or a generator release.
 
 ## Phase 3: Decisions
 
