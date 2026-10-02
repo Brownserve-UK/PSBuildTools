@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 3: Decisions.** Phase 2 is complete. 2.7 done: the [Register](#register) replaces the separate problem lists and open questions, with duplicates merged, dependencies noted and a Phase 3 order set. B2 is deferred to the build restructure. Next: 3.1, an exploration session that checks the E entries before any decision is made.
+**Phase 3: Decisions.** 3.1 done: every E entry is checked and Q2 to Q4 are answered, with results in [To verify](#to-verify). Left open: E18's run (V9), E12 for NuGet, and running the lint CI actions (E9). B2 is deferred to the build restructure. Next: 3.2, A4.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -16,7 +16,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 - [x] 2.5 Trace B: add `docs-astro`, filling in its proposed rows
 - [x] 2.6 Trace C: remove `container`
 - [x] 2.7 Problem list: duplicates removed, dependencies noted, order agreed for Phase 3
-- [ ] 3.1 Exploration: check the E entries in the Register
+- [x] 3.1 Exploration: check the E entries in the Register
 - [ ] 3.2 to 3.22 Decisions: one problem per step, in the Register's order, each fixing a row of the proposed map. The declaration (whether it exists, what it holds, where it lives) comes last
 - [ ] F. Final pass: final map and unresolved questions, re-run the three traces against it, decide whether an overview diagram is worth adding
 
@@ -672,7 +672,7 @@ References: CONTRIBUTING and the PR template are class 2 (org `.github` defaults
 - **README scaffold:** `auto_init` (`modules/github-brownserve_repo/repository.tf:9`) already writes `README.md`, so a Copier scaffold under `_skip_if_exists` would be skipped. This differs from UDF `:81`, `:102`. Confirmed with Copier (E17).
 - **Repeated information:** the Conventional Commits types are Q11. `CLAUDE.md` still restates facts the capabilities own (binary name, GHCR).
 - **`docs-astro`:** adds the Astro scaffold (class 6, UDF `:102`), a CONTRIBUTING section and a PR template item, which the existing capability rows cover. Both texts name the docs path (today `pages/`, `SkillsRepo_github_contributing.md.template:14-17`, `SkillsRepo_github_pull_request_template.md.template:15`), so Copier needs it to render them (A1). The skills section lists no Node prerequisite; in `bsdev` it would sit with Rust and PowerShell (`CONTRIBUTING.md:7-8`). `index.astro` says "Documentation for our agent skills" (`skillsrepo_astro_index.astro.template:14`), which needs generic wording.
-- **Site URL:** Astro sites go under `docs.brownserve.co.uk`, as MkDocs sites do today (`mkdocs.yml.template:2`) (maintainer's decision). Today's Astro scaffold uses `https://<owner lowercase>.github.io` with base `/<repo>` (`skillsrepo_astro_config.mjs.template:4-5`). The domain is the CNAME of the org Pages site (`repos.tf:111-113`), so it's stated in Terraform and in the scaffold. That project sites are served under the org's custom domain is GitHub behaviour, not verified here (E15). `mkdocs.yml` is class 4 (UDF `:100`), so its URL is re-rendered from the answers, but the Astro config is in the class 6 scaffold, so a rename still never reaches the base path (T5).
+- **Site URL:** Astro sites go under `docs.brownserve.co.uk`, as MkDocs sites do today (`mkdocs.yml.template:2`) (maintainer's decision). Today's Astro scaffold uses `https://<owner lowercase>.github.io` with base `/<repo>` (`skillsrepo_astro_config.mjs.template:4-5`). The domain is the CNAME of the org Pages site (`repos.tf:111-113`), so it's stated in Terraform and in the scaffold. Project sites are served under the org's custom domain (E15). `mkdocs.yml` is class 4 (UDF `:100`), so its URL is re-rendered from the answers, but the Astro config is in the class 6 scaffold, so a rename still never reaches the base path (T5).
 - **MkDocs:** being dropped, with Astro as its replacement (maintainer's decision), so the two never share `pages/` or a Pages site. This differs from IBT `:117` and GHA `:121`, which list `docs-mkdocs` as a capability.
 
 **Install scripts**
