@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 3: Decisions.** 3.1 done: every E entry is checked and Q2 to Q4 are answered, with results in [To verify](#to-verify). Left open: E18's run (V9), E12 for NuGet, and running the lint CI actions (E9). B2 is deferred to the build restructure. Next: 3.2, A4.
+**Phase 3: Decisions.** 3.1 done: every E entry is checked and Q2 to Q4 are answered, with results in [To verify](#to-verify). 3.2 done: A4 decided (D2), with X3 and E19 to E22 added. Left open: E12 for NuGet, running the lint CI actions (E9), Feature pins end to end (E22), and security updates against `exclude-paths` (E21). E18's run is moot. B2 is deferred to the build restructure. Next: 3.3, A8.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -507,7 +507,7 @@ Unlike today's map, a row is also given to anything that replaces a file committ
 | Source | What it is |
 | --- | --- |
 | **Maintainer** | Anything written by hand in the repo, including the answers given to Copier. |
-| **Template** | The Copier template repo, released with version tags (UDF `:133`). |
+| **Template** | The Copier template repo, released with version tags (UDF `:133`). Its own Dependabot bumps the version references it renders (3.2). |
 | **Task package** | The shared build tasks, one base script per capability (IBT `:85`), plus the stock Pester tests, which read the binary name from the project config (UDF `:92`). |
 | **Shared workflows** | The Tier 2 reusable workflows, which call the Tier 1 actions (GHA `:53-79`). |
 | **Upstream** | New releases of packages (the task package, the Brownserve modules, Invoke-Build, Pester), of the shared workflows, and of crates and base images. |
@@ -567,16 +567,16 @@ Retired: `paket.dependencies`, and the Paket entry in `.config/dotnet-tools.json
 | Shared workflow logic (today's jobs: matrices, build steps, gate job, artifacts, Slack) | Shared workflows | Workflow call |
 | Shared workflow logic, docs deploy (today's `deploy-docs`) ⚠ T6 | Shared workflows | Workflow call |
 | Shared workflow logic, Node setup ⚠ B3 | Shared workflows | Workflow call |
-| Stubs (`ci`, `pr-checks`, `stage-release`, `release`), everything except the pin | Template | `copier copy` |
+| Stubs (`ci`, `pr-checks`, `stage-release`, `release`) | Template | `copier copy` |
 | `release` stub, `publish_to` input ⚠ A5 | Template | `copier copy` |
 | Template sync stub | Template | `copier copy` |
-| Stub pins ⚠ A4 | Template (first pin); Upstream | `copier copy`; Dependabot PR |
+| Stub pins | Template | `copier copy` |
 
-References: tiers and stub contents (GHA `:53-64`, `:85-88`, `:108`); stub ownership, template except the pin (UDF `:89`, `:262`); lifecycle workflows (GHA `:119-121`, D3); `label-pr` as its own workflow or folded into `pr-checks` (GHA D7, `:180`); template sync stub (UDF `:235`). Inputs reach the build as environment variables (IBT `:170`), which removes the script injection in today's `publish_to` (GHA `:32`).
+References: tiers and stub contents (GHA `:53-64`, `:85-88`, `:108`); stub ownership, template including the pin (3.2; differs from UDF `:262`); lifecycle workflows (GHA `:119-121`, D3); `label-pr` as its own workflow or folded into `pr-checks` (GHA D7, `:180`); template sync stub (UDF `:235`). Inputs reach the build as environment variables (IBT `:170`), which removes the script injection in today's `publish_to` (GHA `:32`).
 
 - **Repo name:** the shared workflow does the checkout, so the stubs don't need it. Whether the checkout still needs a folder named after the repo is Q5.
 - **Required checks:** through a reusable workflow a check is named `<caller job> / <called job>` (GHA `:168`, V6 `:191`). Covered under GitHub settings.
-- **Dependabot:** the `github-actions` entry exists today; Brownserve refs need excluding from the 30-day cooldown (GHA `:139`). Covered under Dependency tooling.
+- **Dependabot:** the repo's `github-actions` entry skips the stubs with `exclude-paths` (E21). Brownserve refs' grouping and cooldown exclusion (GHA `:139`) move to the template repo's `dependabot.yml` (3.2). Covered under Dependency tooling.
 - **`docs-astro` deploy:** either Tier 1 per generator or `actions/deploy-pages` (GHA `:132`). The stubs' `capabilities` input switches it on, and the `ci` stub's path filter carries the docs path (GHA `:128`); both are covered by the stubs row.
 - **Go-live:** a docs-only deploy trigger is Q10.
 
@@ -597,14 +597,15 @@ References: tiers and stub contents (GHA `:53-64`, `:85-88`, `:108`); stub owner
 
 References: `dependabot.yml` is class 4, owned by the template (UDF `:79`, `:98`, `:262`), rendered from the answers. Its entries:
 
-- `github-actions` at `/`, for the stub pins (GHA `:53`).
+- `github-actions` at `/`, only for workflows the template doesn't render; `exclude-paths` lists the stubs (3.2, E21).
 - `nuget` at the dependency manifest's folder, new (Paket `:97`, `:119`, `:161`).
 - `cargo` at `/`, from `rust-app`.
 - `docker` at the Docker context, from `container` (UDF `:134`).
-- `docker` or `devcontainers` at `/.devcontainer`, for the dev container reference (UDF `:94`). Covered under Dev environment.
 - `npm` at the docs path, from `docs-astro` (today `/pages`, `Compare-BrownserveRepository.ps1:822`).
 
-Brownserve refs (`Brownserve-UK/*` actions, `Brownserve.*` packages) are grouped into one PR and excluded from the cooldown (GHA `:139`, Paket `:161`). Without that, a Tier 1 fix could take two 30-day cooldowns to arrive. Confirmed for actions, provided `exclude` matches the case in `uses:` (E12); not run for NuGet (Paket V2 `:189`).
+No entry covers the dev container reference: the template owns it (3.2).
+
+Brownserve refs (`Brownserve-UK/*` actions, `Brownserve.*` packages) are grouped into one PR and excluded from the cooldown (GHA `:139`, Paket `:161`): actions in the template repo's `dependabot.yml` (3.2), packages in each repo's. Without that, a Tier 1 fix could take two 30-day cooldowns to arrive. Confirmed for actions, provided `exclude` matches the case in `uses:` (E12); not run for NuGet (Paket V2 `:189`).
 
 No research doc distributes the `Cargo.toml` files, `Cargo.lock` or `image/Dockerfile`. `UpdateCargoVersion` moves into the task package unchanged (IBT `:38`, `:114`), so T3 carries over and keeps its ID.
 
@@ -616,7 +617,7 @@ No research doc distributes the `Cargo.toml` files, `Cargo.lock` or `image/Docke
 | Thing | Comes from | Gets there by |
 | --- | --- | --- |
 | `devcontainer.json` stub | Template | `copier copy` |
-| Dev container reference (image tag or Feature versions) ⚠ A4 | Template (first pin); Upstream | `copier copy`; Dependabot PR |
+| Dev container reference (image tag or Feature versions) | Template | `copier copy` |
 | Dev container toolset (today's `.devcontainer/Dockerfile`) ⚠ A7 | Not settled | Dev container build |
 | `extensions.json`, template entries | Template | `copier copy` |
 | `extensions.json`, maintainer additions ⚠ A8 | Maintainer | Hand edit |
@@ -624,7 +625,7 @@ No research doc distributes the `Cargo.toml` files, `Cargo.lock` or `image/Docke
 | `settings.json`, maintainer edits ⚠ A8 | Maintainer | Hand edit |
 | `.editorconfig` | Template | `copier copy` |
 
-References: the devcontainer files become class 1 plus a class 4 stub, through published images (Dependabot `docker`) or dev container Features (Dependabot `devcontainers`) (UDF `:94`, D4 `:283`). `.editorconfig` is class 4 (UDF `:98`). `extensions.json` and `settings.json` are class 5 (UDF `:99`). cSpell words are class 3, since `import` can reach a shared list on disk (UDF `:97`, V6 `:298`, E9). If CI checks spelling, the stub is a `cspell.json`, as the CLI doesn't read `settings.json`, and the template's `settings.json` points the editor's "add word" at it (E9). `.editorconfig` sections follow the capabilities: Rust and TOML from `rust-app`, Dockerfile and shell from `container` (UDF `:134`, `:244`).
+References: the devcontainer files become class 1 plus a class 4 stub, through published images (Dependabot `docker`) or dev container Features (Dependabot `devcontainers`) (UDF `:94`, D4 `:283`). After 3.2 the template owns the reference, and only Features have a Dependabot route to bump it there (E22). `.editorconfig` is class 4 (UDF `:98`). `extensions.json` and `settings.json` are class 5 (UDF `:99`). cSpell words are class 3, since `import` can reach a shared list on disk (UDF `:97`, V6 `:298`, E9). If CI checks spelling, the stub is a `cspell.json`, as the CLI doesn't read `settings.json`, and the template's `settings.json` points the editor's "add word" at it (E9). `.editorconfig` sections follow the capabilities: Rust and TOML from `rust-app`, Dockerfile and shell from `container` (UDF `:134`, `:244`).
 
 - **Manual sections:** `.editorconfig` loses its manual section marker; the 3-way merge carries a local rule instead (UDF `:245`). `bsdev`'s is empty, so it has no maintainer row.
 - **Removal:** today's add-only merge leaves a removed capability's extensions and settings behind (see the Phase 1 Dev environment table). Capability conditionals should remove them instead. Covered in Trace C.
@@ -710,7 +711,6 @@ Retired: `.brownserve_repository_manifest` (UDF `:103`).
 | Issue labels | Terraform | Terraform apply |
 | Branch protection, push restriction, signed commits, code owner reviews | Terraform | Terraform apply |
 | CI app install and its secrets, now also needed for template sync ⚠ A12 | Terraform | Terraform apply |
-| CI app key as a Dependabot secret (variant G only) | Terraform | Terraform apply (new, not verified, E18) |
 | `SLACK_WEBHOOK_BUILD` | Terraform | Terraform apply |
 | `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` ⚠ A12 | Terraform | Terraform apply |
 | GHCR push (`packages: write` in the `release` stub) | Template | `copier copy` |
@@ -718,7 +718,7 @@ Retired: `.brownserve_repository_manifest` (UDF `:103`).
 | GitHub Pages, `legacy` from `gh-pages` (`docs-astro`) ⚠ T5 | Terraform | Terraform apply |
 | Pages deploy permission (`contents: write` in the `release` stub) | Template | `copier copy` |
 
-References: Terraform stays the owner of settings, secrets and the consumer list (UDF `:186`); set-up is a Terraform change, then `copier copy` (UDF `:266`). The Terraform boundary is GHA C5 (`:161`), not yet written. Check names through a reusable workflow (GHA `:168`, V6 `:191`) and emitted check names as part of the shared workflow contract (GHA C2, `:158`). The permission ceiling lives in the stub (GHA `:86`). The App installation list doubles as the template sync's consumer list (UDF `:230`); variant G needs the App key as a Dependabot secret (UDF `:207`, V9 `:301`).
+References: Terraform stays the owner of settings, secrets and the consumer list (UDF `:186`); set-up is a Terraform change, then `copier copy` (UDF `:266`). The Terraform boundary is GHA C5 (`:161`), not yet written. Check names through a reusable workflow (GHA `:168`, V6 `:191`) and emitted check names as part of the shared workflow contract (GHA C2, `:158`). The permission ceiling lives in the stub (GHA `:86`). The App installation list doubles as the template sync's consumer list (UDF `:230`).
 
 - **Terraform's own classification:** Terraform doesn't use project types or capabilities. It has `issue_types` (`application`, `powershell` and others, `variables.tf:117-125`; `bsdev` is `application`) and hand-kept lists that each grant something: `release_secrets_repos` (`secrets.tf:125-134`), `powershell_module_secrets_repos` (`:153-160`, in effect a `powershell-module` list), `brownserve_ci_app_repos` (`apps.tf:34-63`) and the two team lists (`teams.tf:10-18`, `:37-47`).
 - **Docker Hub secrets:** move from hand-set to Terraform (maintainer's decision). `secrets.tf` has no list for them today, so a new one is needed alongside `powershell_module_secrets_repos`. `bsdev`'s are hand-set today (see the Phase 1 GitHub settings table), so they need importing when Terraform takes them over; otherwise removing `container` leaves them behind, since Terraform deletes only what it manages.
@@ -779,15 +779,55 @@ The repo from the end of Trace B (`rust-app` + `container` + `docs-astro`) remov
 
 ## Phase 3: Decisions
 
-Not started.
-
 3.1 is an exploration session. It works through the E entries in the [Register](#register), using a throwaway Copier template in a scratch directory for the Local ones and the `copier-test` repo for anything that needs GitHub. Each finding is recorded against its E entry, and any map row or problem it changes is updated.
 
 Decisions then run from 3.2 to 3.22 in the order of the Register's Step column.
 
+### 3.2 A4: who owns version lines in rendered files
+
+**Question.** Where does a version line in a rendered file come from, and who moves it after `copier copy`?
+
+**Lines in scope for `bsdev`.** The five stub pins (`ci`, `pr-checks`, `stage-release`, `release`, template sync) and the dev container reference: one image tag, or one Feature line each for PowerShell, Rust and Docker, plus Node with `docs-astro`.
+
+**Today.** The generator writes the pins, Dependabot bumps them, and a regeneration reverts the bumps (T1). Nothing bumps the dev container (see the Phase 1 Dev environment table).
+
+**Readers.** GitHub (workflow call) and VS Code (dev container build).
+
+**Options.**
+
+| Option | What it does | Result |
+| --- | --- | --- |
+| A | The template's pin is fixed; Dependabot owns it after copy | New repos start stale. B6 and C5 stay. The template can't add a stub input without knowing every repo's pin is new enough (X3) |
+| B | The template moves its pin each release; Dependabot bumps too | Conflicts once Dependabot has moved the line (E1) |
+| C | A copy-only task writes the current pin; Dependabot owns it after | Works at set-up only (E6), so a stub or Feature added later gets no current pin. B6, C5 and X3 stay |
+| D | The template owns every version line it renders, bumped by the template repo's Dependabot; each repo's Dependabot leaves them alone | Clears A4, B6, C5 and X3. Adds one hop, means more template releases, and a repo can't take a pin without the whole release |
+| E | Floating `@v1` tags | Reopens GHA D2. Not pursued |
+
+For `bsdev` under D, the template writes every one of these lines. Declaring renders the current pins. Adding `docs-astro` brings the Node Feature at the template's version. Removing `container` deletes the Docker Feature line. None of these conflict. Under A and C, adding and removing conflict once Dependabot has moved the line (B6, C5).
+
+D can get its versions two ways:
+
+- **D1.** The template repo's Dependabot bumps the template files directly. This needs constrained templates (E20) and doesn't work for `devcontainer.json`, where `#%` isn't a comment.
+- **D2.** A pins file in the template repo, which Dependabot bumps natively and the templates read with `include` (E20). Template files stay as normal Copier.
+
+**Decision.** D2. The template owns every version reference in a file it renders. A repo's Dependabot owns versions only in files the template doesn't render, and `exclude-paths` keeps it off the stubs (E21). Confidence: medium-high. Not yet verified: Feature pins end to end (E22), and whether security updates honour `exclude-paths` (E21).
+
+**Knock-on.**
+
+- UDF:
+  - `:262` flips: the template owns the pin too.
+  - "The template never holds versions" (`:254-256`) now covers manifests only.
+  - Variant G (`:194-211`) loses its trigger, so the template sync is dispatch plus schedule (`:230`, `:235`), and E18 and V9 are moot.
+- GHA `:112`, `:139`:
+  - Brownserve refs' grouping and cooldown exclusion move to the template repo's `dependabot.yml`.
+  - A Tier 2 fix takes one more hop: shared workflow release, pins bump, template release, sync PR.
+- Template CI could render each capability mix and check each stub against the workflow its pin names (X3). The design is left for later.
+- A7: image tags have no Dependabot route (E22).
+- A13 and B3: shared workflow changes now arrive in a template sync PR, not a Dependabot PR, and B3's two hops become three.
+
 ## Register
 
-The single list of problems, open questions and things to check. The maps and traces refer to entries by ID. The prefix records where an entry came from: T from today's map, A, B and C from Traces A, B and C, Q for open questions, E for things to check, and X for problems found in the 3.1 exploration. Merged and cleared entries keep their text so the traces still read correctly.
+The single list of problems, open questions and things to check. The maps and traces refer to entries by ID. The prefix records where an entry came from: T from today's map, A, B and C from Traces A, B and C, Q for open questions, E for things to check, and X for problems found in Phase 3. Merged and cleared entries keep their text so the traces still read correctly.
 
 Step is the Phase 3 step that settles the entry; F means the final pass.
 
@@ -805,10 +845,10 @@ Step is the Phase 3 step that settles the entry; F means the final pass.
 | A1 | How the project config gets written | A2, A5, A12, B1 | 3.22 | Open |
 | A2 | Who writes the `Extends` list | E8 | 3.18 | Open |
 | A3 | Packages into the dependency manifest at set-up | T3, E6 | 3.9 | Open |
-| A4 | Template and Dependabot write the same line | E1, E12 | 3.2 | Open |
+| A4 | Template and Dependabot write the same line | E1, E12, E19 to E22 | 3.2 | Decided (3.2) |
 | A5 | Publish targets have two homes | C2 | 3.17 | Open |
 | A6 | Nothing creates or checks maintainer-written files | | 3.10 | Open |
-| A7 | Dev container toolset has no source | A4, E14 | 3.6 | Open |
+| A7 | Dev container toolset has no source | A4, E14, E22 | 3.6 | Open |
 | A8 | Template and repo lines next to each other conflict | E2, E9 | 3.3 | Open |
 | A9 | Nothing keeps a file identical across repos | A8, E9 | 3.4 | Open |
 | A10 | Changelog scaffold not tied to its parser | | 3.12 | Open |
@@ -830,6 +870,7 @@ Step is the Phase 3 step that settles the entry; F means the final pass.
 | C6 | Removal order not stated | A12 | 3.20 | Open |
 | X1 | Copier doesn't report a conflict | | 3.21 | Open |
 | X2 | New template questions need a default | | 3.21 | Open |
+| X3 | Stub shape tied to its pin | E19 | 3.2 | Decided (3.2) |
 
 Merged entries share a mechanism with the entry they're merged into; only the trigger differs (a template release, adding a capability, removing one). Paired entries have the same shape in another ecosystem, so one decision should cover both. B2 belongs to the wider build restructure (how the builds are split up, and what depends on what), so it isn't decided here. T6 and A13 are decided as ownership rules that hold whichever entry point the site build uses.
 
@@ -843,10 +884,10 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 - **A1. How the project config gets written isn't settled.** It could be the answers file itself, rendered from it, or written by hand (UDF `:264`, `:285`). If it's written by hand, the capabilities and settings such as the Docker context would be stated in two files: Copier needs the Docker context to render `dependabot.yml` and the CI stub's path filter (UDF `:134`), and the build tasks read it from the project config (IBT `:142`). The `docs-astro` docs path has the same shape: Copier needs it to render the `npm` Dependabot entry, the CI path filter and the `.gitignore` lines, and the build tasks read it from the project config.
 - **A2. Nothing settles who writes the `Extends` list.** The project build script's `Extends` list names the capabilities (IBT `:147-155`), a third place they're stated after the answers file and the project config. If the template renders it, the maintainer's project-only tasks sit in a template-owned file. If the maintainer writes it, it can drift from the answers (removing `container` wouldn't touch it). It might instead be worked out at run time from the project config (IBT V4, `:231`), which could make the build script identical everywhere and shippable in the package (IBT `:162`, D6 `:220`). Run time works (E8). With the list read from the project config and project-only tasks in their own file, the build script is the same in every repo, so A2 now depends on A1.
 - **A3. Nothing settles how packages get into the dependency manifest at set-up.** The template never holds versions, so even shared packages need `dotnet add package`. UDF suggests a Copier migration or task (`:256`); only a task fits at set-up, because migrations run when an update crosses a version (UDF `:136`). A Copier task works at set-up (E6), but not for a capability added later: tasks run three times on every update and can't tell a capability was just added. Paket D7 (`:182`) is still open. For `bsdev` every package is shared by all capabilities, so a capability bringing its own package comes up in later traces.
-- **A4. Nothing settles where the template's pin comes from, or whether it ever moves.** Dependabot owns the pin (UDF `:262`), but the stub is rendered from the template, so the first pin has to come from it. Copier's 3-way merge keeps Dependabot's bump only if the template leaves that line alone, or moves it to the same value; any other move conflicts (E1). If the template pins `ci` at `v1.0.0`, Dependabot bumps `bsdev` to `v1.2.0`, and the next template release moves its pin to `v1.1.0` so new repos start more current, `copier update` sees both sides change the same line and commits a conflict (UDF `:147`). The manifest versions had the same shape and were answered by the template never holding versions (UDF `:254`); the research has no equivalent for pins. The dev container stub's image or Feature reference has the same shape (see Dev environment).
+- **A4. Nothing settles where the template's pin comes from, or whether it ever moves.** Dependabot owns the pin (UDF `:262`), but the stub is rendered from the template, so the first pin has to come from it. Copier's 3-way merge keeps Dependabot's bump only if the template leaves that line alone, or moves it to the same value; any other move conflicts (E1). If the template pins `ci` at `v1.0.0`, Dependabot bumps `bsdev` to `v1.2.0`, and the next template release moves its pin to `v1.1.0` so new repos start more current, `copier update` sees both sides change the same line and commits a conflict (UDF `:147`). The manifest versions had the same shape and were answered by the template never holding versions (UDF `:254`); the research has no equivalent for pins. The dev container stub's image or Feature reference has the same shape (see Dev environment). Decided in 3.2: the template owns the line (D2).
 - **A5. Publish targets have two proposed homes.** The project config holds publish targets (IBT `:142`), and dispatch inputs live in the stub (GHA `:85`). Today's `publish_to` is a per-run choice with a default (`release.yaml:5-10`). Nothing says whether the stub still offers that choice, or how its default relates to the config's list. Both follow the capabilities (`container` brings GHCR and DockerHub), so removing `container` would need both changed.
 - **A6. Nothing creates or checks the files the capabilities expect the maintainer to write.** The shared tasks assume the root `Cargo.toml` has `[workspace.package]` with a `version` (`build_tasks.ps1:316-320`, or `StageRelease` fails), the binary in `cli/Cargo.toml` is named `BinaryName` (`:567-571`, or `Package` can't find it), and a Dockerfile sits in the Docker context (`:131`, `:184`, or `BuildImage` fails). The binary name and Docker context are also in the project config (IBT `:142`), with no route between the two. A new `rust-app` repo made with `cargo new` has no `[workspace.package]`, so it builds and tests fine until its first `StageRelease`. The research's scaffold class (class 6) lists only `LICENSE`, `CHANGELOG.md`, `README.md` and the Astro scaffold (UDF `:81`, `:102`).
-- **A7. The dev container toolset has no settled source.** `bsdev` needs PowerShell (every repo, because the build runs in `pwsh`), Rust (`rust-app`) and Docker tooling (`container`, missing today, see the Phase 1 Dev environment table). A dev container uses one image, so an image per capability can't be combined, and an image per combination grows with every new mix. A base image plus one Feature per capability combines, but each Feature has to be built and published. Images or Features is still open (UDF D4, `:283`), and no research doc says which repo builds and publishes them, or with what workflow. `docs-astro` adds Node, which no dev container installs today (`SkillsRepo` has none: `Compare-BrownserveRepository.ps1:784-793`, `:893`). Upstream Features exist for Node and every other capability's tooling (E14), so the Features route may need no Brownserve build.
+- **A7. The dev container toolset has no settled source.** `bsdev` needs PowerShell (every repo, because the build runs in `pwsh`), Rust (`rust-app`) and Docker tooling (`container`, missing today, see the Phase 1 Dev environment table). A dev container uses one image, so an image per capability can't be combined, and an image per combination grows with every new mix. A base image plus one Feature per capability combines, but each Feature has to be built and published. Images or Features is still open (UDF D4, `:283`), and no research doc says which repo builds and publishes them, or with what workflow. `docs-astro` adds Node, which no dev container installs today (`SkillsRepo` has none: `Compare-BrownserveRepository.ps1:784-793`, `:893`). Upstream Features exist for Node and every other capability's tooling (E14), so the Features route may need no Brownserve build. No Dependabot ecosystem bumps an image tag in `devcontainer.json`, so on the image route the template's tag has no update route (E22).
 - **A8. Additions from the template and the repo to the same list can conflict.** When both append to the end of a list in a class 5 file, their edits touch the same or adjacent lines. In JSON, appending also adds a comma to the previous last line. If the maintainer adds `"bsdev"` after `"yzhang"` in the cSpell words (`settings.json:15`), and the next template release also adds a word at the end, both sides change `"yzhang"` to `"yzhang",` and `copier update` commits a conflict. UDF's "a cSpell word the template didn't touch is kept" (`:135`) holds only when the template's change is elsewhere in the list. The same applies to `extensions.json` and `.gitignore`. Confirmed (E2). Only the appended lines conflict, and a template edit with at least one unchanged line between it and the repo's merges cleanly, so a template that inserts mid-list rather than appending avoids it, unless the repo has edited next to the same point. V6 holds (E9), so the template's cSpell words move to a read-only shared list and drop out of this. The repo's own words stay in the stub, which the template doesn't add to, and the extension inserts them alphabetically rather than appending.
 - **A9. Nothing keeps a file identical across repos once Copier merges.** Today `.markdownlint.json` is overwritten whole so that no repo drifts (`Compare-BrownserveRepository.ps1:1704-1748`). Copier's 3-way merge keeps any local edit the template didn't touch (UDF `:135`). That includes class 4 files, whose "overwrite is fine" (UDF `:79`) isn't how Copier updates them. As class 3, the local half exists to hold local rules (UDF `:78`, `:245`). Either way a repo could switch a rule back on and keep it on without ejecting, though ejecting is the research's visible route for divergence (UDF `:246`). The research doesn't say whether the "no local changes" rule should survive.
 - **A10. Nothing ties the changelog scaffold to the parser that reads it.** Today the header and its `v0.0.0` placeholder come from `New-BrownserveChangelogHeader.ps1:7-20`, and `Read-BrownserveChangelog` detects that exact placeholder (`Read-BrownserveChangelog.ps1:203`). Both live in PSBuildTools and release together. As a scaffold, the placeholder moves into the template, while the parser stays in a Brownserve module the task package uses. If the parser's format changes, a repo set up from an older template release gets a placeholder the parser doesn't recognise, and its first staged release treats `v0.0.0` as a real release. It only matters before a repo's first release.
@@ -868,6 +909,7 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 - **C6. Removal has to run in the opposite order to set-up, and nothing states it.** Set-up is Terraform first, then `copier copy` (UDF `:266`), so Terraform's settings are in place before the workflows use them. Removal reverses that: if Terraform deletes the Docker Hub secrets while the `release` stub still publishes to DockerHub, a release in between fails at `CheckPublishingParameters` (IBT `:37`); Copier first leaves the secrets unused until Terraform catches up. `docs-astro` has the same shape: if Terraform drops the `pages` block first, the deploy keeps pushing `gh-pages` to a repo that doesn't serve it. No research doc states the removal order, and nothing enforces either order.
 - **X1. `copier update` exits 0 when it writes a conflict.** The markers are left inline and the file shows as unmerged (`UU`), but the exit code is the same as a clean update (E1). The template sync (UDF `:141`, `:235`) has to check for conflicts itself, e.g. with `git diff --check`, or it opens PRs with markers in them.
 - **X2. A template release that adds a required question with no default stops the template sync.** `copier update --defaults` fails and writes nothing (E5), so every repo stays on the old release until someone passes the answer by hand. Any question added after the first release needs a default, or one worked out from other answers.
+- **X3. A stub's shape is tied to the version its pin names.** GitHub checks the stub's `with:` and `secrets:` against the pinned workflow. A run fails at startup, with no jobs, if the stub passes an input or secret the workflow doesn't declare, or leaves out a required input (E19). If the pin and the rest of the stub move separately, every run in between can fail. The 3-way merge succeeds either way, so nothing flags it before the run.
 
 ### Open questions
 
@@ -899,7 +941,7 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 
 ### To verify
 
-Checked in 3.1. How: Local is a throwaway Copier template and repo in a scratch directory, Docs is vendor documentation, GitHub is the `copier-test` repo.
+Checked in 3.1; E19 to E22 in 3.2. How: Local is a throwaway Copier template and repo in a scratch directory, Docs is vendor documentation, GitHub is the `copier-test` repo.
 
 | ID | Summary | How | Needed by | Result |
 | --- | --- | --- | --- | --- |
@@ -920,7 +962,11 @@ Checked in 3.1. How: Local is a throwaway Copier template and repo in a scratch 
 | E15 | Project Pages under the org's custom domain | Docs, then GitHub | T5 | Confirmed |
 | E16 | `license_template` behaviour | Docs | F | Not replaced; uses display name |
 | E17 | README scaffold vs `auto_init` | Local | F | Confirmed |
-| E18 | CI app key as a Dependabot secret | Docs | F | Docs: yes; run open (V9) |
+| E18 | CI app key as a Dependabot secret | Docs | F | Docs: yes; run moot (3.2) |
+| E19 | Stub inputs and secrets against the pinned workflow | GitHub | X3 | Confirmed |
+| E20 | Dependabot on Copier template source | Docs, then GitHub | A4 | Constrained only; pins file works |
+| E21 | `exclude-paths` for `github-actions` | Docs, then GitHub | A4 | Confirmed |
+| E22 | Dependabot and the dev container reference | Docs, then GitHub | A4, A7 | Features only |
 
 - **E1. Copier keeps a Dependabot bump the template didn't touch.** Copier's 3-way merge should keep a line Dependabot changed when the template leaves it alone, and commit a conflict when both change it (UDF `:135`, `:147`, V1 `:293`). Finding: confirmed with Copier 9.18.2. A Dependabot bump to `@v1.2.0` survived a template release that added a line two lines above it. When the next release moved the template's pin from `v1.0.0` to `v1.1.0`, `copier update` wrote inline conflict markers on that line. Moving it to `v1.2.0`, the value Dependabot had already set, merged cleanly. Copier exits 0 either way (X1).
 - **E2. Copier merge of appends at the same point in a list.** When the template and the repo both add to the end of a list, including JSON's comma on the previous last line, `copier update` is expected to conflict (A8, B7, C3). Finding: confirmed. When the repo and template both appended to the end of the cSpell words, the extensions list and a `.gitignore` section, all three conflicted. The comma both sides added to the previous last line merged; only the appended lines conflicted. Template edits with at least one unchanged line between them and the repo's edit merged cleanly: a word inserted mid-list, an extension with one line between, a line in another `.gitignore` section.
@@ -940,3 +986,37 @@ Checked in 3.1. How: Local is a throwaway Copier template and repo in a scratch 
 - **E16. `license_template` behaviour.** Whether changing it later forces the repo to be replaced, and which name the copyright line uses (Proposed map, Docs). Finding: changing it doesn't replace the repo, and doesn't change `LICENSE` either. In provider 6.6.0 (the lock's version), `license_template` isn't `ForceNew`. Terraform never reads it back, and the repo edit API has no licence parameter, so a later change applies in place and does nothing. A throwaway repo created with `license_template: mit` got `Copyright (c) 2026 Brownserve`: the org's display name and the creation year.
 - **E17. README scaffold vs `auto_init`.** `auto_init` already writes `README.md` (`modules/github-brownserve_repo/repository.tf:9`), so a Copier scaffold under `_skip_if_exists` would be skipped. Not checked against a Brownserve repo (Proposed map, Docs). Finding: confirmed with a stand-in for `auto_init`'s README: `copier copy` reported `README.md` as a conflict and skipped it. A later template change to a `_skip_if_exists` file never reached the repo either.
 - **E18. CI app key as a Dependabot secret.** Variant G needs the App key as a Dependabot secret set by Terraform (UDF `:207`, V9 `:301`). Docs half: yes. A Dependabot-triggered run gets only Dependabot secrets. Provider 6.6.0 has `github_dependabot_organization_secret` with `selected` visibility, so the App key can follow `brownserve_ci_app_repos` like the Actions secret does (`apps.tf:90-96`), as a second resource on the same list. Whether a push with it triggers CI is still V9.
+- **E19. Stub inputs and secrets against the pinned workflow.** Whether GitHub checks a stub's `with:` and `secrets:` against the workflow its pin names (X3). Finding: confirmed on `copier-test`. Three cases failed at startup with no jobs:
+  - An input the workflow doesn't declare: "Invalid input, bar is not defined in the referenced workflow."
+  - A required input left out: "Input req is required, but not provided while calling."
+  - A secret passed explicitly that the workflow doesn't declare: "Invalid secret, mysecret is not defined in the referenced workflow."
+
+  `secrets: inherit` to a workflow that declares no secrets ran fine. The error text shows only on the run's web page, not in `gh run view`. GitHub's workflow syntax docs say the same.
+- **E20. Dependabot on Copier template source.** Whether the template repo's Dependabot can bump pins inside the template's own files (A4). Finding: only under narrow conditions.
+  - From dependabot-core:
+    - For a directory other than `/`, `github-actions` lists only that exact directory, with no `.github/workflows` lookup and no recursion (`github_actions/file_fetcher.rb#L90-L111`).
+    - Files must be named `.yml` or `.yaml` (`constants.rb#L21`) and parse as YAML with a top-level `jobs` or `runs` (`workflow_file.rb#L26-L41`).
+    - Updates are byte-offset edits, so comments survive.
+  - Live on `copier-test`:
+    - A `.jinja` suffix wasn't found.
+    - `[% if %]` on its own line failed with `dependency_file_not_parseable`.
+    - An entry at the template root found nothing (`dependency_file_not_found`).
+    - It worked with four settings together: `_templates_suffix: ""`, the entry at the exact `template/.github/workflows`, control flow hidden in YAML comments (`line_statement_prefix: "#%"`), and variables in quoted values. Dependabot opened PRs and left the `#%` lines alone, and Copier 9.18.2 rendered the result.
+    - Not tested: if/else branches that set the same key, which a YAML parse would collapse.
+  - A pins file works with no constraint on the templates (local, Copier 9.18.2):
+    - The pins file is a real workflow in the template repo (`.github/workflows/pins.yaml`, `on: workflow_dispatch`, every job `if: false`) that Dependabot bumps natively.
+    - A template reads it with `[% include %]` and `regex_search`, which keeps the `# vX.Y.Z` comment (`from_yaml` drops it).
+    - Copier's Jinja loader is rooted at the template repo (`_jinja_ext.py` L51-81, `_main.py` L712-734), so the include reaches it, and the pins file doesn't reach rendered repos.
+    - `_external_data` can't read it, because it resolves against the destination (`_main.py` L330-370).
+  - The test PRs on `copier-test` were closed, which may stop Dependabot proposing those versions there again.
+- **E21. `exclude-paths` for `github-actions`.** Whether a repo's Dependabot can skip the stubs and still bump the maintainer's own workflows (A4). Finding: confirmed on `copier-test`.
+  - With the stubs excluded by exact name and by glob, the PR touched only the maintainer's workflow ("Filtered from 7 to 5 entries").
+  - It's set per `updates` entry and applies to version updates only (GA 2025-08-26).
+  - Globs (`*`, `**`) are relative to the entry's directory and apply to directory listings only, and a bare `*` can cross `/` (`common/lib/dependabot/file_filtering.rb#L10-L67`).
+  - Not established: whether security updates honour it.
+  - `ignore: dependency-name` would hide Brownserve refs in every file instead.
+- **E22. Dependabot and the dev container reference.** Whether any ecosystem bumps the image tag or Feature versions in `devcontainer.json`, in a repo or in the template (A4, A7). Finding: Features only.
+  - `devcontainers` bumps Feature versions (`feature_dependency_parser.rb#L50-L102`) and finds the file in non-standard directories (`file_fetcher.rb#L27-L73`), but only if it's named exactly `devcontainer.json`.
+  - It doesn't touch `image:`, and `docker` ignores `devcontainer.json`, so nothing bumps an image tag.
+  - A `devcontainer.json` with Jinja in it ran green and opened no PR.
+  - Not tested together: a plain `devcontainer.json` in the template repo bumped by `devcontainers`, read by the template the way E20's pins file is.
