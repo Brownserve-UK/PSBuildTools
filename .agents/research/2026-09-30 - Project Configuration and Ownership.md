@@ -781,7 +781,7 @@ The repo from the end of Trace B (`rust-app` + `container` + `docs-astro`) remov
 
 Not started.
 
-3.1 is an exploration session. It works through the E entries in the [Register](#register), using a throwaway Copier template in a scratch directory for the Local ones and the `copier-sandbox` repo for anything that needs GitHub. Each finding is recorded against its E entry, and any map row or problem it changes is updated.
+3.1 is an exploration session. It works through the E entries in the [Register](#register), using a throwaway Copier template in a scratch directory for the Local ones and the `copier-test` repo for anything that needs GitHub. Each finding is recorded against its E entry, and any map row or problem it changes is updated.
 
 Decisions then run from 3.2 to 3.22 in the order of the Register's Step column.
 
@@ -895,7 +895,7 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 
 ### To verify
 
-Checked in 3.1. How: Local is a throwaway Copier template and repo in a scratch directory, Docs is vendor documentation, GitHub is the `copier-sandbox` repo.
+Checked in 3.1. How: Local is a throwaway Copier template and repo in a scratch directory, Docs is vendor documentation, GitHub is the `copier-test` repo.
 
 | ID | Summary | How | Needed by |
 | --- | --- | --- | --- |
