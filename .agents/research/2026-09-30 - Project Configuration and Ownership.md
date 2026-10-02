@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 3: Decisions.** 3.1 done: every E entry is checked and Q2 to Q4 are answered, with results in [To verify](#to-verify). 3.2 done: A4 decided (D2), with X3 and E19 to E22 added. Left open: E12 for NuGet, running the lint CI actions (E9), Feature pins end to end (E22), and security updates against `exclude-paths` (E21). E18's run is moot. B2 is deferred to the build restructure. Next: 3.3, A8.
+**Phase 3: Decisions.** 3.1 done: every E entry is checked and Q2 to Q4 are answered, with results in [To verify](#to-verify). 3.2 done: A4 decided (D2), with X3 and E19 to E22 added. Left open: E12 for NuGet, running the lint CI actions (E9), Feature pins end to end (E22), and security updates against `exclude-paths` (E21). E18's run is moot. B2 is deferred to the build restructure. 3.3 written up as provisional: A8 (marker comments), with X4, X5 and E23 to E27 added; the maintainer may probe it further. Copier itself is to go to a trial and may be replaced by our own sync (Q12). Next: 3.3 review, then 3.4, A9.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -72,7 +72,7 @@ These describe what a word refers to, not decisions. New terms are added as they
 | **Writer** | Any person or automation that changes a file, e.g. the maintainer, Dependabot, the sync mechanism. |
 | **Owner** | A writer that is *allowed* to change a given file, or a given part of one. Ownership is the rule; writing is the act. |
 | **Maintainer** | The people responsible for a repository. |
-| **Sync mechanism** | Whatever brings shared files in a repository up to date with their central source. Provisionally Copier, per [Updating Distributed Files](./2026-09-30%20-%20Updating%20Distributed%20Files.md). |
+| **Sync mechanism** | Whatever brings shared files in a repository up to date with their central source. Provisionally Copier, per [Updating Distributed Files](./2026-09-30%20-%20Updating%20Distributed%20Files.md), pending a trial (Q12). |
 | **Local customisation** | A change the maintainer makes in one repository to a file that comes from somewhere shared, e.g. extra cSpell words, a manually defined `.gitignore` entry. Dependabot's edits are tracked separately. |
 | **Map** | A table of where each piece of content in a repository comes from and how it gets there. Phase 2 builds one for today and one proposed. |
 | **Route** | How content gets from where it comes from to where it's used, e.g. the generator, a Dependabot PR, a hand edit. Each piece of content should have exactly one. |
@@ -609,7 +609,7 @@ Brownserve refs (`Brownserve-UK/*` actions, `Brownserve.*` packages) are grouped
 
 No research doc distributes the `Cargo.toml` files, `Cargo.lock` or `image/Dockerfile`. `UpdateCargoVersion` moves into the task package unchanged (IBT `:38`, `:114`), so T3 carries over and keeps its ID.
 
-- **Local edits to `dependabot.yml`:** the file is owned by the template (UDF `:79`), but Copier's 3-way merge keeps a maintainer's local `ignore` rule (UDF `:135`). Only matters on removal. Covered in Trace C.
+- **Local edits to `dependabot.yml`:** the file is owned by the template (UDF `:79`), but the merge keeps a maintainer's additions: whole entries below a marker at the end of `updates:`, and edits inside a template entry until the template changes it (3.3). Per-repo ignores can use `@dependabot ignore` instead (E26). Removal is covered in Trace C.
 - **Ecosystem labels:** `nuget` adds a third ecosystem with no Terraform label (Q3). Covered under GitHub settings.
 
 **Dev environment**
@@ -620,14 +620,14 @@ No research doc distributes the `Cargo.toml` files, `Cargo.lock` or `image/Docke
 | Dev container reference (image tag or Feature versions) | Template | `copier copy` |
 | Dev container toolset (today's `.devcontainer/Dockerfile`) ⚠ A7 | Not settled | Dev container build |
 | `extensions.json`, template entries | Template | `copier copy` |
-| `extensions.json`, maintainer additions ⚠ A8 | Maintainer | Hand edit |
+| `extensions.json`, maintainer additions (below the marker, 3.3) | Maintainer | Hand edit |
 | `settings.json`, template settings (including cSpell) | Template | `copier copy` |
-| `settings.json`, maintainer edits ⚠ A8 | Maintainer | Hand edit |
+| `settings.json`, maintainer edits (below the marker, 3.3) | Maintainer | Hand edit |
 | `.editorconfig` | Template | `copier copy` |
 
 References: the devcontainer files become class 1 plus a class 4 stub, through published images (Dependabot `docker`) or dev container Features (Dependabot `devcontainers`) (UDF `:94`, D4 `:283`). After 3.2 the template owns the reference, and only Features have a Dependabot route to bump it there (E22). `.editorconfig` is class 4 (UDF `:98`). `extensions.json` and `settings.json` are class 5 (UDF `:99`). cSpell words are class 3, since `import` can reach a shared list on disk (UDF `:97`, V6 `:298`, E9). If CI checks spelling, the stub is a `cspell.json`, as the CLI doesn't read `settings.json`, and the template's `settings.json` points the editor's "add word" at it (E9). `.editorconfig` sections follow the capabilities: Rust and TOML from `rust-app`, Dockerfile and shell from `container` (UDF `:134`, `:244`).
 
-- **Manual sections:** `.editorconfig` loses its manual section marker; the 3-way merge carries a local rule instead (UDF `:245`). `bsdev`'s is empty, so it has no maintainer row.
+- **Manual sections:** `.editorconfig` keeps a marker comment, which nothing parses, and local rules go below it (3.3). `extensions.json` and `settings.json` gain one. `bsdev`'s `.editorconfig` section is empty, so it has no maintainer row.
 - **Removal:** today's add-only merge leaves a removed capability's extensions and settings behind (see the Phase 1 Dev environment table). Capability conditionals should remove them instead. Covered in Trace C.
 - **Repeated information:** Ubuntu focal moves into the published image, so its three copies go. Whether the stub still carries the extension list is Q6.
 - **Ecosystem labels:** the `/.devcontainer` entry adds another ecosystem with no Terraform label. Covered under GitHub settings.
@@ -638,14 +638,14 @@ References: the devcontainer files become class 1 plus a class 4 stub, through p
 | Thing | Comes from | Gets there by |
 | --- | --- | --- |
 | `.gitignore`, template sections | Template | `copier copy` |
-| `.gitignore`, maintainer additions (`image/proto/node_modules/`) ⚠ A8 | Maintainer | Hand edit |
+| `.gitignore`, maintainer additions (`image/proto/node_modules/`, below the marker, 3.3) | Maintainer | Hand edit |
 | `.markdownlint.json` ⚠ A9 | Template | `copier copy` |
 
 References: `.gitignore` is class 5 (UDF `:99`). Its sections follow the capabilities: `target/` and `**/*.rs.bk` from `rust-app`, `.docker/` from `container` (UDF `:134`, `:244`). `.markdownlint.json` is class 3: `extends` reaches a shared file on disk without npm, though not a URL (UDF `:96`, V6 `:298`, E9).
 
 - **Paket entries:** an unconditional template section, since every repo has the build. `paket.lock` and `paket-files/` go (Paket `:170`). The new `packages.lock.json` has to be committed, because Dependabot bumps it with the manifest (Paket `:97`); today's comment says the lock is ignored on purpose (`.gitignore:4`). `packages/` stays only if restore stays repo-local (Paket D4, `:179`). The restore project's `obj/` and `bin/` need ignoring (Paket V8, `:195`).
 - **V6 holds (E9):** `.markdownlint.json` becomes an `extends` stub, still through `copier copy`, plus a shared file on disk. Where that file lives is Q9.
-- **Manual sections:** `.gitignore` loses its manual section marker; the 3-way merge carries a local line instead (UDF `:245`).
+- **Manual sections:** `.gitignore` keeps a marker comment, which nothing parses, and local lines go below it (3.3).
 - **Removal:** dropping a capability should drop its ignore lines. Covered in Trace C.
 - **`docs-astro`:** adds a template section: `node_modules/`, plus `dist/` and `.astro/` under the docs path, which Copier needs to render them (A1). Whether to anchor `node_modules/` to the docs path is Q7. Whether `package-lock.json` is ignored follows B4. `.markdownlint.json` is one config for every type today (`Compare-BrownserveRepository.ps1:803`), and Astro doesn't change it.
 
@@ -659,13 +659,13 @@ References: `.gitignore` is class 5 (UDF `:99`). Its sections follow the capabil
 | `LICENSE` | GitHub's licence list, chosen in Terraform | Repo creation |
 | `CLAUDE.md` | Maintainer | Hand edit |
 | `CONTRIBUTING.md`, baseline and capability sections | Template | `copier copy` |
-| `CONTRIBUTING.md`, repo additions ⚠ A8 | Maintainer | Hand edit |
+| `CONTRIBUTING.md`, repo additions (below the marker, 3.3) | Maintainer | Hand edit |
 | `pull_request_template.md`, baseline and capability items | Template | `copier copy` |
-| `pull_request_template.md`, repo additions ⚠ A8 | Maintainer | Hand edit |
+| `pull_request_template.md`, repo additions (below the marker, 3.3) | Maintainer | Hand edit |
 | `docs-astro` scaffold (`package.json`, `astro.config.mjs`, `index.astro`) ⚠ T5 | Template | `copier copy` (scaffold) |
 | `docs-astro` site content after scaffolding | Maintainer | Hand edit |
 
-References: CONTRIBUTING and the PR template are class 2 (org `.github` defaults) or class 4 (UDF `:95`, D3 `:282`). `CHANGELOG.md` is a class 6 scaffold through `_skip_if_exists` (UDF `:81`, `:102`, `:138`). Capability sections follow the capabilities (UDF `:134`, `:244`); a repo addition is carried by the 3-way merge (UDF `:245`), or the file is ejected (UDF `:246`).
+References: CONTRIBUTING and the PR template are class 2 (org `.github` defaults) or class 4 (UDF `:95`, D3 `:282`). `CHANGELOG.md` is a class 6 scaffold through `_skip_if_exists` (UDF `:81`, `:102`, `:138`). Capability sections follow the capabilities (UDF `:134`, `:244`); a repo addition is carried by the merge below a marker comment (UDF `:245`, 3.3), or the file is ejected (UDF `:246`).
 
 - **Per-repo variation:** CONTRIBUTING and the PR template share a baseline, and repos (even with the same capabilities) add their own items (confirmed by the maintainer). That rules out class 2: GitHub only falls back to the org copy when the repo has none (UDF `:77`), and doesn't merge the two, so one extra item would cut the repo off from baseline updates. Today nothing carries a repo addition: both files are compared whole and replaced (`Compare-BrownserveRepository.ps1:1962-1974`, `:2019-2031`), with no manual section marker.
 - **`container` gap:** what a `container` section would hold is Q8.
@@ -825,6 +825,70 @@ D can get its versions two ways:
 - A7: image tags have no Dependabot route (E22).
 - A13 and B3: shared workflow changes now arrive in a template sync PR, not a Dependabot PR, and B3's two hops become three.
 
+### 3.3 A8: template and repo lines in the same file
+
+**Question.** How do a repo's own lines in a file the template renders survive template releases and capability changes, and what happens when the template later adopts one? Covers B7 (adding) and C3 (removing), merged into A8.
+
+**Files in scope for `bsdev`.**
+
+| File | Template part | Repo part today |
+| --- | --- | --- |
+| `.gitignore` | Capability sections | `image/proto/node_modules/` (`:31`) |
+| `.editorconfig` | Capability sections | None (manual section empty, `:46`) |
+| `extensions.json`, `settings.json` | Capability entries, settings | None; repo words move to `cspell.json` (E9) |
+| `CONTRIBUTING.md`, PR template | Baseline and capability items | None; other repos add items |
+| `dependabot.yml` | Ecosystem entries, `exclude-paths` | None; repos may add an entry, an `ignore` rule or a group |
+
+Out of scope: the template's cSpell words (E9), `.markdownlint.json` (A9), version lines (3.2).
+
+**Today.** `.gitignore` and `.editorconfig` keep a manual section after a marker the generator parses, and everything above it is regenerated; a `.gitignore` without the marker stops generation. The VS Code files are merged add-only, and CONTRIBUTING and the PR template are replaced whole (see the Phase 1 Dev environment, Repository hygiene and Docs tables).
+
+**How Copier merges.** `copier update` isn't a line-level 3-way merge. It diffs the old render against the repo, replays that diff onto the new render with `git apply`, which finds each hunk by three lines of context at any offset, and falls back to `git merge-file` only for hunks that don't apply (E24). Line numbers don't matter, so a template that grows doesn't move a repo edit. A hunk whose context also appears elsewhere can apply in the wrong place with no conflict (X4).
+
+**Options.**
+
+| Option | What it does | Result |
+| --- | --- | --- |
+| A | Accept conflicts; the sync PR shows them | Conflicts on any template change next to a repo line (E2). Needs X1's check |
+| B | A fixed marker comment the template never changes, with repo additions below it | Clean on releases, adding and removing capabilities (E23). Nothing parses it, so a missing marker falls back to A |
+| C | The template inserts in sorted order | Fewer conflicts, not none. Wrong where order matters |
+| D | Repo additions as answers, rendered by the template | Each change needs `copier update --data`; a hand-edited answers file doesn't reach the file (E23). Editor writes bypass it |
+| E | Nested `.gitignore` or `.editorconfig` | Path-scoped rules only |
+| F | Eject (UDF `:246`) | Loses template updates for that file |
+
+**Edits inside template sections.** Kept while the template leaves the section alone, and a visible conflict when it changes it (E24). In `bsdev`'s `.editorconfig`, a repo `indent_size = 2` in the PowerShell section survived a release that grew the file and changed TOML, and the removal of either capability; a release adding a PowerShell property conflicted. The exception is X4.
+
+**Promotion.** When the template adopts a line a repo already has, the merge keeps both copies with no conflict (X5, E25). That's harmless in `.gitignore` and `extensions.json`, visible in Markdown, and an editor warning in `settings.json`. In `.editorconfig` and `settings.json` the repo's copy wins, so a different value hides the new default. GitHub rejects a duplicate `dependabot.yml` entry (E26). A version-gated migration removed the exact copy in every file; a copy with a different value needs a person.
+
+**Resolving conflicts.** Copier has no ours/theirs option; `--conflict` only picks inline markers or `.rej` files. It does record the conflict in git's index, so straight after `copier update` the merge editor and `git mergetool` work. The sync commits the markers, which clears that, and GitHub's UI has nothing for markers inside a committed file. VS Code's merge-conflict buttons read the markers from the text and run in github.dev too, so on the sync PR's branch each conflict gets Accept Current (the repo) or Accept Incoming (the template) (E27). Considered and not needed: PR comment commands that re-run the update and resolve a file one way, and review suggestions per conflict.
+
+**Decision (provisional).** B, with:
+
+- One marker per file, at the end of the template's lines (`#`, `//` or `<!-- -->`); in `dependabot.yml`, at the end of `updates:`. A marker never changes, is unique in its file and ends with a newline.
+- Repo edits inside template sections allowed. A conflict is resolved on the sync PR's branch with VS Code's Accept buttons: in github.dev (`.` on the PR) for simple cases, locally for anything harder (E27).
+- The template sync passes `--context-lines 5` (X4) and fails on conflict markers (X1).
+- A release that promotes a repo line ships a migration removing the exact copy, and CI flags any duplicate the migration can't remove (X5).
+- In `dependabot.yml`, a repo adds whole entries below the marker, never a second entry for an ecosystem and directory the template covers (E26). Per-repo ignores use `@dependabot ignore` where they fit, otherwise an edit inside the template's entry (A).
+- In the JSON files the template's last entry carries a trailing comma, which VS Code accepts (E25). The first line added through the editor lands above the marker and is moved by hand (E23).
+
+Confidence: medium. To be probed further by the maintainer. Not settled:
+
+- CONTRIBUTING and the PR template: one marker, or one per section repos extend. Depends on whether repos add items to existing sections or whole sections.
+- Per-entry markers in `dependabot.yml`, if repo edits inside template entries turn out to be common (X4).
+- How GitHub treats duplicate keys in one Dependabot entry, and whether a name-only `ignore` blocks security PRs (E26).
+- What a migration failing partway leaves behind (E25).
+- The resolution path in github.dev (E27).
+
+**Knock-on.**
+
+- UDF:
+  - R5 (`:135`) and "Let the 3-way merge carry it" (`:245`) describe a 3-way merge; it's a diff replay with a fallback (E24). A local addition is still carried, anchored by a marker.
+  - `--context-lines` is CLI only, so the sync (`:141`) sets it.
+- Proposed map: `.gitignore` and `.editorconfig` keep a marker comment rather than losing it, and the Markdown and JSON files gain one.
+- B7's objection to a fixed last line ("a manual marker under another name") no longer holds: nothing parses the marker, so a missing one falls back to A rather than stopping generation.
+- B1: adding and removing a capability merged cleanly with markers (E23).
+- Copier itself stays provisional (Q12).
+
 ## Register
 
 The single list of problems, open questions and things to check. The maps and traces refer to entries by ID. The prefix records where an entry came from: T from today's map, A, B and C from Traces A, B and C, Q for open questions, E for things to check, and X for problems found in Phase 3. Merged and cleared entries keep their text so the traces still read correctly.
@@ -849,7 +913,7 @@ Step is the Phase 3 step that settles the entry; F means the final pass.
 | A5 | Publish targets have two homes | C2 | 3.17 | Open |
 | A6 | Nothing creates or checks maintainer-written files | | 3.10 | Open |
 | A7 | Dev container toolset has no source | A4, E14, E22 | 3.6 | Open |
-| A8 | Template and repo lines next to each other conflict | E2, E9 | 3.3 | Open |
+| A8 | Template and repo lines next to each other conflict | E2, E9, E23 to E27 | 3.3 | Provisional (3.3) |
 | A9 | Nothing keeps a file identical across repos | A8, E9 | 3.4 | Open |
 | A10 | Changelog scaffold not tied to its parser | | 3.12 | Open |
 | A11 | Installers not tied to the release | A6 | 3.11 | Open |
@@ -871,6 +935,8 @@ Step is the Phase 3 step that settles the entry; F means the final pass.
 | X1 | Copier doesn't report a conflict | | 3.21 | Open |
 | X2 | New template questions need a default | | 3.21 | Open |
 | X3 | Stub shape tied to its pin | E19 | 3.2 | Decided (3.2) |
+| X4 | A repo edit can move without a conflict | E24 | 3.3 | Provisional (3.3) |
+| X5 | A promoted line ends up twice | E25, E26 | 3.3 | Provisional (3.3) |
 
 Merged entries share a mechanism with the entry they're merged into; only the trigger differs (a template release, adding a capability, removing one). Paired entries have the same shape in another ecosystem, so one decision should cover both. B2 belongs to the wider build restructure (how the builds are split up, and what depends on what), so it isn't decided here. T6 and A13 are decided as ownership rules that hold whichever entry point the site build uses.
 
@@ -888,7 +954,7 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 - **A5. Publish targets have two proposed homes.** The project config holds publish targets (IBT `:142`), and dispatch inputs live in the stub (GHA `:85`). Today's `publish_to` is a per-run choice with a default (`release.yaml:5-10`). Nothing says whether the stub still offers that choice, or how its default relates to the config's list. Both follow the capabilities (`container` brings GHCR and DockerHub), so removing `container` would need both changed.
 - **A6. Nothing creates or checks the files the capabilities expect the maintainer to write.** The shared tasks assume the root `Cargo.toml` has `[workspace.package]` with a `version` (`build_tasks.ps1:316-320`, or `StageRelease` fails), the binary in `cli/Cargo.toml` is named `BinaryName` (`:567-571`, or `Package` can't find it), and a Dockerfile sits in the Docker context (`:131`, `:184`, or `BuildImage` fails). The binary name and Docker context are also in the project config (IBT `:142`), with no route between the two. A new `rust-app` repo made with `cargo new` has no `[workspace.package]`, so it builds and tests fine until its first `StageRelease`. The research's scaffold class (class 6) lists only `LICENSE`, `CHANGELOG.md`, `README.md` and the Astro scaffold (UDF `:81`, `:102`).
 - **A7. The dev container toolset has no settled source.** `bsdev` needs PowerShell (every repo, because the build runs in `pwsh`), Rust (`rust-app`) and Docker tooling (`container`, missing today, see the Phase 1 Dev environment table). A dev container uses one image, so an image per capability can't be combined, and an image per combination grows with every new mix. A base image plus one Feature per capability combines, but each Feature has to be built and published. Images or Features is still open (UDF D4, `:283`), and no research doc says which repo builds and publishes them, or with what workflow. `docs-astro` adds Node, which no dev container installs today (`SkillsRepo` has none: `Compare-BrownserveRepository.ps1:784-793`, `:893`). Upstream Features exist for Node and every other capability's tooling (E14), so the Features route may need no Brownserve build. No Dependabot ecosystem bumps an image tag in `devcontainer.json`, so on the image route the template's tag has no update route (E22).
-- **A8. Additions from the template and the repo to the same list can conflict.** When both append to the end of a list in a class 5 file, their edits touch the same or adjacent lines. In JSON, appending also adds a comma to the previous last line. If the maintainer adds `"bsdev"` after `"yzhang"` in the cSpell words (`settings.json:15`), and the next template release also adds a word at the end, both sides change `"yzhang"` to `"yzhang",` and `copier update` commits a conflict. UDF's "a cSpell word the template didn't touch is kept" (`:135`) holds only when the template's change is elsewhere in the list. The same applies to `extensions.json` and `.gitignore`. Confirmed (E2). Only the appended lines conflict, and a template edit with at least one unchanged line between it and the repo's merges cleanly, so a template that inserts mid-list rather than appending avoids it, unless the repo has edited next to the same point. V6 holds (E9), so the template's cSpell words move to a read-only shared list and drop out of this. The repo's own words stay in the stub, which the template doesn't add to, and the extension inserts them alphabetically rather than appending.
+- **A8. Additions from the template and the repo to the same list can conflict.** When both append to the end of a list in a class 5 file, their edits touch the same or adjacent lines. In JSON, appending also adds a comma to the previous last line. If the maintainer adds `"bsdev"` after `"yzhang"` in the cSpell words (`settings.json:15`), and the next template release also adds a word at the end, both sides change `"yzhang"` to `"yzhang",` and `copier update` commits a conflict. UDF's "a cSpell word the template didn't touch is kept" (`:135`) holds only when the template's change is elsewhere in the list. The same applies to `extensions.json` and `.gitignore`. Confirmed (E2). Only the appended lines conflict, and a template edit with at least one unchanged line between it and the repo's merges cleanly, so a template that inserts mid-list rather than appending avoids it, unless the repo has edited next to the same point. V6 holds (E9), so the template's cSpell words move to a read-only shared list and drop out of this. The repo's own words stay in the stub, which the template doesn't add to, and the extension inserts them alphabetically rather than appending. Provisionally decided in 3.3: a marker comment the template never changes, with repo additions below it.
 - **A9. Nothing keeps a file identical across repos once Copier merges.** Today `.markdownlint.json` is overwritten whole so that no repo drifts (`Compare-BrownserveRepository.ps1:1704-1748`). Copier's 3-way merge keeps any local edit the template didn't touch (UDF `:135`). That includes class 4 files, whose "overwrite is fine" (UDF `:79`) isn't how Copier updates them. As class 3, the local half exists to hold local rules (UDF `:78`, `:245`). Either way a repo could switch a rule back on and keep it on without ejecting, though ejecting is the research's visible route for divergence (UDF `:246`). The research doesn't say whether the "no local changes" rule should survive.
 - **A10. Nothing ties the changelog scaffold to the parser that reads it.** Today the header and its `v0.0.0` placeholder come from `New-BrownserveChangelogHeader.ps1:7-20`, and `Read-BrownserveChangelog` detects that exact placeholder (`Read-BrownserveChangelog.ps1:203`). Both live in PSBuildTools and release together. As a scaffold, the placeholder moves into the template, while the parser stays in a Brownserve module the task package uses. If the parser's format changes, a repo set up from an older template release gets a placeholder the parser doesn't recognise, and its first staged release treats `v0.0.0` as a real release. It only matters before a repo's first release.
 - **A11. Nothing ties the installers to the release they install.** Each installer hard-codes the asset name (`install.sh:42`, `install.ps1:26`), the targets (`install.sh:26`, `:32`, `install.ps1:25`) and the binary name (from the repo name). In the proposal these are decided by the task package's `Package` task (IBT `:131`), the `release` stub's targets input (GHA `:133`) and the project config (IBT `:142`). Nothing checks them today either (see the Phase 1 Install scripts table), but today the installers and the build tasks come from the same generator and change together. Proposed, they have separate owners and releases. If a task package major release changes the asset layout (a breaking change, IBT `:182`), or the stub drops `aarch64-apple-darwin`, CI stays green and the breakage only shows up when someone runs the `README.md` one-liner.
@@ -910,6 +976,8 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 - **X1. `copier update` exits 0 when it writes a conflict.** The markers are left inline and the file shows as unmerged (`UU`), but the exit code is the same as a clean update (E1). The template sync (UDF `:141`, `:235`) has to check for conflicts itself, e.g. with `git diff --check`, or it opens PRs with markers in them.
 - **X2. A template release that adds a required question with no default stops the template sync.** `copier update --defaults` fails and writes nothing (E5), so every repo stays on the old release until someone passes the answer by hand. Any question added after the first release needs a default, or one worked out from other answers.
 - **X3. A stub's shape is tied to the version its pin names.** GitHub checks the stub's `with:` and `secrets:` against the pinned workflow. A run fails at startup, with no jobs, if the stub passes an input or secret the workflow doesn't declare, or leaves out a required input (E19). If the pin and the rest of the stub move separately, every run in between can fail. The 3-way merge succeeds either way, so nothing flags it before the run.
+- **X4. A repo edit can move to the wrong place without a conflict.** `copier update` replays the repo's diff with `git apply`, which finds each hunk by three lines of context anywhere in the file (E24). When a template change leaves another spot that looks the same, the edit lands there and the update reports success. Seen on capability removal in `dependabot.yml` and `.editorconfig`, whose entries and sections end with identical lines: a `cargo` `ignore` rule moved into the `github-actions` entry, and a `[*.rs]` line into the PowerShell section. A unique marker per entry, or `--context-lines 5`, turned each case into a conflict, but identical per-entry markers still moved with 5.
+- **X5. A line the template adopts from a repo ends up twice.** The merge keeps the repo's copy below the marker and adds the template's, with no conflict (E25). The repo's copy wins in `.editorconfig` and `settings.json`, so a repo with a different value silently keeps it, and GitHub rejects a duplicate `dependabot.yml` entry (E26). A version-gated migration removes identical copies only.
 
 ### Open questions
 
@@ -926,6 +994,7 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 | Q9 | Where the shared markdownlint file lives | 3.4 |
 | Q10 | Docs-only deploy trigger | 3.14 |
 | Q11 | Conventional Commits types in two sources | F |
+| Q12 | Copier or our own sync mechanism | F |
 
 - **Q1. `removed` vs `removal` label.** `label-pr.yaml:88` applies `removed`, but Terraform defines `removal` (`modules/github-brownserve_repo/issues.tf:93`). Terraform's labels are authoritative (`issues.tf:2-3`). This isn't specific to `rust-app` or `container`, but it's two sources of the same information that disagree. The changelog groups entries by these labels, so the mismatch reaches `CHANGELOG.md` too.
 - **Q2. Dependabot `docker` entry may do nothing.** `image/Dockerfile:8` uses `archlinux:latest` with no version or digest. Dependabot bumps versioned tags or digests, so this entry (`dependabot.yml:18-23`) probably never opens a PR. Confirmed from Dependabot's source: `latest` isn't a version tag, so the update checker treats it as up to date and never opens a PR. With a digest pinned (`archlinux:latest@sha256:…`) it would bump the digest.
@@ -938,10 +1007,11 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 - **Q9. Where does the shared markdownlint file live?** If E9 holds, `.markdownlint.json` becomes an `extends` stub plus a shared file (UDF `:96`). No research doc says where the shared file lives or how it reaches the repo. E9 rules out a URL. A restored package under `packages/` works if restore stays repo-local (Paket D4, `:179`), but markdownlint crashes in the editor until the restore runs. The shared cSpell list faces the same choice, and needs `readonly` so the editor doesn't offer to add words to it.
 - **Q10. How is a docs-only deploy triggered?** Today the deploy runs only after `release` (`skillsrepo_github_release.yaml.template:64`), which is `workflow_dispatch` (`:4`), so a docs-only fix waits for the next release. The maintainer wants a way to trigger the docs deploy manually on its own.
 - **Q11. Conventional Commits types are stated in two separately released sources.** The table stays in the template's CONTRIBUTING, while the title-to-label mapping moves to the shared workflows (GHA D7). Today both come from the generator, so they at least change together.
+- **Q12. Copier or our own sync mechanism.** The decisions assume Copier (UDF), but 3.3 found sharp edges: a diff replay rather than a 3-way merge (E24), edits that move without a conflict (X4), promoted lines kept twice (X5) and a zero exit on conflict (X1). The maintainer expects to take Copier to a trial and may roll our own instead. Decisions that rest on Copier's behaviour cite an E entry, so they can be rechecked against whatever is chosen.
 
 ### To verify
 
-Checked in 3.1; E19 to E22 in 3.2. How: Local is a throwaway Copier template and repo in a scratch directory, Docs is vendor documentation, GitHub is the `copier-test` repo.
+Checked in 3.1; E19 to E22 in 3.2; E23 to E27 in 3.3. How: Local is a throwaway Copier template and repo in a scratch directory, Docs is vendor documentation, GitHub is the `copier-test` repo.
 
 | ID | Summary | How | Needed by | Result |
 | --- | --- | --- | --- | --- |
@@ -967,6 +1037,11 @@ Checked in 3.1; E19 to E22 in 3.2. How: Local is a throwaway Copier template and
 | E20 | Dependabot on Copier template source | Docs, then GitHub | A4 | Constrained only; pins file works |
 | E21 | `exclude-paths` for `github-actions` | Docs, then GitHub | A4 | Confirmed |
 | E22 | Dependabot and the dev container reference | Docs, then GitHub | A4, A7 | Features only |
+| E23 | A marker line under Copier's merge | Local | A8 | Confirmed |
+| E24 | How `copier update` merges | Local | A8, X4 | Diff replay; can move edits |
+| E25 | Promotion and duplicates | Local | A8, X5 | Both copies kept |
+| E26 | Dependabot per-repo variation | Docs | A8, X5 | Duplicate entries rejected; keys open |
+| E27 | Resolving a conflict in the sync PR | Local | A8 | VS Code buttons work from the text; github.dev not run |
 
 - **E1. Copier keeps a Dependabot bump the template didn't touch.** Copier's 3-way merge should keep a line Dependabot changed when the template leaves it alone, and commit a conflict when both change it (UDF `:135`, `:147`, V1 `:293`). Finding: confirmed with Copier 9.18.2. A Dependabot bump to `@v1.2.0` survived a template release that added a line two lines above it. When the next release moved the template's pin from `v1.0.0` to `v1.1.0`, `copier update` wrote inline conflict markers on that line. Moving it to `v1.2.0`, the value Dependabot had already set, merged cleanly. Copier exits 0 either way (X1).
 - **E2. Copier merge of appends at the same point in a list.** When the template and the repo both add to the end of a list, including JSON's comma on the previous last line, `copier update` is expected to conflict (A8, B7, C3). Finding: confirmed. When the repo and template both appended to the end of the cSpell words, the extensions list and a `.gitignore` section, all three conflicted. The comma both sides added to the previous last line merged; only the appended lines conflicted. Template edits with at least one unchanged line between them and the repo's edit merged cleanly: a word inserted mid-list, an extension with one line between, a line in another `.gitignore` section.
@@ -1020,3 +1095,44 @@ Checked in 3.1; E19 to E22 in 3.2. How: Local is a throwaway Copier template and
   - It doesn't touch `image:`, and `docker` ignores `devcontainer.json`, so nothing bumps an image tag.
   - A `devcontainer.json` with Jinja in it ran green and opened no PR.
   - Not tested together: a plain `devcontainer.json` in the template repo bumped by `devcontainers`, read by the template the way E20's pins file is.
+- **E23. A marker line under Copier's merge.** Whether a fixed comment the template never changes keeps repo lines below it out of conflicts (A8). Finding: confirmed with Copier 9.18.2.
+  - Clean in `.gitignore`, JSONC (a `//` marker, the template's last entry with a trailing comma) and a Markdown checklist (`<!-- -->`): a release appending directly above the marker, adding `docs-astro`, and removing `container` when its section sat directly above the marker. Also clean in a `bsdev`-shaped `.editorconfig` that grew six lines above the marker, and in `dependabot.yml` with the marker at the end of `updates:`.
+  - In Markdown the comment splits the checklist into two lists when rendered; markdownlint-cli2 0.23.3 reports nothing.
+  - VS Code's "add to recommendations" (`workspaceExtensionsConfig.ts:149`) and the Settings UI append after the last element. With nothing below the marker they write above it; once a repo line is below it, they write below. Simulated with `jsonc-parser`, not run in the editor. With repo additions above the template's lines instead, editor writes always land in the template's part.
+  - A marker with no final newline is changed by the first line appended below it, so a template addition directly above it conflicts.
+  - Repo additions as answers: a hand-edited `.copier-answers.yml` doesn't reach the file on `copier update`, because the old version is rendered with the new answer too, so the line reads as a local deletion. `copier recopy` reaches it but drops every other local edit.
+- **E24. How `copier update` merges.** What the merge does with repo edits inside and next to template lines (A8, X4). Finding, from Copier 9.18.2's source, then runs:
+  - It renders the old version, diffs it against the repo's index (`git write-tree`), renders the new version over the repo, and applies the diff with `git apply --reject`. Only files with a rejected hunk go through `git merge-file`, which writes the inline markers (`copier/_main.py:1388-1699`).
+  - The default context is 3 lines (`_main.py:267`), not 1 as the docs say (`docs/configuring.md:861`). `--context-lines` is a CLI flag only.
+  - `git apply` finds a hunk by its context at any offset, so line numbers don't matter, and a hunk can apply in the wrong place when its context appears elsewhere (the docs warn of this, `configuring.md:870-872`).
+  - Edits inside template sections: in `bsdev`'s `.editorconfig`, the PowerShell `indent_size` changed to 2 survived a release that grew the file and changed TOML, and the removal of either capability. A release adding a PowerShell property conflicted.
+  - Moves with no conflict (X4):
+    - A repo `ignore` rule in `dependabot.yml`'s `cargo` entry moved into the `github-actions` entry when `rust-app` was removed, with no marker, with identical per-entry markers, and with identical markers plus `--context-lines 5`. A unique marker per entry made it a conflict.
+    - In an `.editorconfig` where removing `rust-app` dropped `[*.rs]` but kept `[*.toml]`, a repo line at the end of `[*.rs]` moved into the PowerShell section. `--context-lines 5` made it a conflict. Where `[*.rs]` and `[*.toml]` went together, the same kind of edit conflicted.
+  - Without a marker, a repo entry at the end of `updates:` merged only when the template's new entry ended with the same lines; otherwise it conflicted.
+  - Repo additions inside a template-owned `groups:` or `ignore:` conflicted when the template appended at the same point, and merged when its change was three or more lines away.
+- **E25. Promotion and duplicates.** Whether a repo line the template later adopts merges, and what the readers do with two copies (A8, X5). Finding: both copies are kept.
+  - Below a marker, an identical promotion merged cleanly in `.gitignore`, `.editorconfig`, `extensions.json`, `settings.json`, a Markdown checklist and `dependabot.yml`, leaving two copies. A promotion with a different value did the same, with the repo's copy last. A repo line exactly where the template later adds the same text merged to one copy; with different text it conflicted.
+  - Readers:
+    - `.gitignore`: the last match wins; harmless.
+    - `.editorconfig`: later sections win (spec 0.17.2), with no warning (`editorconfig` npm 3.0.2).
+    - `settings.json`: the last key wins at runtime (`base/common/json.ts:847-857`), and the editor warns "Duplicate object key" on both (`jsonParser.ts:1525-1529`).
+    - `extensions.json`: deduped at runtime (`workspaceExtensionsConfig.ts:84`), with no warning. "Remove from recommendations" removes only the first copy (`:303-306`).
+    - Markdown: harmless and visible; markdownlint has no rule for it.
+    - Trailing commas raise no warning in either VS Code file: both schemas set `allowTrailingCommas` (`jsonValidation.ts:87-88`).
+  - A `_migrations` entry gated on the version being crossed (`new >= version > old`, `configuring.md:1428-1500`) removed the exact copies in all six files, run `after`, or `before` with `git add` (the diff reads the index, so unstaged edits are lost). It needs `--trust` and removes only identical copies. Not tested: a migration failing partway.
+  - A repo-owned sidecar read with `_external_data` doesn't help: the old and new renders can't see it, so promoted entries conflicted.
+- **E26. Dependabot per-repo variation.** Whether a repo can add entries, ignores and groups next to the template's, and what Dependabot does with duplicates (A8, X5). Finding, from GitHub's docs and dependabot-core:
+  - Two entries with the same ecosystem, directory and target branch, or overlapping `directories`, are rejected: "Update configs must have a unique combination of 'package-ecosystem', 'directory', and 'target-branch'." (quoted in rust-random/getrandom#620). The check is in GitHub's closed service. A different `target-branch` is allowed.
+  - Duplicate keys in one entry: not established. GitHub parses the file in closed code. dependabot-core's own parser is Psych (`config/file.rb:52`), last-wins, used only by its dry-run script. A last-wins parser would drop the template's `ignore` or `groups`.
+  - `groups`: a dependency goes to the first group it matches, so a repo group after the template's gets only what's left.
+  - `ignore` beats `allow`. The docs say it covers version and security updates, but `update-types` doesn't apply to security updates, and in dependabot-core a security job honours only `versions` ranges (`ignore_condition.rb:41-45`). Whether the service filters name-only ignores is open.
+  - `@dependabot ignore` comment commands are stored by GitHub, not in `dependabot.yml`, and reach jobs as ignore conditions with a version range, which security jobs honour. Listed with `@dependabot show <dependency> ignore conditions`; undone by reopening the PR or with `@dependabot unignore`. They aren't version-controlled, and Copier never sees them.
+  - No include, extends or second-file mechanism.
+- **E27. Resolving a conflict in the sync PR.** Whether a conflict can be resolved one way or the other without editing the file by hand, once the sync has committed it (A8). Finding, from Copier 9.18.2's and VS Code's source, then runs:
+  - Copier's `--conflict` takes only `inline` or `rej` (`copier/_cli.py:398-403`). It writes the markers with `git merge-file` (`<<<<<<< before updating`, `>>>>>>> after updating`) and records the conflict in the index (`_main.py:1622-1691`). In the S5 repo `git status` showed `UU .editorconfig`, with the old render, the repo's file and the new render as stages 1 to 3.
+  - Locally, straight after `copier update`, the merge editor and `git mergetool` work. `git checkout --theirs` takes the new render whole, dropping every repo line including those below the marker; `--ours` drops the template's update to that file. `git merge-file --ours`, `--theirs` or `--union` on the stages settles only the conflicting hunks: on S5, `--ours` kept the repo's Rust and TOML sections and `--theirs` took the template's removal.
+  - Committing the markers clears the stages, and GitHub's "Resolve conflicts" covers only conflicts with the base branch.
+  - VS Code's built-in merge-conflict extension finds conflicts in the text, not through git (`extensions/merge-conflict/src/mergeConflictParser.ts:10-13,44-66`), and has a browser build (`package.json:26`), so it should run in github.dev. Copier's markers match its format. Current is the repo, Incoming the template.
+  - github.dev's commits are signed, which branch protection requires (the maintainer's regular practice).
+  - Not run: resolving in github.dev itself.
