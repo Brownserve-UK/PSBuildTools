@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 3: Decisions, continued without Copier.** 3.1 to 3.5 are done. After 3.3 and 3.4, Copier was ruled out (Q12). The likely replacement is a CLI that Brownserve builds and ships, but that isn't confirmed. The decisions so far are split into ownership rules, which stand, and Copier mechanisms, which don't (see [Sync mechanism requirements](#sync-mechanism-requirements)). The Copier findings are now requirements for whatever replaces it. Steps that depend on the sync mechanism (3.9, 3.13, 3.19, 3.21, 3.22) are parked until it's chosen. The rest continue, more briefly where a step is small. Still open from earlier: E12 for NuGet, running the lint CI actions (E9), Feature pins end to end (E22), and security updates against `exclude-paths` (E21). Next: 3.6, A7.
+**Phase 3: Decisions, continued without Copier.** 3.1 to 3.6 are done. After 3.3 and 3.4, Copier was ruled out (Q12). The likely replacement is a CLI that Brownserve builds and ships, but that isn't confirmed. The decisions so far are split into ownership rules, which stand, and Copier mechanisms, which don't (see [Sync mechanism requirements](#sync-mechanism-requirements)). The Copier findings are now requirements for whatever replaces it. Steps that depend on the sync mechanism (3.9, 3.13, 3.19, 3.21, 3.22) are parked until it's chosen. The rest continue, more briefly where a step is small. Still open from earlier: E12 for NuGet, running the lint CI actions (E9), Feature pins end to end (E22), and security updates against `exclude-paths` (E21). New: the dev container base image tag and baseline Features (E29). Next: 3.7, B3.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -19,6 +19,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 - [x] 3.1 Exploration: check the E entries in the Register
 - [x] 3.2 to 3.4 Decisions: A4, A8 (provisional), A9
 - [x] 3.5 Decision: C4
+- [x] 3.6 Decision: A7
 - [x] Sync mechanism requirements, from the Copier findings
 - [ ] 3.5 to 3.20 Decisions that don't depend on the sync mechanism, skipping parked steps
 - [ ] Parked until the sync mechanism is chosen: 3.9, 3.13, 3.19, 3.21, 3.22
@@ -621,15 +622,15 @@ No research doc distributes the `Cargo.toml` files, `Cargo.lock` or `image/Docke
 | Thing | Comes from | Gets there by |
 | --- | --- | --- |
 | `devcontainer.json` stub | Template | `copier copy` |
-| Dev container reference (image tag or Feature versions) | Template | `copier copy` |
-| Dev container toolset (today's `.devcontainer/Dockerfile`) ⚠ A7 | Not settled | Dev container build |
+| Dev container reference (base image tag and Feature versions, 3.6) | Template | `copier copy` |
+| Dev container toolset: upstream Features on a stock base image (3.6) | Upstream | Dev container build |
 | `extensions.json`, template entries | Template | `copier copy` |
 | `extensions.json`, maintainer additions (below the marker, 3.3) | Maintainer | Hand edit |
 | `settings.json`, template settings (including cSpell) | Template | `copier copy` |
 | `settings.json`, maintainer edits (below the marker, 3.3) | Maintainer | Hand edit |
 | `.editorconfig`, template sections (same in every repo, 3.5) | Template | `copier copy` |
 
-References: the devcontainer files become class 1 plus a class 4 stub, through published images (Dependabot `docker`) or dev container Features (Dependabot `devcontainers`) (UDF `:94`, D4 `:283`). After 3.2 the template owns the reference, and only Features have a Dependabot route to bump it there (E22). `.editorconfig` is class 4 (UDF `:98`). `extensions.json` and `settings.json` are class 5 (UDF `:99`). cSpell words are class 3, since `import` can reach a shared list on disk (UDF `:97`, V6 `:298`, E9). If CI checks spelling, the stub is a `cspell.json`, as the CLI doesn't read `settings.json`, and the template's `settings.json` points the editor's "add word" at it (E9). `.editorconfig` sections don't follow the capabilities: the template's part is the union of every capability's sections, the same in every repo (3.5).
+References: the devcontainer files become class 1 plus a class 4 stub, through published images (Dependabot `docker`) or dev container Features (Dependabot `devcontainers`) (UDF `:94`, D4 `:283`). After 3.2 the template owns the reference, and only Features have a Dependabot route to bump it there (E22). 3.6 chose upstream Features, so no repo keeps a `.devcontainer/Dockerfile`. `.editorconfig` is class 4 (UDF `:98`). `extensions.json` and `settings.json` are class 5 (UDF `:99`). cSpell words are class 3, since `import` can reach a shared list on disk (UDF `:97`, V6 `:298`, E9). If CI checks spelling, the stub is a `cspell.json`, as the CLI doesn't read `settings.json`, and the template's `settings.json` points the editor's "add word" at it (E9). `.editorconfig` sections don't follow the capabilities: the template's part is the union of every capability's sections, the same in every repo (3.5).
 
 - **Manual sections:** `.editorconfig` keeps a marker comment, which nothing parses, and local rules go below it (3.3). `extensions.json` and `settings.json` gain one. `bsdev`'s `.editorconfig` section is empty, so it has no maintainer row.
 - **Removal:** today's add-only merge leaves a removed capability's extensions and settings behind (see the Phase 1 Dev environment table). Capability conditionals should remove them instead. Covered in Trace C.
@@ -970,6 +971,63 @@ If capability-scoped sections are wanted later, a Brownserve sync tool could bui
 - Traces: A reaches `.editorconfig` only as a baseline file, and C no longer reaches it (`:776`, `:779`). To be confirmed in F.
 - For F: check the same rule against other capability-scoped content. Content stays with a capability only if every file it covers comes and goes with it. `vscode-docker` is a likely case, since `.devcontainer/Dockerfile` uses it too.
 
+### 3.6 A7: where the dev container's tools come from
+
+**Question.** What provides the dev container's toolset, and who owns its versions?
+
+**Lines in scope for `bsdev`.** `.devcontainer/Dockerfile`, and the toolset reference in `devcontainer.json`: PowerShell (every repo), Rust (`rust-app`), Docker tooling (`container`), plus Node with `docs-astro`.
+
+**Today.**
+
+- The generator writes one Dockerfile per project type (`devcontainer_config.json`). `bsdev` gets `RustApp`'s, so it has no Docker tooling (`:14-17`).
+- Every type builds on `mcr.microsoft.com/vscode/devcontainers/base:0-focal` (`Dockerfile_*:5-6`), Ubuntu 20.04.
+- `PowerShellModule` also installs .NET SDK 5.0 and Mono (`Dockerfile_PowerShellModule:29`, `:33`).
+- Nothing bumps any of it.
+
+**Readers.** VS Code Dev Containers and Codespaces, used by external contributors. Maintainers work in `bsdev`'s own image (maintainer), so the dev container only needs enough to build and test the repo.
+
+**Options.**
+
+| Option | What it does | Result for `bsdev` |
+| --- | --- | --- |
+| A | One heavy Brownserve image for every repo | One tag, nothing to change on add or remove. Ruled out: an earlier all-in-one image was big enough that a few running copies used up a contributor's free disk space (maintainer) |
+| B | A Brownserve image per capability combination | The image count grows with every mix, a capability change swaps the tag, and nothing bumps image tags (E22) |
+| C | Brownserve Features on a stock base image | As D, but Brownserve builds, publishes and maintains Features upstream already has |
+| D | Upstream Features on a stock base image | One Feature line per capability (E14). Adding `docs-astro` adds the Node line, removing `container` removes the Docker line. Dependabot `devcontainers` bumps the versions in the template repo (E22) |
+
+B6 and C5 don't arise under C or D: after 3.2 the template owns these lines and the repo's Dependabot is excluded from them.
+
+**Decision.** D. Each repo's dev container is a stock Ubuntu base image plus the upstream Features for its capabilities. The template owns the Feature list, the pins file owns the versions, and `.devcontainer/Dockerfile` goes from every repo. Confidence: medium-high. Not yet verified: Feature pins end to end (E22), and the Features installing together on one base (E29).
+
+Illustration for `bsdev` (tags and versions are placeholders):
+
+```jsonc
+{
+  "name": "bsdev",
+  "image": "mcr.microsoft.com/devcontainers/base:2-ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/powershell:1.5.0": {},
+    "ghcr.io/devcontainers/features/dotnet:2.2.0": {},
+    "ghcr.io/devcontainers/features/rust:1.3.0": {},
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1.6.0": {}
+  },
+  "remoteUser": "vscode"
+}
+```
+
+PowerShell and .NET are baseline, Rust comes from `rust-app` and Docker from `container`. Adding `docs-astro` adds a `node` line with its version option; removing `container` deletes the Docker line. A PowerShell module repo gets the first two Features only.
+
+**Knock-on.**
+
+- A7 cleared. UDF D4 (`:285`) answered: no Brownserve images or Features.
+- New gap: the base image tag sits in `image:`, which nothing bumps (E22). Likely answer: a tag naming only the major version and OS, so rebuilds arrive without a pin change and an OS upgrade is a template change. Checked under E29, with the .NET Feature, which E14 didn't cover.
+- Baseline Features are what the build needs: PowerShell, plus .NET while builds restore through Paket.
+- `container`'s Docker Feature: docker-outside-of-docker or docker-in-docker, left to implementation.
+- B3 (3.7): the dev container's Node version is the Node Feature's option, rendered from the pins file.
+- Proposed map: the toolset row is settled and the reference row narrows to Feature versions.
+- 3.5's note for F: with `.devcontainer/Dockerfile` gone, `vscode-docker` in `bsdev` covers only `image/Dockerfile`, so it comes and goes with `container`.
+- Traces: A, B and C reach the toolset as Feature lines, not a Dockerfile (`:748`, `:762`, `:777`). To be confirmed in F.
+
 ## Sync mechanism requirements
 
 Copier was ruled out after 3.4 (Q12). This section separates what 3.2 to 3.4 decided from how Copier would have done it, and turns the Copier findings into requirements for the replacement. The E entries still describe Copier, so any requirement can be checked against them.
@@ -1029,7 +1087,7 @@ Step is the Phase 3 step that settles the entry; F means the final pass.
 | A4 | Template and Dependabot write the same line | E1, E12, E19 to E22 | 3.2 | Decided (3.2) |
 | A5 | Publish targets have two homes | C2 | 3.17 | Open |
 | A6 | Nothing creates or checks maintainer-written files | | 3.10 | Open |
-| A7 | Dev container toolset has no source | A4, E14, E22 | 3.6 | Open |
+| A7 | Dev container toolset has no source | A4, E14, E22 | 3.6 | Decided (3.6) |
 | A8 | Template and repo lines next to each other conflict | E2, E9, E23 to E27 | 3.3 | Provisional (3.3) |
 | A9 | Nothing keeps a file identical across repos | A8, E9, E28 | 3.4 | Decided (3.4) |
 | A10 | Changelog scaffold not tied to its parser | | 3.12 | Open |
@@ -1070,7 +1128,7 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 - **A4. Nothing settles where the template's pin comes from, or whether it ever moves.** Dependabot owns the pin (UDF `:262`), but the stub is rendered from the template, so the first pin has to come from it. Copier's 3-way merge keeps Dependabot's bump only if the template leaves that line alone, or moves it to the same value; any other move conflicts (E1). If the template pins `ci` at `v1.0.0`, Dependabot bumps `bsdev` to `v1.2.0`, and the next template release moves its pin to `v1.1.0` so new repos start more current, `copier update` sees both sides change the same line and commits a conflict (UDF `:147`). The manifest versions had the same shape and were answered by the template never holding versions (UDF `:254`); the research has no equivalent for pins. The dev container stub's image or Feature reference has the same shape (see Dev environment). Decided in 3.2: the template owns the line (D2).
 - **A5. Publish targets have two proposed homes.** The project config holds publish targets (IBT `:142`), and dispatch inputs live in the stub (GHA `:85`). Today's `publish_to` is a per-run choice with a default (`release.yaml:5-10`). Nothing says whether the stub still offers that choice, or how its default relates to the config's list. Both follow the capabilities (`container` brings GHCR and DockerHub), so removing `container` would need both changed.
 - **A6. Nothing creates or checks the files the capabilities expect the maintainer to write.** The shared tasks assume the root `Cargo.toml` has `[workspace.package]` with a `version` (`build_tasks.ps1:316-320`, or `StageRelease` fails), the binary in `cli/Cargo.toml` is named `BinaryName` (`:567-571`, or `Package` can't find it), and a Dockerfile sits in the Docker context (`:131`, `:184`, or `BuildImage` fails). The binary name and Docker context are also in the project config (IBT `:142`), with no route between the two. A new `rust-app` repo made with `cargo new` has no `[workspace.package]`, so it builds and tests fine until its first `StageRelease`. The research's scaffold class (class 6) lists only `LICENSE`, `CHANGELOG.md`, `README.md` and the Astro scaffold (UDF `:81`, `:102`).
-- **A7. The dev container toolset has no settled source.** `bsdev` needs PowerShell (every repo, because the build runs in `pwsh`), Rust (`rust-app`) and Docker tooling (`container`, missing today, see the Phase 1 Dev environment table). A dev container uses one image, so an image per capability can't be combined, and an image per combination grows with every new mix. A base image plus one Feature per capability combines, but each Feature has to be built and published. Images or Features is still open (UDF D4, `:283`), and no research doc says which repo builds and publishes them, or with what workflow. `docs-astro` adds Node, which no dev container installs today (`SkillsRepo` has none: `Compare-BrownserveRepository.ps1:784-793`, `:893`). Upstream Features exist for Node and every other capability's tooling (E14), so the Features route may need no Brownserve build. No Dependabot ecosystem bumps an image tag in `devcontainer.json`, so on the image route the template's tag has no update route (E22).
+- **A7. The dev container toolset has no settled source.** `bsdev` needs PowerShell (every repo, because the build runs in `pwsh`), Rust (`rust-app`) and Docker tooling (`container`, missing today, see the Phase 1 Dev environment table). A dev container uses one image, so an image per capability can't be combined, and an image per combination grows with every new mix. A base image plus one Feature per capability combines, but each Feature has to be built and published. Images or Features is still open (UDF D4, `:283`), and no research doc says which repo builds and publishes them, or with what workflow. `docs-astro` adds Node, which no dev container installs today (`SkillsRepo` has none: `Compare-BrownserveRepository.ps1:784-793`, `:893`). Upstream Features exist for Node and every other capability's tooling (E14), so the Features route may need no Brownserve build. No Dependabot ecosystem bumps an image tag in `devcontainer.json`, so on the image route the template's tag has no update route (E22). Decided in 3.6: upstream Features on a stock base image, versions from the pins file.
 - **A8. Additions from the template and the repo to the same list can conflict.** When both append to the end of a list in a class 5 file, their edits touch the same or adjacent lines. In JSON, appending also adds a comma to the previous last line. If the maintainer adds `"bsdev"` after `"yzhang"` in the cSpell words (`settings.json:15`), and the next template release also adds a word at the end, both sides change `"yzhang"` to `"yzhang",` and `copier update` commits a conflict. UDF's "a cSpell word the template didn't touch is kept" (`:135`) holds only when the template's change is elsewhere in the list. The same applies to `extensions.json` and `.gitignore`. Confirmed (E2). Only the appended lines conflict, and a template edit with at least one unchanged line between it and the repo's merges cleanly, so a template that inserts mid-list rather than appending avoids it, unless the repo has edited next to the same point. V6 holds (E9), so the template's cSpell words move to a read-only shared list and drop out of this. The repo's own words stay in the stub, which the template doesn't add to, and the extension inserts them alphabetically rather than appending. Provisionally decided in 3.3: a marker comment the template never changes, with repo additions below it.
 - **A9. Nothing keeps a file identical across repos once Copier merges.** Today `.markdownlint.json` is overwritten whole so that no repo drifts (`Compare-BrownserveRepository.ps1:1704-1748`). Copier's 3-way merge keeps any local edit the template didn't touch (UDF `:135`). That includes class 4 files, whose "overwrite is fine" (UDF `:79`) isn't how Copier updates them. As class 3, the local half exists to hold local rules (UDF `:78`, `:245`). Either way a repo could switch a rule back on and keep it on without ejecting, though ejecting is the research's visible route for divergence (UDF `:246`). The research doesn't say whether the "no local changes" rule should survive. Decided in 3.4: it survives, reset by a migration on every update.
 - **A10. Nothing ties the changelog scaffold to the parser that reads it.** Today the header and its `v0.0.0` placeholder come from `New-BrownserveChangelogHeader.ps1:7-20`, and `Read-BrownserveChangelog` detects that exact placeholder (`Read-BrownserveChangelog.ps1:203`). Both live in PSBuildTools and release together. As a scaffold, the placeholder moves into the template, while the parser stays in a Brownserve module the task package uses. If the parser's format changes, a repo set up from an older template release gets a placeholder the parser doesn't recognise, and its first staged release treats `v0.0.0` as a real release. It only matters before a repo's first release.
@@ -1160,6 +1218,7 @@ Checked in 3.1; E19 to E22 in 3.2; E23 to E27 in 3.3; E28 in 3.4. How: Local is 
 | E26 | Dependabot per-repo variation | Docs | A8, X5 | Duplicate entries rejected; keys open |
 | E27 | Resolving a conflict in the sync PR | Local | A8 | VS Code buttons work from the text; github.dev not run |
 | E28 | Replacing a file whole on update | Local | A9 | Yes, with an every-update migration |
+| E29 | Dev container base image tag and baseline Features | Docs, then Local | A7 | Not checked |
 
 - **E1. Copier keeps a Dependabot bump the template didn't touch.** Copier's 3-way merge should keep a line Dependabot changed when the template leaves it alone, and commit a conflict when both change it (UDF `:135`, `:147`, V1 `:293`). Finding: confirmed with Copier 9.18.2. A Dependabot bump to `@v1.2.0` survived a template release that added a line two lines above it. When the next release moved the template's pin from `v1.0.0` to `v1.1.0`, `copier update` wrote inline conflict markers on that line. Moving it to `v1.2.0`, the value Dependabot had already set, merged cleanly. Copier exits 0 either way (X1).
 - **E2. Copier merge of appends at the same point in a list.** When the template and the repo both add to the end of a list, including JSON's comma on the previous last line, `copier update` is expected to conflict (A8, B7, C3). Finding: confirmed. When the repo and template both appended to the end of the cSpell words, the extensions list and a `.gitignore` section, all three conflicted. The comma both sides added to the previous last line merged; only the appended lines conflicted. Template edits with at least one unchanged line between them and the repo's edit merged cleanly: a word inserted mid-list, an extension with one line between, a line in another `.gitignore` section.
@@ -1261,3 +1320,4 @@ Checked in 3.1; E19 to E22 in 3.2; E23 to E27 in 3.3; E28 in 3.4. How: Local is 
   - A `_migrations` entry with no `version` runs `after` on every update, once the diff is applied (`_template.py:439-471`, `_main.py:1695-1699`), if both template versions are tagged (`_template.py:411`). A list-form command renders each part with Jinja and runs without a shell (`_main.py:413-421`), so an `{% include %}` of the file's `.jinja` source passes the render, with the current answers, to `_copier_python`.
   - Runs: a temporary edit to `.markdownlint.json` and `.editorconfig` was reset byte-identical to a fresh `copier copy` with the same answers, on a release that conflicted with the edit (no markers left, git still `UU`), on a release that also removed `container`, and on a `--vcs-ref=:current:` update adding it back.
   - Not run: on Windows, or in the sync workflow.
+- **E29. Dev container base image tag and baseline Features.** Whether the stock base image publishes a tag that takes rebuilds without a pin change, whether an upstream .NET Feature covers the build, and whether the PowerShell, .NET, Rust, Docker and Node Features install together on that base (A7, 3.6). Not checked.
