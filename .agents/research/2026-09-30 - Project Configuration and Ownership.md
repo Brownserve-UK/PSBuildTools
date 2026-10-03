@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 3: Decisions, continued without Copier.** 3.1 to 3.8, 3.10 to 3.12, 3.14 to 3.18 and 3.20 are done. After 3.3 and 3.4, Copier was ruled out (Q12). The likely replacement is a CLI that Brownserve builds and ships, but that isn't confirmed. The decisions so far are split into ownership rules, which stand, and Copier mechanisms, which don't (see [Sync mechanism requirements](#sync-mechanism-requirements)). The Copier findings are now requirements for whatever replaces it. Steps that depend on the sync mechanism (3.9, 3.13, 3.19, 3.21, 3.22) are parked until it's chosen. The rest continue, more briefly where a step is small. Still open from earlier: E12 for NuGet, running the lint CI actions (E9), Feature pins end to end (E22), and security updates against `exclude-paths` (E21). Also: the dev container base image tag and baseline Features (E29), the Node version checks (E30), and Dependabot `npm` updating `package-lock.json` (E31). Every step that doesn't depend on the sync mechanism is done. Next: final pass F.
+**Phase 3: Decisions, continued without Copier.** 3.1 to 3.8, 3.10 to 3.12, 3.14 to 3.18 and 3.20 are done. After 3.3 and 3.4, Copier was ruled out (Q12). The likely replacement is a CLI that Brownserve builds and ships, but that isn't confirmed. The decisions so far are split into ownership rules, which stand, and Copier mechanisms, which don't (see [Sync mechanism requirements](#sync-mechanism-requirements)). The Copier findings are now requirements for whatever replaces it. Steps that depend on the sync mechanism (3.9, 3.13, 3.19, 3.21, 3.22) are parked until it's chosen. The rest continue, more briefly where a step is small. Still open from earlier: E12 for NuGet, running the lint CI actions (E9), Feature pins end to end (E22), and security updates against `exclude-paths` (E21). Also: the dev container base image tag and baseline Features (E29), the Node version checks (E30), and Dependabot `npm` updating `package-lock.json` (E31). Every step that doesn't depend on the sync mechanism is done. Final pass: F1 is done. Next: F2, the final map, one group at a time.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -34,7 +34,12 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 - [x] 3.20 Decision: C6
 - [x] 3.5 to 3.20 Decisions that don't depend on the sync mechanism, skipping parked steps
 - [ ] Parked until the sync mechanism is chosen: 3.9, 3.13, 3.19, 3.21, 3.22
-- [ ] F. Final pass: final map and unresolved questions, re-run the three traces against it, decide whether an overview diagram is worth adding
+- [x] F1. Final pass: close the F open questions and check 3.5's rule
+- [ ] F2. Final map: routes as the M1 ownership modes, stale notes fixed, parked rows keep their ⚠
+- [ ] F3. Ownership table (the Deliverable)
+- [ ] F4. Re-run Traces A, B and C against the final map
+- [ ] F5. Unresolved list: parked steps and unchecked E entries
+- [ ] F6. Decide whether an overview diagram is worth adding
 
 ## Purpose
 
@@ -948,7 +953,7 @@ _migrations:
 - UDF:
   - "Overwrite is fine" (`:79`) holds for a file with this migration; other class 4 files merge.
   - `.markdownlint.json` is class 4, not 3 (`:96`).
-- Q9 is answered for markdownlint. The shared cSpell list still needs a home.
+- Q9 is answered for markdownlint. The shared cSpell list still needs a home (answered in F: the same way).
 - Each reset file needs its own migration entry. A file with a marker never gets one, or the repo's lines below it are lost.
 - After a conflict the file is still `UU` in git but has no markers, so X1's check passes.
 
@@ -1415,6 +1420,18 @@ Set-up in the wrong order also fails loudly, and a new repo can't take it: the s
 - C6 no longer depends on A12. If A12 has Terraform read the repo, this is revisited.
 - No sync requirement or E entry.
 
+## Final pass
+
+### F1: open questions and the 3.5 rule check
+
+The F questions are settled in the [Register](#register): Q1, Q5, Q7, Q9 and Q11 are answered, Q8 is out of scope, and Q6 is unresolved.
+
+3.5's rule (content stays with a capability only if every file it covers comes and goes with it), checked against the other capability-scoped content:
+
+- `vscode-docker` passes once `.devcontainer/Dockerfile` goes (3.6).
+- `rust-analyzer`, `target/` and `**/*.rs.bk` pass.
+- `docs-astro`'s `node_modules/` failed, because it matched every folder of that name in the repo. Now anchored (Q7).
+
 ## Sync mechanism requirements
 
 Copier was ruled out after 3.4 (Q12). This section separates what 3.2 to 3.4 decided from how Copier would have done it, and turns the Copier findings into requirements for the replacement. The E entries still describe Copier, so any requirement can be checked against them.
@@ -1546,30 +1563,30 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 
 | ID | Summary | Step |
 | --- | --- | --- |
-| Q1 | `removed` vs `removal` label | F |
+| Q1 | `removed` vs `removal` label | Answered (F) |
 | Q2 | Dependabot `docker` entry may do nothing | 3.1 |
 | Q3 | Dependabot ecosystem labels | 3.1 |
 | Q4 | Org `CODE_OF_CONDUCT.md` | 3.1 |
-| Q5 | Checkout folder named after the repo | F |
-| Q6 | Extension list in the dev container stub | F |
-| Q7 | Anchoring `node_modules/` to the docs path | F |
-| Q8 | What a `container` docs section holds | F |
-| Q9 | Where the shared cSpell list lives | F |
+| Q5 | Checkout folder named after the repo | Answered (F): not ours |
+| Q6 | Extension list in the dev container stub | Unresolved |
+| Q7 | Anchoring `node_modules/` to the docs path | Answered (F) |
+| Q8 | What a `container` docs section holds | Out of scope (F) |
+| Q9 | Where the shared cSpell list lives | Answered (3.4, F) |
 | Q10 | Docs-only deploy trigger | Answered (3.14) |
-| Q11 | Conventional Commits types in two sources | F |
+| Q11 | Conventional Commits types in two sources | Answered (F) |
 | Q12 | Copier or our own sync mechanism | Not Copier; replacement open |
 
-- **Q1. `removed` vs `removal` label.** `label-pr.yaml:88` applies `removed`, but Terraform defines `removal` (`modules/github-brownserve_repo/issues.tf:93`). Terraform's labels are authoritative (`issues.tf:2-3`). This isn't specific to `rust-app` or `container`, but it's two sources of the same information that disagree. The changelog groups entries by these labels, so the mismatch reaches `CHANGELOG.md` too.
+- **Q1. `removed` vs `removal` label.** `label-pr.yaml:88` applies `removed`, but Terraform defines `removal` (`modules/github-brownserve_repo/issues.tf:93`). Terraform's labels are authoritative (`issues.tf:2-3`). This isn't specific to `rust-app` or `container`, but it's two sources of the same information that disagree. The changelog groups entries by these labels, so the mismatch reaches `CHANGELOG.md` too. Answered in F: a bug, not an ownership question. Terraform's labels are authoritative, so `action-label-pr` applies `removal`. Fixed outside this doc.
 - **Q2. Dependabot `docker` entry may do nothing.** `image/Dockerfile:8` uses `archlinux:latest` with no version or digest. Dependabot bumps versioned tags or digests, so this entry (`dependabot.yml:18-23`) probably never opens a PR. Confirmed from Dependabot's source: `latest` isn't a version tag, so the update checker treats it as up to date and never opens a PR. With a digest pinned (`archlinux:latest@sha256:…`) it would bump the digest.
 - **Q3. Dependabot ecosystem labels.** Terraform has `dependencies` and `github_actions`, but no label for `cargo` or `docker` (`issues.tf:56-97`). Because the label set is authoritative, any label Dependabot creates would be deleted on the next apply. Not verified. The proposal adds `nuget`, `npm` and the dev container ecosystem. The template's `dependabot.yml` could set `labels:` per entry so Dependabot only applies labels Terraform defines. From Dependabot's source: with no `labels:`, it creates `dependencies` and, with more than one ecosystem, the ecosystem's label: `rust`, `docker`, `.NET`, `javascript`, `github_actions`, `devcontainers_package_manager`. With `labels:` set it creates none and applies only labels that exist, so the template can set `labels:` per entry and never trigger a label Terraform deletes. Terraform's `dependencies` and `github_actions` are only in the `application` and `powershell` sets (`issues.tf:146-158`). Live on `copier-test`: with `labels:` naming labels the repo didn't have, the PR got none and none were created.
 - **Q4. Org `CODE_OF_CONDUCT.md`.** `bsdev`'s PR template links to it in the `.github` repo (`repos.tf:123`). Finding: it exists (Contributor Covenant), and GitHub serves it as the default for every repo without its own (`copier-test`, `bsdev`, `PSBuildTools`). The `.github` repo holds only it and a README.
-- **Q5. Does the checkout still need a folder named after the repo?** The shared workflow does the checkout, so the stubs don't need the repo name, but whether the checkout has to use a folder named after the repo is open (GHA `:19`, C4 `:160`).
-- **Q6. Does the dev container stub still carry the extension list?** The list is in both `extensions.json` (`:9`) and `devcontainer.json` (`:18`) today; the research doesn't say whether the stub keeps its copy.
-- **Q7. Should `node_modules/` be anchored to the docs path?** Today's entry has no leading path (`gitignore_config.json:68`), so while `docs-astro` is present the maintainer's `image/proto/node_modules/` line (`.gitignore:31`) does nothing.
-- **Q8. What would a `container` section in CONTRIBUTING and the PR template hold?** Neither file mentions `container` today (see the Phase 1 Docs table), and no research doc says what a section would hold, so the gap carries over until one is written.
-- **Q9. Where does the shared markdownlint file live?** If E9 holds, `.markdownlint.json` becomes an `extends` stub plus a shared file (UDF `:96`). No research doc says where the shared file lives or how it reaches the repo. E9 rules out a URL. A restored package under `packages/` works if restore stays repo-local (Paket D4, `:179`), but markdownlint crashes in the editor until the restore runs. The shared cSpell list faces the same choice, and needs `readonly` so the editor doesn't offer to add words to it. Answered for markdownlint in 3.4: no shared file, the template owns it whole. Under NuGet the restored path also carries the version (Paket `:107`), which applies to the cSpell list too.
+- **Q5. Does the checkout still need a folder named after the repo?** The shared workflow does the checkout, so the stubs don't need the repo name, but whether the checkout has to use a folder named after the repo is open (GHA `:19`, C4 `:160`). Answered in F: left to the GitHub Actions research (GHA C4 `:160`). Nothing in the ownership model depends on it.
+- **Q6. Does the dev container stub still carry the extension list?** The list is in both `extensions.json` (`:9`) and `devcontainer.json` (`:18`) today; the research doesn't say whether the stub keeps its copy. Unresolved in F: can't be answered at this stage.
+- **Q7. Should `node_modules/` be anchored to the docs path?** Today's entry has no leading path (`gitignore_config.json:68`), so while `docs-astro` is present the maintainer's `image/proto/node_modules/` line (`.gitignore:31`) does nothing. Answered in F: anchored to the docs path, so the `docs-astro` section covers only files that come and go with it (3.5's rule). Any other npm folder in a repo needs its own line below the marker, as `bsdev`'s `image/proto/node_modules/` already is.
+- **Q8. What would a `container` section in CONTRIBUTING and the PR template hold?** Neither file mentions `container` today (see the Phase 1 Docs table), and no research doc says what a section would hold, so the gap carries over until one is written. Out of scope (F): it's about what the section says, not who owns it. Capability sections already follow their capability.
+- **Q9. Where does the shared markdownlint file live?** If E9 holds, `.markdownlint.json` becomes an `extends` stub plus a shared file (UDF `:96`). No research doc says where the shared file lives or how it reaches the repo. E9 rules out a URL. A restored package under `packages/` works if restore stays repo-local (Paket D4, `:179`), but markdownlint crashes in the editor until the restore runs. The shared cSpell list faces the same choice, and needs `readonly` so the editor doesn't offer to add words to it. Answered for markdownlint in 3.4: no shared file, the template owns it whole. Under NuGet the restored path also carries the version (Paket `:107`), which applies to the cSpell list too. Answered for cSpell in F, the same way: the shared word list is a template-owned file, `readonly`, reset on every sync (3.4), and the repo's `cspell.json` imports it from disk (E9). It's committed, so nothing depends on a restore or a path that carries a version. File name not decided.
 - **Q10. How is a docs-only deploy triggered?** Today the deploy runs only after `release` (`skillsrepo_github_release.yaml.template:64`), which is `workflow_dispatch` (`:4`), so a docs-only fix waits for the next release. The maintainer wants a way to trigger the docs deploy manually on its own. Answered in 3.14: a `docs` stub for `docs-astro` repos dispatches the shared `deploy-docs` workflow, which the `release` stub also calls (3.16), from the default branch only.
-- **Q11. Conventional Commits types are stated in two separately released sources.** The table stays in the template's CONTRIBUTING, while the title-to-label mapping moves to the shared workflows (GHA D7). Today both come from the generator, so they at least change together.
+- **Q11. Conventional Commits types are stated in two separately released sources.** The table stays in the template's CONTRIBUTING, while the title-to-label mapping moves to the shared workflows (GHA D7). Today both come from the generator, so they at least change together. Answered in F: CONTRIBUTING links to the shared workflows' list rather than restating it, so there's one source.
 - **Q12. Copier or our own sync mechanism.** Answered: not Copier. 3.3 and 3.4 found a diff replay rather than a 3-way merge (E24), edits that move without a conflict (X4), promoted lines kept twice (X5), a zero exit on conflict (X1), no way to replace a file whole on update (E28), and tasks that can't tell a capability was just added (E6). The likely replacement is a CLI that Brownserve builds and ships, not yet confirmed. Its requirements are in [Sync mechanism requirements](#sync-mechanism-requirements). Decisions that rest on Copier's behaviour cite an E entry, so they can be rechecked against it.
 
 ### To verify
