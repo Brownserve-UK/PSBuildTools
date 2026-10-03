@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 3: Decisions, continued without Copier.** 3.1 to 3.4 are done. After 3.3 and 3.4, Copier was ruled out (Q12). The likely replacement is a CLI that Brownserve builds and ships, but that isn't confirmed. The decisions so far are split into ownership rules, which stand, and Copier mechanisms, which don't (see [Sync mechanism requirements](#sync-mechanism-requirements)). The Copier findings are now requirements for whatever replaces it. Steps that depend on the sync mechanism (3.9, 3.13, 3.19, 3.21, 3.22) are parked until it's chosen. The rest continue, more briefly where a step is small. Still open from earlier: E12 for NuGet, running the lint CI actions (E9), Feature pins end to end (E22), and security updates against `exclude-paths` (E21). Next: 3.5, C4.
+**Phase 3: Decisions, continued without Copier.** 3.1 to 3.5 are done. After 3.3 and 3.4, Copier was ruled out (Q12). The likely replacement is a CLI that Brownserve builds and ships, but that isn't confirmed. The decisions so far are split into ownership rules, which stand, and Copier mechanisms, which don't (see [Sync mechanism requirements](#sync-mechanism-requirements)). The Copier findings are now requirements for whatever replaces it. Steps that depend on the sync mechanism (3.9, 3.13, 3.19, 3.21, 3.22) are parked until it's chosen. The rest continue, more briefly where a step is small. Still open from earlier: E12 for NuGet, running the lint CI actions (E9), Feature pins end to end (E22), and security updates against `exclude-paths` (E21). Next: 3.6, A7.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -18,6 +18,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 - [x] 2.7 Problem list: duplicates removed, dependencies noted, order agreed for Phase 3
 - [x] 3.1 Exploration: check the E entries in the Register
 - [x] 3.2 to 3.4 Decisions: A4, A8 (provisional), A9
+- [x] 3.5 Decision: C4
 - [x] Sync mechanism requirements, from the Copier findings
 - [ ] 3.5 to 3.20 Decisions that don't depend on the sync mechanism, skipping parked steps
 - [ ] Parked until the sync mechanism is chosen: 3.9, 3.13, 3.19, 3.21, 3.22
@@ -626,9 +627,9 @@ No research doc distributes the `Cargo.toml` files, `Cargo.lock` or `image/Docke
 | `extensions.json`, maintainer additions (below the marker, 3.3) | Maintainer | Hand edit |
 | `settings.json`, template settings (including cSpell) | Template | `copier copy` |
 | `settings.json`, maintainer edits (below the marker, 3.3) | Maintainer | Hand edit |
-| `.editorconfig` | Template | `copier copy` |
+| `.editorconfig`, template sections (same in every repo, 3.5) | Template | `copier copy` |
 
-References: the devcontainer files become class 1 plus a class 4 stub, through published images (Dependabot `docker`) or dev container Features (Dependabot `devcontainers`) (UDF `:94`, D4 `:283`). After 3.2 the template owns the reference, and only Features have a Dependabot route to bump it there (E22). `.editorconfig` is class 4 (UDF `:98`). `extensions.json` and `settings.json` are class 5 (UDF `:99`). cSpell words are class 3, since `import` can reach a shared list on disk (UDF `:97`, V6 `:298`, E9). If CI checks spelling, the stub is a `cspell.json`, as the CLI doesn't read `settings.json`, and the template's `settings.json` points the editor's "add word" at it (E9). `.editorconfig` sections follow the capabilities: Rust and TOML from `rust-app`, Dockerfile and shell from `container` (UDF `:134`, `:244`).
+References: the devcontainer files become class 1 plus a class 4 stub, through published images (Dependabot `docker`) or dev container Features (Dependabot `devcontainers`) (UDF `:94`, D4 `:283`). After 3.2 the template owns the reference, and only Features have a Dependabot route to bump it there (E22). `.editorconfig` is class 4 (UDF `:98`). `extensions.json` and `settings.json` are class 5 (UDF `:99`). cSpell words are class 3, since `import` can reach a shared list on disk (UDF `:97`, V6 `:298`, E9). If CI checks spelling, the stub is a `cspell.json`, as the CLI doesn't read `settings.json`, and the template's `settings.json` points the editor's "add word" at it (E9). `.editorconfig` sections don't follow the capabilities: the template's part is the union of every capability's sections, the same in every repo (3.5).
 
 - **Manual sections:** `.editorconfig` keeps a marker comment, which nothing parses, and local rules go below it (3.3). `extensions.json` and `settings.json` gain one. `bsdev`'s `.editorconfig` section is empty, so it has no maintainer row.
 - **Removal:** today's add-only merge leaves a removed capability's extensions and settings behind (see the Phase 1 Dev environment table). Capability conditionals should remove them instead. Covered in Trace C.
@@ -934,6 +935,41 @@ _migrations:
 - Each reset file needs its own migration entry. A file with a marker never gets one, or the repo's lines below it are lost.
 - After a conflict the file is still `UU` in git but has no markers, so X1's check passes.
 
+### 3.5 C4: a section that covers files outliving its capability
+
+**Question.** Which capability, if any, owns an `.editorconfig` section whose patterns match files the capability doesn't bring?
+
+**Files in scope for `bsdev`.** `container`'s section `[{Dockerfile,*.Dockerfile,Dockerfile_*,*.sh}]` (`.editorconfig:40`) matches four tracked files. Only `image/Dockerfile` and `image/bsdev-entrypoint.sh` come and go with `container`. `scripts/install.sh` is `rust-app`'s installer, kept by the maintainer (Trace A), and `.devcontainer/Dockerfile` is the dev container toolset (A7).
+
+**Today.**
+
+- A `RustApp` repo already ends where C4 does: it ships `install.sh` (`rustapp_install.sh.template`, 4-space indent) with no `*.sh` rule (`editorconfig_config.json:28-64`), so the script falls back to the default 2 spaces.
+- `SkillsRepo` has its own `*.sh` rule (`:129-140`), so the shell rule follows shell scripts, not `container`.
+- Every section in `editorconfig_config.json` agrees across types: `*.ps1` is 4 everywhere, and both `*.sh` rules are 4.
+
+**Readers.** Editors through EditorConfig. A section that matches no file does nothing.
+
+**Options.**
+
+| Option | What it does | Result for `bsdev` |
+| --- | --- | --- |
+| A | Sections stay with their capability; the maintainer adds `*.sh` below the marker | Removing `container` drops the rule for `install.sh` and `.devcontainer/Dockerfile` with no warning. A later template adoption is a promotion (M6) |
+| B | Split by file owner: Dockerfile patterns with `container`, `*.sh` in the baseline | `install.sh` keeps its rule. `.devcontainer/Dockerfile` still loses its rule unless A7 removes the file |
+| C | The sync renders sections from the files in the repo | A new file type gets no rule until the next sync, and the same answers render differently. Not pursued |
+| D | One `.editorconfig` for every repo: the union of every capability's sections, in the baseline, with the repo part below the marker (3.3) | Declaring, adding `docs-astro` and removing `container` leave `.editorconfig` unchanged |
+
+**Decision.** D. The template's part of `.editorconfig` is the same in every repo and doesn't follow the capabilities. All repos stay consistent, nothing needs maintaining per capability, and a repo that gains a new file type, such as its first shell script, is already covered. D can't give two capabilities different values for the same extension, but a repo combining both couldn't either, and today's union has no clash. Confidence: medium-high.
+
+If capability-scoped sections are wanted later, a Brownserve sync tool could build each repo's file from per-capability defaults. That isn't a requirement now.
+
+**Knock-on.**
+
+- C4 cleared. B7, C3 and X4 no longer arise in `.editorconfig` from a capability change, only from a template release.
+- 3.3's in-scope table: `.editorconfig`'s template part is baseline sections, not capability sections.
+- Proposed map: the `.editorconfig` row and its note no longer follow the capabilities. UDF `:134` and `:244` no longer apply to `.editorconfig`.
+- Traces: A reaches `.editorconfig` only as a baseline file, and C no longer reaches it (`:776`, `:779`). To be confirmed in F.
+- For F: check the same rule against other capability-scoped content. Content stays with a capability only if every file it covers comes and goes with it. `vscode-docker` is a likely case, since `.devcontainer/Dockerfile` uses it too.
+
 ## Sync mechanism requirements
 
 Copier was ruled out after 3.4 (Q12). This section separates what 3.2 to 3.4 decided from how Copier would have done it, and turns the Copier findings into requirements for the replacement. The E entries still describe Copier, so any requirement can be checked against them.
@@ -1010,7 +1046,7 @@ Step is the Phase 3 step that settles the entry; F means the final pass.
 | C1 | Hand-written `Extends` fails silently | | | Merged into A2 |
 | C2 | Permission ceiling can't follow capabilities | E11 | 3.16 | Open |
 | C3 | Removal conflicts with local edits | | | Merged into A8 |
-| C4 | A section covers files that outlive its capability | A8 | 3.5 | Open |
+| C4 | A section covers files that outlive its capability | A8 | 3.5 | Decided (3.5) |
 | C5 | Features route: removal conflicts with Dependabot | | | Merged into A4 |
 | C6 | Removal order not stated | A12 | 3.20 | Open |
 | X1 | Copier doesn't report a conflict | | | Copier only; requirement M4 |
@@ -1051,7 +1087,7 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 - **C1. A capability left in a hand-written `Extends` list fails silently.** If the `Extends` list is written by hand (A2) and still names `container` after removal, nothing fails: `image/Dockerfile` stays, so every `Build` keeps building the image (IBT `:127`). A project-only task hooked onto a removed task fails loudly instead (`Invoke-Build.ps1:489`). Worked out at run time, a removed capability drops out with the config (E8).
 - **C2. The stub's permission ceiling can't follow the capabilities the way the shared workflow's jobs do.** A job's `permissions` block is fixed and can't depend on an input, and GitHub fails a run when a called job asks for more than the caller grants (E11). If the shared `release` workflow's push job asks for `packages: write`, dropping it from the stub when `container` goes stops every release, even with the job switched off by `if:` (E11). Keeping `packages: write` in every stub avoids that, but grants it to repos with nothing to push. `docs-astro`'s `contents: write` has the same shape (Trace B).
 - **C3. Removing a capability conflicts with local edits inside or next to its sections.** When the template deletes a capability's block and the repo has edited lines inside it, or added lines straight after it, both sides change the same or adjacent lines and `copier update` commits a conflict (UDF `:147`). If the maintainer adds an `ignore` rule to the `docker` entry in `dependabot.yml` (`:18-23`), removing `container` conflicts on that block, and the maintainer resolves it by deleting the block by hand. If `container`'s `.gitignore` section is the last template section, `bsdev`'s `image/proto/node_modules/` sits straight after `.docker/` (`.gitignore:28-31`), and the removal conflicts there too. B7 is the adding counterpart. Confirmed for `extensions.json` (E4). In JSON the line before the removed block loses its comma, so it's pulled into the conflict too.
-- **C4. A capability's section can cover files that outlive the capability.** `container` brings the `.editorconfig` section for Dockerfiles and shell scripts (`:39-44`), but `*.sh` (`:40`) also matches `scripts/install.sh`, which stays with the maintainer (Trace A). Removing `container` drops the rule, so `install.sh`, indented with 4 spaces (`:12`), falls back to the default section's 2 spaces with no charset (`:12-16`), and editors indent new lines differently from the rest of the file. Nothing fails or flags it. `image/Dockerfile` and `image/bsdev-entrypoint.sh` lose their rule too, until the maintainer deletes them.
+- **C4. A capability's section can cover files that outlive the capability.** `container` brings the `.editorconfig` section for Dockerfiles and shell scripts (`:39-44`), but `*.sh` (`:40`) also matches `scripts/install.sh`, which stays with the maintainer (Trace A). Removing `container` drops the rule, so `install.sh`, indented with 4 spaces (`:12`), falls back to the default section's 2 spaces with no charset (`:12-16`), and editors indent new lines differently from the rest of the file. Nothing fails or flags it. `image/Dockerfile` and `image/bsdev-entrypoint.sh` lose their rule too, until the maintainer deletes them. Decided in 3.5: one `.editorconfig` for every repo, so no section follows a capability.
 - **C5. On the Features route, removing a capability conflicts with Dependabot.** B6's escape holds only for adding. Removing `container` deletes the Docker Feature line from the dev container stub; if Dependabot has bumped that Feature's version since `copier copy`, both sides change the line and `copier update` commits a conflict (UDF `:147`). On the image route, removal swaps the reference instead, which is B6. So on either route a capability change can conflict once Dependabot has moved the line it touches. Not verified (UDF V1, `:293`). It weighs on the images-or-Features choice (A7, UDF D4 `:283`).
 - **C6. Removal has to run in the opposite order to set-up, and nothing states it.** Set-up is Terraform first, then `copier copy` (UDF `:266`), so Terraform's settings are in place before the workflows use them. Removal reverses that: if Terraform deletes the Docker Hub secrets while the `release` stub still publishes to DockerHub, a release in between fails at `CheckPublishingParameters` (IBT `:37`); Copier first leaves the secrets unused until Terraform catches up. `docs-astro` has the same shape: if Terraform drops the `pages` block first, the deploy keeps pushing `gh-pages` to a repo that doesn't serve it. No research doc states the removal order, and nothing enforces either order.
 - **X1. `copier update` exits 0 when it writes a conflict.** The markers are left inline and the file shows as unmerged (`UU`), but the exit code is the same as a clean update (E1). The template sync (UDF `:141`, `:235`) has to check for conflicts itself, e.g. with `git diff --check`, or it opens PRs with markers in them.
