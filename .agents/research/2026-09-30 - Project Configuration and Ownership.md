@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 3: Decisions, continued without Copier.** 3.1 to 3.7 are done. After 3.3 and 3.4, Copier was ruled out (Q12). The likely replacement is a CLI that Brownserve builds and ships, but that isn't confirmed. The decisions so far are split into ownership rules, which stand, and Copier mechanisms, which don't (see [Sync mechanism requirements](#sync-mechanism-requirements)). The Copier findings are now requirements for whatever replaces it. Steps that depend on the sync mechanism (3.9, 3.13, 3.19, 3.21, 3.22) are parked until it's chosen. The rest continue, more briefly where a step is small. Still open from earlier: E12 for NuGet, running the lint CI actions (E9), Feature pins end to end (E22), and security updates against `exclude-paths` (E21). Also: the dev container base image tag and baseline Features (E29), and the Node version checks (E30). Next: 3.8, T3 and B4.
+**Phase 3: Decisions, continued without Copier.** 3.1 to 3.8 are done. After 3.3 and 3.4, Copier was ruled out (Q12). The likely replacement is a CLI that Brownserve builds and ships, but that isn't confirmed. The decisions so far are split into ownership rules, which stand, and Copier mechanisms, which don't (see [Sync mechanism requirements](#sync-mechanism-requirements)). The Copier findings are now requirements for whatever replaces it. Steps that depend on the sync mechanism (3.9, 3.13, 3.19, 3.21, 3.22) are parked until it's chosen. The rest continue, more briefly where a step is small. Still open from earlier: E12 for NuGet, running the lint CI actions (E9), Feature pins end to end (E22), and security updates against `exclude-paths` (E21). Also: the dev container base image tag and baseline Features (E29), the Node version checks (E30), and Dependabot `npm` updating `package-lock.json` (E31). Next: 3.10, A6.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -22,6 +22,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 - [x] 3.6 Decision: A7
 - [x] Sync mechanism requirements, from the Copier findings
 - [x] 3.7 Decision: B3
+- [x] 3.8 Decision: T3 and B4
 - [ ] 3.5 to 3.20 Decisions that don't depend on the sync mechanism, skipping parked steps
 - [ ] Parked until the sync mechanism is chosen: 3.9, 3.13, 3.19, 3.21, 3.22
 - [ ] F. Final pass: final map and unresolved questions, re-run the three traces against it, decide whether an overview diagram is worth adding
@@ -595,12 +596,12 @@ References: tiers and stub contents (GHA `:53-64`, `:85-88`, `:108`); stub owner
 | Root `Cargo.toml`, `[workspace.package]` version | Release history | Staged release |
 | `cli/` and `core/` `Cargo.toml`, packages, binary name, dependency list ⚠ A6 | Maintainer | Hand edit |
 | `cli/` and `core/` `Cargo.toml`, dependency versions | Upstream | Dependabot PR |
-| `Cargo.lock` ⚠ T3 | Cargo | Cargo build; Dependabot PR; Staged release |
+| `Cargo.lock` (CI builds with `--locked`, 3.8) | Upstream; Release history; Maintainer | Dependabot PR; Staged release (workspace version only); Local cargo build |
 | `image/Dockerfile` ⚠ A6 | Maintainer | Hand edit |
 | `image/Dockerfile`, base image tag | Upstream | Dependabot PR (may do nothing, Q2) |
 | `package.json`, dependency versions ⚠ B5 | Template (first version); Upstream | `copier copy` (scaffold); Dependabot PR |
 | `package.json`, `engines.node` (a major, read by CI, 3.7) | Template (first version); Maintainer | `copier copy` (scaffold); Hand edit |
-| `package-lock.json` ⚠ B4 | Not settled | Not settled |
+| `package-lock.json` (committed, CI runs `npm ci`, 3.8) | Upstream; Maintainer | Dependabot PR; Local `npm install` |
 
 References: `dependabot.yml` is class 4, owned by the template (UDF `:79`, `:98`, `:262`), rendered from the answers. Its entries:
 
@@ -614,7 +615,7 @@ No entry covers the dev container reference: the template owns it (3.2).
 
 Brownserve refs (`Brownserve-UK/*` actions, `Brownserve.*` packages) are grouped into one PR and excluded from the cooldown (GHA `:139`, Paket `:161`): actions in the template repo's `dependabot.yml` (3.2), packages in each repo's. Without that, a Tier 1 fix could take two 30-day cooldowns to arrive. Confirmed for actions, provided `exclude` matches the case in `uses:` (E12); not run for NuGet (Paket V2 `:189`).
 
-No research doc distributes the `Cargo.toml` files, `Cargo.lock` or `image/Dockerfile`. `UpdateCargoVersion` moves into the task package unchanged (IBT `:38`, `:114`), so T3 carries over and keeps its ID.
+No research doc distributes the `Cargo.toml` files, `Cargo.lock` or `image/Dockerfile`. `UpdateCargoVersion` moves into the task package unchanged (IBT `:38`, `:114`), so T3 carries over and keeps its ID. 3.8 fixes it there.
 
 - **Local edits to `dependabot.yml`:** the file is owned by the template (UDF `:79`), but the merge keeps a maintainer's additions: whole entries below a marker at the end of `updates:`, and edits inside a template entry until the template changes it (3.3). Per-repo ignores can use `@dependabot ignore` instead (E26). Removal is covered in Trace C.
 - **Ecosystem labels:** `nuget` adds a third ecosystem with no Terraform label (Q3). Covered under GitHub settings.
@@ -654,7 +655,7 @@ References: `.gitignore` is class 5 (UDF `:99`). Its sections follow the capabil
 - **V6 holds (E9), but isn't used here:** an `extends` stub would need a shared file at a fixed path, and a repo's own file would still win (E28). The template owns the whole file instead (3.4).
 - **Manual sections:** `.gitignore` keeps a marker comment, which nothing parses, and local lines go below it (3.3).
 - **Removal:** dropping a capability should drop its ignore lines. Covered in Trace C.
-- **`docs-astro`:** adds a template section: `node_modules/`, plus `dist/` and `.astro/` under the docs path, which Copier needs to render them (A1). Whether to anchor `node_modules/` to the docs path is Q7. Whether `package-lock.json` is ignored follows B4. `.markdownlint.json` is one config for every type today (`Compare-BrownserveRepository.ps1:803`), and Astro doesn't change it.
+- **`docs-astro`:** adds a template section: `node_modules/`, plus `dist/` and `.astro/` under the docs path, which Copier needs to render them (A1). Whether to anchor `node_modules/` to the docs path is Q7. `package-lock.json` is committed, so it stays unignored (3.8). `.markdownlint.json` is one config for every type today (`Compare-BrownserveRepository.ps1:803`), and Astro doesn't change it.
 
 **Docs**
 
@@ -1073,6 +1074,50 @@ Under C, a range in `engines.node` floats with the runner (E13), so the scaffold
 - B5 (3.9, parked): the scaffold's first `engines.node` goes with where the scaffold's versions come from.
 - Proposed map: the Node setup row takes its version from the repo's `package.json`, and Dependency tooling gains an `engines.node` row.
 
+### 3.8 T3 and B4: lock files
+
+**Question.** How does each ecosystem's lock file move, and does `docs-astro` commit one?
+
+**Today.**
+
+- Cargo: `Cargo.lock` is committed. `UpdateCargoVersion` runs `cargo generate-lockfile` on every staged release (`build_tasks.ps1:330`). `Build` and `CargoTest` don't pass `--locked` (`:490-507`, `:525`), so a stale lock is rewritten silently.
+- npm: no lock. The base script and the deploy run `npm install` (B4).
+- NuGet: the Paket proposal commits `packages.lock.json` and restores with `--locked-mode` (E7).
+
+**Checked locally (E31).** On a copy of `bsdev` with the version bumped from 0.10.0 to 0.11.0, `cargo generate-lockfile` re-resolved all 263 packages and moved 20 third-party crates as well as the two workspace crates. `cargo update --workspace` moved only `bsdev` and `bsdev-core`. Cargo with `--locked` failed against the stale lock. `npm ci` failed with no lock, and with a lock that didn't match `package.json`.
+
+**Options for T3.**
+
+| Option | What it does | Result |
+| --- | --- | --- |
+| A | Keep `cargo generate-lockfile` | Every release moves dependencies with no Dependabot PR, against 3.2's rule. Not pursued |
+| B | `cargo update --workspace` | Only the workspace's own versions move. Third-party crates move only through Dependabot |
+| C | Stop committing `Cargo.lock` | Builds aren't reproducible and Dependabot has nothing to bump. Not pursued |
+
+**Options for B4.**
+
+| Option | What it does | Result |
+| --- | --- | --- |
+| A | No lock, `npm install` (today) | Every CI run resolves again, so a new Astro release reaches the site with no PR. The same shape as T3 |
+| B | Commit `package-lock.json`, CI runs `npm ci` | Dependabot `npm` bumps the manifest and lock in one PR. CI fails if they drift |
+
+**Rule, for Cargo, npm and NuGet.**
+
+1. Every ecosystem commits a lock.
+2. Local builds may update it (plain `cargo build`, `npm install`), so a maintainer's manifest change brings its lock change in the same PR.
+3. CI fails rather than rewrite it: `--locked`, `npm ci`, `--locked-mode`.
+4. Release tooling touches only the workspace's own version.
+
+**Decision.** B for T3, B for B4, under the rule above. Confidence: high. Not yet verified: Dependabot `npm` updating `package-lock.json` with `package.json` (E31).
+
+**Knock-on.**
+
+- Task package: `UpdateCargoVersion` runs `cargo update --workspace`. `Build` and `CargoTest` pass `--locked` in CI. The `docs-astro` base script runs `npm ci` in CI and `npm install` locally. The task package has to know when it runs in CI.
+- `--locked` and `npm ci` are CI-only, so a local `Cargo.toml` edit doesn't fail the next build, and local builds don't reinstall `node_modules` every run.
+- First npm lock: `npm ci` fails without one, so the first `npm install` is a one-time step. Who runs it is 3.9 (parked, M11). Until then, the base script fails with a clear message telling the maintainer to run `npm install` and commit the lock.
+- `.gitignore`: `package-lock.json` stays unignored.
+- Proposed map: the `Cargo.lock` and `package-lock.json` rows are settled.
+
 ## Sync mechanism requirements
 
 Copier was ruled out after 3.4 (Q12). This section separates what 3.2 to 3.4 decided from how Copier would have done it, and turns the Copier findings into requirements for the replacement. The E entries still describe Copier, so any requirement can be checked against them.
@@ -1122,7 +1167,7 @@ Step is the Phase 3 step that settles the entry; F means the final pass.
 | --- | --- | --- | --- | --- |
 | T1 | Action pins arrive by two routes | | | Merged into A4 |
 | T2 | Hand edits inside files replaced whole | | | Cleared (Trace A) |
-| T3 | `Cargo.lock` moves outside Dependabot | E7 | 3.8 | Open |
+| T3 | `Cargo.lock` moves outside Dependabot | E7, E31 | 3.8 | Decided (3.8) |
 | T4 | Paket version has no update route | | | Cleared (Trace A) |
 | T5 | `docs-astro` site URL never re-rendered | E15 | 3.13 | Parked: depends on whether `astro.config.mjs` is a scaffold or rendered (M1) |
 | T6 | `docs-astro` site built two ways | | 3.14 | Open |
@@ -1143,7 +1188,7 @@ Step is the Phase 3 step that settles the entry; F means the final pass.
 | B1 | Capability change has no route of its own | A4, A8, E3, E4, E5 | 3.21 | Parked: M8, M9 |
 | B2 | Site build entry point | | | Deferred: build restructure |
 | B3 | Node version has two owners | A7, E13 | 3.7 | Decided (3.7) |
-| B4 | Whether `docs-astro` commits a lock file | | 3.8 | Paired with T3 |
+| B4 | Whether `docs-astro` commits a lock file | E31 | 3.8 | Decided (3.8) |
 | B5 | Template holds the Astro version | | 3.9 | Parked: paired with A3 |
 | B6 | Image route: adding conflicts with Dependabot | | | Merged into A4 |
 | B7 | Adding conflicts with repo additions | | | Merged into A8 |
@@ -1163,7 +1208,7 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 
 - **T1. Action pins arrive by two routes.** Dependabot bumps the pins in all four workflows, and a regeneration puts the template's older pins back (`builds.yaml:57`, `:82`; `Compare-BrownserveRepository.ps1:1863-1876`). The same applies to the `docs-astro` `setup-node` pins.
 - **T2. Hand edits inside files the generator replaces whole.** These are the `publish_to` input in `release.yaml` (`:5-10`, `:96`) and the extra tests at `Basic.Binary.Tests.ps1:38-47`. A regeneration drops both.
-- **T3. `Cargo.lock` moves outside Dependabot.** On every staged release, `UpdateCargoVersion` runs `cargo generate-lockfile` (`build_tasks.ps1:330`), which moves every dependency to its latest compatible version without a Dependabot PR.
+- **T3. `Cargo.lock` moves outside Dependabot.** On every staged release, `UpdateCargoVersion` runs `cargo generate-lockfile` (`build_tasks.ps1:330`), which moves every dependency to its latest compatible version without a Dependabot PR. Decided in 3.8: `cargo update --workspace`, which moves only the workspace's own versions, and `--locked` in CI.
 - **T4. The Paket version has no update route except a hand edit.** It's only written when the file is missing (`Compare-BrownserveRepository.ps1:1326`), and `bsdev` has no Dependabot `nuget` entry. The PowerShell module types do have one (`:426`, `:488`).
 - **T5. The `docs-astro` site URL has no update route except a hand edit.** `astro.config.mjs` is only written if missing (`Compare-BrownserveRepository.ps1:2391-2394`), so a repo rename or owner change never reaches it. It also has to match the Pages setting in Terraform, and nothing checks the two agree.
 - **T6. The `docs-astro` site is built two ways.** PR checks build it through `BuildDocs` (`skillsrepo_build_tasks.ps1.template:373-385`); `deploy-docs` runs its own npm steps (`skillsrepo_github_release.yaml.template:84-85`). A change to one doesn't reach the other.
@@ -1184,7 +1229,7 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 - **B1. Adding or removing a capability has no route of its own.** The template sync runs `copier update --defaults` (UDF `:141`), which reuses the recorded answers, so changing a capability needs a manual `copier update`. That needs Python (`:145`), `--trust` (`:149`) and a clean tree (`:150`). By default it also moves the repo to the newest template release, so the PR adding `docs-astro` can carry unrelated template changes and conflicts. `--vcs-ref=:current:` keeps the repo on its current template version, so the PR carries only the capability change (E3). A removed capability's settings are dropped from the answers, and re-adding it gives their defaults, not the earlier values (E4). The maintainer considers this a heavy-handed way to change a repo's capabilities, and wants the approach considered properly in Phase 3. Removing `container` takes the same route, with the same costs.
 - **B2. Nothing says which entry point the site build hooks into.** Today it's part of `Build` (`skillsrepo_build_tasks.ps1.template:391`), and IBT's entry points table lists no docs hook (`:125-133`). `bsdev`'s PR check runs `BuildTestAndCheck` on three OSes (`builds.yaml:48-49`, `:67`). If `docs-astro` hooks `Build` the way today's task does, every PR builds the site three times, and the Linux, macOS and Windows runners all need Node. The maintainer expects the builds to be restructured as part of the main work, and the site build to be placed properly then.
 - **B3. The Node version has two owners.** The shared workflow's `setup-node` sets the Node version CI installs, while the repo's `package.json` states the range Astro needs (`>=22.12.0`, `skillsrepo_astro_package.json.template:16`), scaffolded once and then the maintainer's. Today the generator writes both, plus the two workflow copies (`skillsrepo_github_builds.yaml.template:50`, `skillsrepo_github_release.yaml.template:79`), so they change together. If an Astro major needs a newer Node, Dependabot's `astro` bump PR fails until a shared workflow release raises the version and the repo takes that bump: two hops, slowed by the cooldown unless Brownserve refs are excluded (GHA `:139`). `setup-node` can read it from `package.json` (E13), leaving one owner, but a range there floats with the runner image. A dev container states the Node version a third time, in the image or as a Feature option in the stub, owned by the template. Decided in 3.7: CI reads `engines.node` from the repo's `package.json`, which names a major; the dev container takes a major from the pins file.
-- **B4. Nothing settles whether `docs-astro` commits a lock file.** Today none is scaffolded, and both npm steps run `npm install` (`skillsrepo_build_tasks.ps1.template:378`, `skillsrepo_github_release.yaml.template:84`), so every CI run resolves again and a new Astro minor or patch reaches the deployed site with no Dependabot PR: the same shape as T3. The NuGet proposal commits its lock and fails the build if the manifest and lock disagree (Paket `:93`, `:97-98`); no research doc proposes the same for npm. With a lock, the base script should run `npm ci`, which fails without one, so the task package and the scaffold have to agree. The first lock would also need a Copier task running `npm install`, since a template with no versions can't ship one: the same shape as A3. As with A3, that works at set-up but not when `docs-astro` is added to an existing repo (E6). `.gitignore` has to match the answer: nothing ignores `package-lock.json` today (`gitignore_config.json:64-73`), so without a lock a local `npm install` leaves an untracked one that can be committed by accident; with a lock, it must stay unignored.
+- **B4. Nothing settles whether `docs-astro` commits a lock file.** Today none is scaffolded, and both npm steps run `npm install` (`skillsrepo_build_tasks.ps1.template:378`, `skillsrepo_github_release.yaml.template:84`), so every CI run resolves again and a new Astro minor or patch reaches the deployed site with no Dependabot PR: the same shape as T3. The NuGet proposal commits its lock and fails the build if the manifest and lock disagree (Paket `:93`, `:97-98`); no research doc proposes the same for npm. With a lock, the base script should run `npm ci`, which fails without one, so the task package and the scaffold have to agree. The first lock would also need a Copier task running `npm install`, since a template with no versions can't ship one: the same shape as A3. As with A3, that works at set-up but not when `docs-astro` is added to an existing repo (E6). `.gitignore` has to match the answer: nothing ignores `package-lock.json` today (`gitignore_config.json:64-73`), so without a lock a local `npm install` leaves an untracked one that can be committed by accident; with a lock, it must stay unignored. Decided in 3.8: `package-lock.json` is committed, CI runs `npm ci`, and local builds run `npm install`. The first lock waits on 3.9.
 - **B5. The template holds the scaffold's Astro version, and nothing updates it.** The `package.json` scaffold carries `astro ^7.3.5` (`skillsrepo_astro_package.json.template:13`), against UDF's rule that the template never contains versions (`:255`). `_skip_if_exists` keeps it from fighting Dependabot once a repo exists, but Dependabot can't bump the template's copy, so a new repo starts on whatever version was last set by hand and its first Dependabot PRs catch it up. That's the brief's GitHub Actions problem 1 in a smaller form (`2026-09-29 - Refactor.md:60`). A Copier task running `npm install astro`, as UDF suggests for NuGet (`:256`), would pick the current version instead. It does at set-up (E6), but `docs-astro` is usually added to an existing repo, where the task has no clean trigger.
 - **B6. On the image route, adding a capability conflicts with Dependabot.** With one image per combination, adding `docs-astro` swaps the stub's image reference (a Rust and Docker image for a Rust, Docker and Node one) on the line Dependabot bumps. If Dependabot has bumped the tag since `copier copy`, `copier update` sees both sides change the same line and commits a conflict (UDF `:147`), on every capability change. With Features, the template adds a line and leaves the Dependabot-bumped lines alone. Not verified (UDF V1, `:293`). It weighs on the images-or-Features choice (A7, UDF D4 `:283`).
 - **B7. Adding a capability can conflict with a repo's own additions.** Without the manual marker, `bsdev`'s `image/proto/node_modules/` sits straight after `.docker/` at the end of the file (`.gitignore:28-31`). If the template renders the `docs-astro` section after `container`'s, both sides add lines at the same point and `copier update` commits a conflict (UDF `:147`). Unlike A8, this happens on the change that adds the capability, not on a later template release. The PR template and CONTRIBUTING have the same shape, since repos add their own items (confirmed by the maintainer): a repo item after the `cargo` items (`pull_request_template.md:14-15`) sits where `docs-astro`'s checklist item lands, and a repo section after Building locally (`CONTRIBUTING.md:10`) sits where its CONTRIBUTING section lands. `bsdev` has neither today. Removing a capability has the same shape (C3): whichever section comes last sits next to the repo's lines, so no fixed order of sections avoids it. A fixed last line in the template, with repo additions below it, would keep the two apart, but that's a manual marker under another name, which UDF `:245` drops. Confirmed for `.gitignore` (E3).
@@ -1232,7 +1277,7 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 
 ### To verify
 
-Checked in 3.1; E19 to E22 in 3.2; E23 to E27 in 3.3; E28 in 3.4. E29 and E30 are not yet checked. How: Local is a throwaway Copier template and repo in a scratch directory, Docs is vendor documentation, GitHub is the `copier-test` repo.
+Checked in 3.1; E19 to E22 in 3.2; E23 to E27 in 3.3; E28 in 3.4. E29 and E30 are not yet checked. E31 is checked in 3.8, apart from Dependabot. How: Local is a throwaway Copier template and repo in a scratch directory, Docs is vendor documentation, GitHub is the `copier-test` repo.
 
 | ID | Summary | How | Needed by | Result |
 | --- | --- | --- | --- | --- |
@@ -1266,6 +1311,7 @@ Checked in 3.1; E19 to E22 in 3.2; E23 to E27 in 3.3; E28 in 3.4. E29 and E30 ar
 | E28 | Replacing a file whole on update | Local | A9 | Yes, with an every-update migration |
 | E29 | Dev container base image tag and baseline Features | Docs, then Local | A7 | Not checked |
 | E30 | Node version checks for `docs-astro` | Docs, then Local | B3 | Not checked |
+| E31 | Lock file commands for Cargo and npm | Local; Docs | T3, B4 | Confirmed, except Dependabot `npm` (not checked) |
 
 - **E1. Copier keeps a Dependabot bump the template didn't touch.** Copier's 3-way merge should keep a line Dependabot changed when the template leaves it alone, and commit a conflict when both change it (UDF `:135`, `:147`, V1 `:293`). Finding: confirmed with Copier 9.18.2. A Dependabot bump to `@v1.2.0` survived a template release that added a line two lines above it. When the next release moved the template's pin from `v1.0.0` to `v1.1.0`, `copier update` wrote inline conflict markers on that line. Moving it to `v1.2.0`, the value Dependabot had already set, merged cleanly. Copier exits 0 either way (X1).
 - **E2. Copier merge of appends at the same point in a list.** When the template and the repo both add to the end of a list, including JSON's comma on the previous last line, `copier update` is expected to conflict (A8, B7, C3). Finding: confirmed. When the repo and template both appended to the end of the cSpell words, the extensions list and a `.gitignore` section, all three conflicted. The comma both sides added to the previous last line merged; only the appended lines conflicted. Template edits with at least one unchanged line between them and the repo's edit merged cleanly: a word inserted mid-list, an extension with one line between, a line in another `.gitignore` section.
@@ -1369,3 +1415,4 @@ Checked in 3.1; E19 to E22 in 3.2; E23 to E27 in 3.3; E28 in 3.4. E29 and E30 ar
   - Not run: on Windows, or in the sync workflow.
 - **E29. Dev container base image tag and baseline Features.** Whether the stock base image publishes a tag that takes rebuilds without a pin change, whether an upstream .NET Feature covers the build, and whether the PowerShell, .NET, Rust, Docker and Node Features install together on that base (A7, 3.6). Not checked.
 - **E30. Node version checks for `docs-astro`.** Whether Astro refuses to start on a Node outside its supported range, whether Dependabot `npm` leaves `engines.node` alone, and whether the Node Feature accepts a major such as `"22"` (B3, 3.7). Not checked.
+- **E31. Lock file commands for Cargo and npm.** On a copy of `bsdev` bumped from 0.10.0 to 0.11.0: `cargo generate-lockfile` moved 20 third-party crates; `cargo update --workspace` moved only `bsdev` and `bsdev-core`; Cargo with `--locked` exits 101 against the stale lock. `npm ci` fails with no lock, and with a lock missing a dependency in `package.json` (T3, B4, 3.8). Confirmed. Whether Dependabot `npm` updates `package-lock.json` in the same PR as `package.json`: not checked.
