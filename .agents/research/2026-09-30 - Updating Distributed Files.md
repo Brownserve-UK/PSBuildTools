@@ -3,6 +3,8 @@
 Research for the "How do we solve updating things" question in [2026-09-29 - Refactor](../prompts/2026-09-29%20-%20Refactor.md).
 Nothing here is decided. It leans on [GitHub Actions](./2026-09-30%20-%20GitHub%20Actions.md) (C6), [Invoke-Build Tasks](./2026-09-30%20-%20Invoke-Build%20Tasks.md) (D6) and [Paket](./2026-09-30%20-%20Paket.md) (D7), which all deferred "who owns this file" to here.
 
+> **Option B (Copier) has been ruled out.** Testing in [Project Configuration and Ownership](./2026-09-30%20-%20Project%20Configuration%20and%20Ownership.md) found sharp edges in how it merges and reports conflicts (Q12). The likely replacement is a CLI that Brownserve builds and ships, not yet confirmed. The problem, what we need and the "shrink the surface first" principle still stand. Sections that assume B (G, the migration sketch, and parts of triggering and divergence) describe Copier's behaviour, so check them against [Sync mechanism requirements](./2026-09-30%20-%20Project%20Configuration%20and%20Ownership.md#sync-mechanism-requirements).
+
 ## Where we are today
 
 ### How an update works

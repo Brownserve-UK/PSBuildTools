@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 3: Decisions.** 3.1 done: every E entry is checked and Q2 to Q4 are answered, with results in [To verify](#to-verify). 3.2 done: A4 decided (D2), with X3 and E19 to E22 added. Left open: E12 for NuGet, running the lint CI actions (E9), Feature pins end to end (E22), and security updates against `exclude-paths` (E21). E18's run is moot. B2 is deferred to the build restructure. 3.3 written up as provisional: A8 (marker comments), with X4, X5 and E23 to E27 added; the maintainer may probe it further. Copier itself is to go to a trial and may be replaced by our own sync (Q12). 3.4 done: A9 decided (an every-update migration resets whole files), with E28 added; Q9 now covers only the shared cSpell list. Next: 3.5, C4.
+**Phase 3: Decisions, continued without Copier.** 3.1 to 3.4 are done. After 3.3 and 3.4, Copier was ruled out (Q12). The likely replacement is a CLI that Brownserve builds and ships, but that isn't confirmed. The decisions so far are split into ownership rules, which stand, and Copier mechanisms, which don't (see [Sync mechanism requirements](#sync-mechanism-requirements)). The Copier findings are now requirements for whatever replaces it. Steps that depend on the sync mechanism (3.9, 3.13, 3.19, 3.21, 3.22) are parked until it's chosen. The rest continue, more briefly where a step is small. Still open from earlier: E12 for NuGet, running the lint CI actions (E9), Feature pins end to end (E22), and security updates against `exclude-paths` (E21). Next: 3.5, C4.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -17,7 +17,10 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 - [x] 2.6 Trace C: remove `container`
 - [x] 2.7 Problem list: duplicates removed, dependencies noted, order agreed for Phase 3
 - [x] 3.1 Exploration: check the E entries in the Register
-- [ ] 3.2 to 3.22 Decisions: one problem per step, in the Register's order, each fixing a row of the proposed map. The declaration (whether it exists, what it holds, where it lives) comes last
+- [x] 3.2 to 3.4 Decisions: A4, A8 (provisional), A9
+- [x] Sync mechanism requirements, from the Copier findings
+- [ ] 3.5 to 3.20 Decisions that don't depend on the sync mechanism, skipping parked steps
+- [ ] Parked until the sync mechanism is chosen: 3.9, 3.13, 3.19, 3.21, 3.22
 - [ ] F. Final pass: final map and unresolved questions, re-run the three traces against it, decide whether an overview diagram is worth adding
 
 ## Purpose
@@ -72,7 +75,7 @@ These describe what a word refers to, not decisions. New terms are added as they
 | **Writer** | Any person or automation that changes a file, e.g. the maintainer, Dependabot, the sync mechanism. |
 | **Owner** | A writer that is *allowed* to change a given file, or a given part of one. Ownership is the rule; writing is the act. |
 | **Maintainer** | The people responsible for a repository. |
-| **Sync mechanism** | Whatever brings shared files in a repository up to date with their central source. Provisionally Copier, per [Updating Distributed Files](./2026-09-30%20-%20Updating%20Distributed%20Files.md), pending a trial (Q12). |
+| **Sync mechanism** | Whatever brings shared files in a repository up to date with their central source. Was Copier, per [Updating Distributed Files](./2026-09-30%20-%20Updating%20Distributed%20Files.md). Now likely a CLI that Brownserve builds, not yet confirmed (Q12). What it has to do is in [Sync mechanism requirements](#sync-mechanism-requirements). |
 | **Local customisation** | A change the maintainer makes in one repository to a file that comes from somewhere shared, e.g. extra cSpell words, a manually defined `.gitignore` entry. Dependabot's edits are tracked separately. |
 | **Map** | A table of where each piece of content in a repository comes from and how it gets there. Phase 2 builds one for today and one proposed. |
 | **Route** | How content gets from where it comes from to where it's used, e.g. the generator, a Dependabot PR, a hand edit. Each piece of content should have exactly one. |
@@ -931,6 +934,42 @@ _migrations:
 - Each reset file needs its own migration entry. A file with a marker never gets one, or the repo's lines below it are lost.
 - After a conflict the file is still `UU` in git but has no markers, so X1's check passes.
 
+## Sync mechanism requirements
+
+Copier was ruled out after 3.4 (Q12). This section separates what 3.2 to 3.4 decided from how Copier would have done it, and turns the Copier findings into requirements for the replacement. The E entries still describe Copier, so any requirement can be checked against them.
+
+### Rules and mechanisms so far
+
+| Decision | Rule (stands) | Copier mechanism (dropped) |
+| --- | --- | --- |
+| 3.2 A4 | The template owns every version line in a file it renders. The versions come from a pins file in the template repo, which Dependabot bumps natively. A repo's Dependabot owns versions only in files the template doesn't render, and `exclude-paths` keeps it off the stubs (E21) | Reading the pins file with `include` and `regex_search` (E20) |
+| 3.3 A8 (provisional) | A fixed marker separates the template's lines from the repo's. Repo edits inside template sections are kept until the template changes those lines, then they conflict. A line the template adopts is removed from the repo's part | Diff replay with `git apply` (E24), `--context-lines 5`, a `git diff --check` in the sync, version-gated `_migrations` |
+| 3.4 A9 | A file the template owns whole is reset on every sync. Lasting divergence is an eject | An every-update `_migrations` entry (E28) |
+
+3.3 stays provisional. A tool we write can parse the marker, which reopens what a missing marker should do (B7).
+
+### Requirements
+
+| ID | Requirement | From |
+| --- | --- | --- |
+| M1 | Each file has an ownership mode: rendered whole and reset on every sync; a template part and a repo part split by a marker; a scaffold written once and never updated; or ejected | A8, A9, E17, E23, E28 |
+| M2 | A repo edit stays where it is or becomes a conflict. It never moves without one | X4, E24 |
+| M3 | An edit inside a template section is kept while the template leaves those lines alone, and conflicts when the template changes them | 3.3, E24 |
+| M4 | A conflict is reported in the exit code, so the sync workflow can stop before opening a PR | X1, E1 |
+| M5 | Conflict markers are in git's format, so VS Code's merge-conflict extension reads them, with the repo as Current and the template as Incoming. There's a way to take one side for a file or a hunk | E27 |
+| M6 | When the template adopts a line from a repo, an identical copy in the repo's part is removed and a different value is flagged | X5, E25, E26 |
+| M7 | Version lines are rendered from a pins file that Dependabot bumps natively. Template source never has to parse as the ecosystem's own file | 3.2, E20, E22 |
+| M8 | A capability change is its own operation. It stays on the repo's current template version and runs unattended | B1, E3 |
+| M9 | Re-adding a removed capability says when a dropped setting comes back with its default, instead of losing the earlier value silently | E4 |
+| M10 | A template release that adds a question with no default doesn't stall unattended syncs. Either template CI requires a default, or the sync fails visibly for that repo | X2, E5 |
+| M11 | Hooks know which operation is running (set-up, update, capability added, capability removed) and run once in the repo, so adding a capability can install its packages and write its first lock file | A3, B4, B5, E6 |
+| M12 | Output is the same on Linux, macOS and Windows, including line endings | E28 |
+
+### Open for the parked steps
+
+- Whether the tool's answers file is the project config, renders it, or is separate (A1), and whether Terraform reads it (A12).
+- What a missing marker does: stop, as today's generator does, or fall back to a conflict, as Copier did (3.3, B7).
+
 ## Register
 
 The single list of problems, open questions and things to check. The maps and traces refer to entries by ID. The prefix records where an entry came from: T from today's map, A, B and C from Traces A, B and C, Q for open questions, E for things to check, and X for problems found in Phase 3. Merged and cleared entries keep their text so the traces still read correctly.
@@ -945,12 +984,12 @@ Step is the Phase 3 step that settles the entry; F means the final pass.
 | T2 | Hand edits inside files replaced whole | | | Cleared (Trace A) |
 | T3 | `Cargo.lock` moves outside Dependabot | E7 | 3.8 | Open |
 | T4 | Paket version has no update route | | | Cleared (Trace A) |
-| T5 | `docs-astro` site URL never re-rendered | E15 | 3.13 | Open |
+| T5 | `docs-astro` site URL never re-rendered | E15 | 3.13 | Parked: depends on whether `astro.config.mjs` is a scaffold or rendered (M1) |
 | T6 | `docs-astro` site built two ways | | 3.14 | Open |
 | T7 | `docs-astro` can't be added on its own | | | Cleared (Trace B) |
-| A1 | How the project config gets written | A2, A5, A12, B1 | 3.22 | Open |
+| A1 | How the project config gets written | A2, A5, A12, B1 | 3.22 | Parked: sync mechanism |
 | A2 | Who writes the `Extends` list | E8 | 3.18 | Open |
-| A3 | Packages into the dependency manifest at set-up | T3, E6 | 3.9 | Open |
+| A3 | Packages into the dependency manifest at set-up | T3, E6 | 3.9 | Parked: M11 |
 | A4 | Template and Dependabot write the same line | E1, E12, E19 to E22 | 3.2 | Decided (3.2) |
 | A5 | Publish targets have two homes | C2 | 3.17 | Open |
 | A6 | Nothing creates or checks maintainer-written files | | 3.10 | Open |
@@ -959,13 +998,13 @@ Step is the Phase 3 step that settles the entry; F means the final pass.
 | A9 | Nothing keeps a file identical across repos | A8, E9, E28 | 3.4 | Decided (3.4) |
 | A10 | Changelog scaffold not tied to its parser | | 3.12 | Open |
 | A11 | Installers not tied to the release | A6 | 3.11 | Open |
-| A12 | Terraform keeps its own record | A13, T5 | 3.19 | Open |
+| A12 | Terraform keeps its own record | A13, T5 | 3.19 | Parked: depends on A1 |
 | A13 | Check name built from three sources | E10 | 3.15 | Open |
-| B1 | Capability change has no route of its own | A4, A8, E3, E4, E5 | 3.21 | Open |
+| B1 | Capability change has no route of its own | A4, A8, E3, E4, E5 | 3.21 | Parked: M8, M9 |
 | B2 | Site build entry point | | | Deferred: build restructure |
 | B3 | Node version has two owners | A7, E13 | 3.7 | Open |
 | B4 | Whether `docs-astro` commits a lock file | | 3.8 | Paired with T3 |
-| B5 | Template holds the Astro version | | 3.9 | Paired with A3 |
+| B5 | Template holds the Astro version | | 3.9 | Parked: paired with A3 |
 | B6 | Image route: adding conflicts with Dependabot | | | Merged into A4 |
 | B7 | Adding conflicts with repo additions | | | Merged into A8 |
 | C1 | Hand-written `Extends` fails silently | | | Merged into A2 |
@@ -974,11 +1013,11 @@ Step is the Phase 3 step that settles the entry; F means the final pass.
 | C4 | A section covers files that outlive its capability | A8 | 3.5 | Open |
 | C5 | Features route: removal conflicts with Dependabot | | | Merged into A4 |
 | C6 | Removal order not stated | A12 | 3.20 | Open |
-| X1 | Copier doesn't report a conflict | | 3.21 | Open |
-| X2 | New template questions need a default | | 3.21 | Open |
+| X1 | Copier doesn't report a conflict | | | Copier only; requirement M4 |
+| X2 | New template questions need a default | | | Copier only; requirement M10 |
 | X3 | Stub shape tied to its pin | E19 | 3.2 | Decided (3.2) |
-| X4 | A repo edit can move without a conflict | E24 | 3.3 | Provisional (3.3) |
-| X5 | A promoted line ends up twice | E25, E26 | 3.3 | Provisional (3.3) |
+| X4 | A repo edit can move without a conflict | E24 | | Copier only; requirement M2 |
+| X5 | A promoted line ends up twice | E25, E26 | | Copier only; requirement M6 |
 
 Merged entries share a mechanism with the entry they're merged into; only the trigger differs (a template release, adding a capability, removing one). Paired entries have the same shape in another ecosystem, so one decision should cover both. B2 belongs to the wider build restructure (how the builds are split up, and what depends on what), so it isn't decided here. T6 and A13 are decided as ownership rules that hold whichever entry point the site build uses.
 
@@ -1036,7 +1075,7 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 | Q9 | Where the shared cSpell list lives | F |
 | Q10 | Docs-only deploy trigger | 3.14 |
 | Q11 | Conventional Commits types in two sources | F |
-| Q12 | Copier or our own sync mechanism | F |
+| Q12 | Copier or our own sync mechanism | Not Copier; replacement open |
 
 - **Q1. `removed` vs `removal` label.** `label-pr.yaml:88` applies `removed`, but Terraform defines `removal` (`modules/github-brownserve_repo/issues.tf:93`). Terraform's labels are authoritative (`issues.tf:2-3`). This isn't specific to `rust-app` or `container`, but it's two sources of the same information that disagree. The changelog groups entries by these labels, so the mismatch reaches `CHANGELOG.md` too.
 - **Q2. Dependabot `docker` entry may do nothing.** `image/Dockerfile:8` uses `archlinux:latest` with no version or digest. Dependabot bumps versioned tags or digests, so this entry (`dependabot.yml:18-23`) probably never opens a PR. Confirmed from Dependabot's source: `latest` isn't a version tag, so the update checker treats it as up to date and never opens a PR. With a digest pinned (`archlinux:latest@sha256:…`) it would bump the digest.
@@ -1049,7 +1088,7 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 - **Q9. Where does the shared markdownlint file live?** If E9 holds, `.markdownlint.json` becomes an `extends` stub plus a shared file (UDF `:96`). No research doc says where the shared file lives or how it reaches the repo. E9 rules out a URL. A restored package under `packages/` works if restore stays repo-local (Paket D4, `:179`), but markdownlint crashes in the editor until the restore runs. The shared cSpell list faces the same choice, and needs `readonly` so the editor doesn't offer to add words to it. Answered for markdownlint in 3.4: no shared file, the template owns it whole. Under NuGet the restored path also carries the version (Paket `:107`), which applies to the cSpell list too.
 - **Q10. How is a docs-only deploy triggered?** Today the deploy runs only after `release` (`skillsrepo_github_release.yaml.template:64`), which is `workflow_dispatch` (`:4`), so a docs-only fix waits for the next release. The maintainer wants a way to trigger the docs deploy manually on its own.
 - **Q11. Conventional Commits types are stated in two separately released sources.** The table stays in the template's CONTRIBUTING, while the title-to-label mapping moves to the shared workflows (GHA D7). Today both come from the generator, so they at least change together.
-- **Q12. Copier or our own sync mechanism.** The decisions assume Copier (UDF), but 3.3 found sharp edges: a diff replay rather than a 3-way merge (E24), edits that move without a conflict (X4), promoted lines kept twice (X5) and a zero exit on conflict (X1). The maintainer expects to take Copier to a trial and may roll our own instead. Decisions that rest on Copier's behaviour cite an E entry, so they can be rechecked against whatever is chosen.
+- **Q12. Copier or our own sync mechanism.** Answered: not Copier. 3.3 and 3.4 found a diff replay rather than a 3-way merge (E24), edits that move without a conflict (X4), promoted lines kept twice (X5), a zero exit on conflict (X1), no way to replace a file whole on update (E28), and tasks that can't tell a capability was just added (E6). The likely replacement is a CLI that Brownserve builds and ships, not yet confirmed. Its requirements are in [Sync mechanism requirements](#sync-mechanism-requirements). Decisions that rest on Copier's behaviour cite an E entry, so they can be rechecked against it.
 
 ### To verify
 
