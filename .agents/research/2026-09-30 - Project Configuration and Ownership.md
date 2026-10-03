@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 3: Decisions, continued without Copier.** 3.1 to 3.8, 3.10 and 3.11 are done. After 3.3 and 3.4, Copier was ruled out (Q12). The likely replacement is a CLI that Brownserve builds and ships, but that isn't confirmed. The decisions so far are split into ownership rules, which stand, and Copier mechanisms, which don't (see [Sync mechanism requirements](#sync-mechanism-requirements)). The Copier findings are now requirements for whatever replaces it. Steps that depend on the sync mechanism (3.9, 3.13, 3.19, 3.21, 3.22) are parked until it's chosen. The rest continue, more briefly where a step is small. Still open from earlier: E12 for NuGet, running the lint CI actions (E9), Feature pins end to end (E22), and security updates against `exclude-paths` (E21). Also: the dev container base image tag and baseline Features (E29), the Node version checks (E30), and Dependabot `npm` updating `package-lock.json` (E31). Next: 3.12, A10.
+**Phase 3: Decisions, continued without Copier.** 3.1 to 3.8 and 3.10 to 3.12 are done. After 3.3 and 3.4, Copier was ruled out (Q12). The likely replacement is a CLI that Brownserve builds and ships, but that isn't confirmed. The decisions so far are split into ownership rules, which stand, and Copier mechanisms, which don't (see [Sync mechanism requirements](#sync-mechanism-requirements)). The Copier findings are now requirements for whatever replaces it. Steps that depend on the sync mechanism (3.9, 3.13, 3.19, 3.21, 3.22) are parked until it's chosen. The rest continue, more briefly where a step is small. Still open from earlier: E12 for NuGet, running the lint CI actions (E9), Feature pins end to end (E22), and security updates against `exclude-paths` (E21). Also: the dev container base image tag and baseline Features (E29), the Node version checks (E30), and Dependabot `npm` updating `package-lock.json` (E31). Next: 3.14, T6 and Q10.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -25,6 +25,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 - [x] 3.8 Decision: T3 and B4
 - [x] 3.10 Decision: A6
 - [x] 3.11 Decision: A11
+- [x] 3.12 Decision: A10
 - [ ] 3.5 to 3.20 Decisions that don't depend on the sync mechanism, skipping parked steps
 - [ ] Parked until the sync mechanism is chosen: 3.9, 3.13, 3.19, 3.21, 3.22
 - [ ] F. Final pass: final map and unresolved questions, re-run the three traces against it, decide whether an overview diagram is worth adding
@@ -664,7 +665,7 @@ References: `.gitignore` is class 5 (UDF `:99`). Its sections follow the capabil
 | Thing | Comes from | Gets there by |
 | --- | --- | --- |
 | `README.md` | GitHub (auto-init), then Maintainer | Repo creation; Hand edit |
-| `CHANGELOG.md`, header and placeholder ⚠ A10 | Template | `copier copy` (scaffold) |
+| `CHANGELOG.md`, header and placeholder | Task package (with the parser's module, 3.12) | First task that reads the changelog, if the file is missing |
 | `CHANGELOG.md`, entries | Release history | Staged release |
 | `LICENSE` | GitHub's licence list, chosen in Terraform | Repo creation |
 | `CLAUDE.md` | Maintainer | Hand edit |
@@ -675,7 +676,7 @@ References: `.gitignore` is class 5 (UDF `:99`). Its sections follow the capabil
 | `docs-astro` scaffold (`package.json`, `astro.config.mjs`, `index.astro`) ⚠ T5 | Template | `copier copy` (scaffold) |
 | `docs-astro` site content after scaffolding | Maintainer | Hand edit |
 
-References: CONTRIBUTING and the PR template are class 2 (org `.github` defaults) or class 4 (UDF `:95`, D3 `:282`). `CHANGELOG.md` is a class 6 scaffold through `_skip_if_exists` (UDF `:81`, `:102`, `:138`). Capability sections follow the capabilities (UDF `:134`, `:244`); a repo addition is carried by the merge below a marker comment (UDF `:245`, 3.3), or the file is ejected (UDF `:246`).
+References: CONTRIBUTING and the PR template are class 2 (org `.github` defaults) or class 4 (UDF `:95`, D3 `:282`). `CHANGELOG.md` isn't scaffolded, unlike UDF's class 6 (UDF `:81`, `:102`): the task package writes it (3.12). Capability sections follow the capabilities (UDF `:134`, `:244`); a repo addition is carried by the merge below a marker comment (UDF `:245`, 3.3), or the file is ejected (UDF `:246`).
 
 - **Per-repo variation:** CONTRIBUTING and the PR template share a baseline, and repos (even with the same capabilities) add their own items (confirmed by the maintainer). That rules out class 2: GitHub only falls back to the org copy when the repo has none (UDF `:77`), and doesn't merge the two, so one extra item would cut the repo off from baseline updates. Today nothing carries a repo addition: both files are compared whole and replaced (`Compare-BrownserveRepository.ps1:1962-1974`, `:2019-2031`), with no manual section marker.
 - **`container` gap:** what a `container` section would hold is Q8.
@@ -1186,6 +1187,32 @@ The one-liners fetch the installers from `main` (`README.md:31`, `:36`), not fro
 - No new task, workflow job or E entry.
 - Proposed map: the A11 marks on the Install scripts rows are cleared. D stays under "Later".
 
+### 3.12 A10: changelog scaffold not tied to its parser
+
+**Question.** Who writes a new repo's `CHANGELOG.md` header and `v0.0.0` placeholder, when the parser that reads them doesn't release with the template?
+
+**Today.** The generator writes the header only if the file is missing (`Compare-BrownserveRepository.ps1:1673`), from the private `New-BrownserveChangelogHeader.ps1:7-20`. `Read-BrownserveChangelog.ps1:203` spots the placeholder by version alone: one entry, `0.0.0`. `New-BrownserveChangelogEntry` then reads all history (`:217`), and `Add-BrownserveChangelogEntry` drops the placeholder (`:69`). PR builds don't read the changelog; `StageRelease`, `Package`, `DryRun` and `Release` do, through `GetReleaseHistory` (`build_tasks.ps1:261`).
+
+**Options.**
+
+| Option | What it does | Result |
+| --- | --- | --- |
+| A | Template scaffolds the header and placeholder; A10 accepted | The format lives in two places. A repo set up from a template older than a format change fails at its first `StageRelease` with git's "unknown revision" error, and is fixed by hand |
+| B | No scaffold. `GetReleaseHistory` detects a missing file, and a separate task writes the header from the parser's module | A10 goes away: header and parser release together. The module exposes the header, and the task package gains a task |
+| C | Template scaffolds; the parser promises to keep recognising the old placeholder | A with an unenforced convention |
+| D | A task package check compares the scaffold with the parser | A drift check, ruled out (3.11) |
+
+**Decision.** B. Confidence: high.
+
+**Knock-on.**
+
+- `GetReleaseHistory` tells a missing changelog apart from an unparseable one. Missing means a first release, and the new task writes the header. Unparseable still fails `GetReleaseHistory`.
+- `StageRelease` commits the new file with its first entry. A `DryRun` before the first release writes it in the CI workspace, where it's discarded.
+- PSBuildTools makes the header public, either by exposing `New-BrownserveChangelogHeader` or another way. That's for the implementation to decide.
+- The scaffold class loses `CHANGELOG.md`. Proposed map: the Docs row moves to the task package and loses its A10 mark.
+- `bsdev` and other existing repos already have a changelog, so nothing changes for them.
+- No sync requirement or E entry.
+
 ## Sync mechanism requirements
 
 Copier was ruled out after 3.4 (Q12). This section separates what 3.2 to 3.4 decided from how Copier would have done it, and turns the Copier findings into requirements for the replacement. The E entries still describe Copier, so any requirement can be checked against them.
@@ -1249,7 +1276,7 @@ Step is the Phase 3 step that settles the entry; F means the final pass.
 | A7 | Dev container toolset has no source | A4, E14, E22 | 3.6 | Decided (3.6) |
 | A8 | Template and repo lines next to each other conflict | E2, E9, E23 to E27 | 3.3 | Provisional (3.3) |
 | A9 | Nothing keeps a file identical across repos | A8, E9, E28 | 3.4 | Decided (3.4) |
-| A10 | Changelog scaffold not tied to its parser | | 3.12 | Open |
+| A10 | Changelog scaffold not tied to its parser | | 3.12 | Decided (3.12) |
 | A11 | Installers not tied to the release | A6 | 3.11 | Accepted (3.11) |
 | A12 | Terraform keeps its own record | A13, T5 | 3.19 | Parked: depends on A1 |
 | A13 | Check name built from three sources | E10 | 3.15 | Open |
@@ -1290,7 +1317,7 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 - **A7. The dev container toolset has no settled source.** `bsdev` needs PowerShell (every repo, because the build runs in `pwsh`), Rust (`rust-app`) and Docker tooling (`container`, missing today, see the Phase 1 Dev environment table). A dev container uses one image, so an image per capability can't be combined, and an image per combination grows with every new mix. A base image plus one Feature per capability combines, but each Feature has to be built and published. Images or Features is still open (UDF D4, `:283`), and no research doc says which repo builds and publishes them, or with what workflow. `docs-astro` adds Node, which no dev container installs today (`SkillsRepo` has none: `Compare-BrownserveRepository.ps1:784-793`, `:893`). Upstream Features exist for Node and every other capability's tooling (E14), so the Features route may need no Brownserve build. No Dependabot ecosystem bumps an image tag in `devcontainer.json`, so on the image route the template's tag has no update route (E22). Decided in 3.6: upstream Features on a stock base image, versions from the pins file.
 - **A8. Additions from the template and the repo to the same list can conflict.** When both append to the end of a list in a class 5 file, their edits touch the same or adjacent lines. In JSON, appending also adds a comma to the previous last line. If the maintainer adds `"bsdev"` after `"yzhang"` in the cSpell words (`settings.json:15`), and the next template release also adds a word at the end, both sides change `"yzhang"` to `"yzhang",` and `copier update` commits a conflict. UDF's "a cSpell word the template didn't touch is kept" (`:135`) holds only when the template's change is elsewhere in the list. The same applies to `extensions.json` and `.gitignore`. Confirmed (E2). Only the appended lines conflict, and a template edit with at least one unchanged line between it and the repo's merges cleanly, so a template that inserts mid-list rather than appending avoids it, unless the repo has edited next to the same point. V6 holds (E9), so the template's cSpell words move to a read-only shared list and drop out of this. The repo's own words stay in the stub, which the template doesn't add to, and the extension inserts them alphabetically rather than appending. Provisionally decided in 3.3: a marker comment the template never changes, with repo additions below it.
 - **A9. Nothing keeps a file identical across repos once Copier merges.** Today `.markdownlint.json` is overwritten whole so that no repo drifts (`Compare-BrownserveRepository.ps1:1704-1748`). Copier's 3-way merge keeps any local edit the template didn't touch (UDF `:135`). That includes class 4 files, whose "overwrite is fine" (UDF `:79`) isn't how Copier updates them. As class 3, the local half exists to hold local rules (UDF `:78`, `:245`). Either way a repo could switch a rule back on and keep it on without ejecting, though ejecting is the research's visible route for divergence (UDF `:246`). The research doesn't say whether the "no local changes" rule should survive. Decided in 3.4: it survives, reset by a migration on every update.
-- **A10. Nothing ties the changelog scaffold to the parser that reads it.** Today the header and its `v0.0.0` placeholder come from `New-BrownserveChangelogHeader.ps1:7-20`, and `Read-BrownserveChangelog` detects that exact placeholder (`Read-BrownserveChangelog.ps1:203`). Both live in PSBuildTools and release together. As a scaffold, the placeholder moves into the template, while the parser stays in a Brownserve module the task package uses. If the parser's format changes, a repo set up from an older template release gets a placeholder the parser doesn't recognise, and its first staged release treats `v0.0.0` as a real release. It only matters before a repo's first release.
+- **A10. Nothing ties the changelog scaffold to the parser that reads it.** Today the header and its `v0.0.0` placeholder come from `New-BrownserveChangelogHeader.ps1:7-20`, and `Read-BrownserveChangelog` detects that exact placeholder (`Read-BrownserveChangelog.ps1:203`). Both live in PSBuildTools and release together. As a scaffold, the placeholder moves into the template, while the parser stays in a Brownserve module the task package uses. If the parser's format changes, a repo set up from an older template release gets a placeholder the parser doesn't recognise. Its first staged release asks git for `v0.0.0` and fails with "unknown revision" (`New-BrownserveChangelogEntry.ps1:217-219`). It only matters before a repo's first release. Decided in 3.12: the template doesn't scaffold the changelog. A task package task writes the header from the parser's module when the file is missing, and an unparseable changelog still fails.
 - **A11. Nothing ties the installers to the release they install.** Each installer hard-codes the asset name (`install.sh:42`, `install.ps1:26`), the targets (`install.sh:26`, `:32`, `install.ps1:25`) and the binary name (from the repo name). In the proposal these are decided by the task package's `Package` task (IBT `:131`), the `release` stub's targets input (GHA `:133`) and the project config (IBT `:142`). Nothing checks them today either (see the Phase 1 Install scripts table), but today the installers and the build tasks come from the same generator and change together. Proposed, they have separate owners and releases. If a task package major release changes the asset layout (a breaking change, IBT `:182`), or the stub drops `aarch64-apple-darwin`, CI stays green and the breakage only shows up when someone runs the `README.md` one-liner. Accepted in 3.11: nothing checks the installers, and a breakage is fixed by a PR to `main`, where the one-liners fetch them from.
 - **A12. Terraform keeps its own record of what each repo is.** A repo declares its capabilities in the Copier answers (UDF `:265`), but Terraform decides what the repo gets from `issue_types` and its hand-kept lists, and nothing links the two. Declare `container` and Terraform also has to add the repo to a new Docker Hub secret list, or the first `Release` fails at `CheckPublishingParameters` (IBT `:37`). Every repo needs to be in `brownserve_ci_app_repos`, or the template sync can't get an App token and the repo never receives template updates. Remove `container` and the secrets stay behind unless Terraform is changed too. GHA C5 (`:161`) names the boundary but doesn't say which side is the source. The maintainer plans to refactor the Terraform set-up to link labels, secrets and contributors (not yet researched). That could let the module call work out the lists from one declaration, but it would still be separate from the Copier answers unless one reads the other. Declare `docs-astro` and Terraform also needs a `pages` block for the repo; without it the deploy pushes `gh-pages` successfully and the site never goes live.
 - **A13. A required check name is built from three sources.** `<caller job>` comes from the template (the stub's job name), `<called job>` from the shared workflows (GHA `:158`), and the full string is stated in Terraform's `required_status_checks` (`repos.tf:211`). Today there are two: the job name in `builds.yaml:98` and Terraform. If a shared workflow release renames its gate job, each repo's Dependabot bump PR reports the new name and never the old one, and strict protection with `enforce_admins` (`repository.tf:46`, `:59`) stops it merging. If Terraform changes first, every repo that hasn't taken the bump is blocked instead. Whether `rust-app`'s matrix and `container`'s smoke test sit behind one gate job with a fixed name (GHA `:129`) isn't settled; if the name varies by capability, Terraform has to know the capabilities too, which ties A13 to A12. Names confirmed (E10). A required check skipped by `if:` passes, so a capability's job can be required in every repo.
