@@ -6,7 +6,7 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 
 ## Status
 
-**Phase 3: Decisions, continued without Copier.** 3.1 to 3.8, 3.10 to 3.12 and 3.14 to 3.17 are done. After 3.3 and 3.4, Copier was ruled out (Q12). The likely replacement is a CLI that Brownserve builds and ships, but that isn't confirmed. The decisions so far are split into ownership rules, which stand, and Copier mechanisms, which don't (see [Sync mechanism requirements](#sync-mechanism-requirements)). The Copier findings are now requirements for whatever replaces it. Steps that depend on the sync mechanism (3.9, 3.13, 3.19, 3.21, 3.22) are parked until it's chosen. The rest continue, more briefly where a step is small. Still open from earlier: E12 for NuGet, running the lint CI actions (E9), Feature pins end to end (E22), and security updates against `exclude-paths` (E21). Also: the dev container base image tag and baseline Features (E29), the Node version checks (E30), and Dependabot `npm` updating `package-lock.json` (E31). Next: 3.18, A2.
+**Phase 3: Decisions, continued without Copier.** 3.1 to 3.8, 3.10 to 3.12, 3.14 to 3.18 and 3.20 are done. After 3.3 and 3.4, Copier was ruled out (Q12). The likely replacement is a CLI that Brownserve builds and ships, but that isn't confirmed. The decisions so far are split into ownership rules, which stand, and Copier mechanisms, which don't (see [Sync mechanism requirements](#sync-mechanism-requirements)). The Copier findings are now requirements for whatever replaces it. Steps that depend on the sync mechanism (3.9, 3.13, 3.19, 3.21, 3.22) are parked until it's chosen. The rest continue, more briefly where a step is small. Still open from earlier: E12 for NuGet, running the lint CI actions (E9), Feature pins end to end (E22), and security updates against `exclude-paths` (E21). Also: the dev container base image tag and baseline Features (E29), the Node version checks (E30), and Dependabot `npm` updating `package-lock.json` (E31). Every step that doesn't depend on the sync mechanism is done. Next: final pass F.
 
 - [x] 1. Inventory
 - [x] 2.1 Agree the map format
@@ -30,7 +30,9 @@ Follows the research phase of [2026-09-29 - Refactor](../prompts/2026-09-29%20-%
 - [x] 3.15 Decision: A13
 - [x] 3.16 Decision: C2
 - [x] 3.17 Decision: A5
-- [ ] 3.5 to 3.20 Decisions that don't depend on the sync mechanism, skipping parked steps
+- [x] 3.18 Decision: A2
+- [x] 3.20 Decision: C6
+- [x] 3.5 to 3.20 Decisions that don't depend on the sync mechanism, skipping parked steps
 - [ ] Parked until the sync mechanism is chosen: 3.9, 3.13, 3.19, 3.21, 3.22
 - [ ] F. Final pass: final map and unresolved questions, re-run the three traces against it, decide whether an overview diagram is worth adding
 
@@ -75,7 +77,7 @@ These describe what a word refers to, not decisions. New terms are added as they
 | **Project type** | Today's model: one label per repository (`bsdev`, `PowerShellModule`) that selects every generated file. Being replaced by capabilities. |
 | **Capability** | A named piece of shared process that a repository opts into, e.g. `rust-app`, `container`, `powershell-module`. A repository can combine several. |
 | **Project config** | The settings file [Invoke-Build Tasks](./2026-09-30%20-%20Invoke-Build%20Tasks.md) proposes for each repo (`:142`): its capabilities and their settings (binary name when Cargo can't give it (3.10), image name, Docker context, publish targets: each capability's full set unless the repo narrows it, the only home for them (3.17)). The build tasks read it. Replaces today's `ModuleInfo.json` and the hard-coded defaults in `build.ps1` and `build_tasks.ps1`. Format and location not decided (`:199`, `:217`). |
-| **Task package** | The NuGet package of shared Invoke-Build tasks proposed in [Invoke-Build Tasks](./2026-09-30%20-%20Invoke-Build%20Tasks.md) (`:85`). It has one base script per capability, and the repo loads them with `Extends`. Name not decided (D8, `:222`). |
+| **Task package** | The NuGet package of shared Invoke-Build tasks proposed in [Invoke-Build Tasks](./2026-09-30%20-%20Invoke-Build%20Tasks.md) (`:85`). It has one base script per capability, and ships the build script that loads them with `Extends`, from the capabilities in the project config (3.18). Name not decided (D8, `:222`). |
 | **Dependency manifest** | The file that lists the NuGet packages a repo's build needs. Today that's `paket.dependencies`, which has no versions. Under [Paket](./2026-09-30%20-%20Paket.md) option C it's a small `.csproj` used only for this, with versions, plus a committed lock file, `packages.lock.json` (`:72-78`, `:97`). Name and location not decided; the research's example is `.build/dependencies.csproj` (`:119`). Doesn't cover the `Cargo.toml` files. |
 | **Shared workflow** | A reusable GitHub Actions workflow (`on: workflow_call`) kept in a central Brownserve repo and run by other repos. It holds the jobs themselves: matrices, build steps, the gate job. Tier 2 in [GitHub Actions](./2026-09-30%20-%20GitHub%20Actions.md) (`:59-60`, `:72-79`). Repo name not decided (D5, `:178`). |
 | **Stub** | A short workflow file kept in each repo (Tier 3 in [GitHub Actions](./2026-09-30%20-%20GitHub%20Actions.md), `:81-110`). It has no jobs of its own: it says when to run (triggers), what the run may do (permissions), which secrets to pass and which capabilities apply, then hands over to a shared workflow pinned at a version. GitHub calls this a caller workflow (`:47`). |
@@ -557,8 +559,8 @@ Every `copier copy` route, apart from `copier copy` (scaffold), is kept current 
 | Shared tasks, `docs-astro` base script (today's `BuildDocs`) | Task package | Package restore |
 | Stock tests (today's `Basic.Binary.Tests.ps1`, apart from lines 38-47) | Task package | Package restore |
 | Bootstrap (`build.ps1`, `_init.ps1`) | Template | `copier copy` |
-| Project build script, `Extends` list ⚠ A2 | Not settled | Not settled |
-| Project build script, project-only tasks (none in `bsdev`) | Maintainer | Hand edit |
+| Build script, `Extends` list worked out from the project config | Task package | Package restore |
+| Project tasks file, project-only tasks (none in `bsdev`) | Maintainer | Hand edit |
 | Project tests (today's `Basic.Binary.Tests.ps1:38-47`) | Maintainer | Hand edit |
 | Dependency manifest, scaffold | Template | `copier copy` (scaffold) |
 | Dependency manifest, package list ⚠ A3 | Template | Copier task |
@@ -566,7 +568,7 @@ Every `copier copy` route, apart from `copier copy` (scaffold), is kept current 
 | Dependency manifest, lock file | NuGet | Copier task; Dependabot PR |
 | `nuget.config` | Template | `copier copy` |
 
-References: shared tasks and base scripts (IBT `:85`, `:111-115`); stock and project tests (UDF `:92`, IBT `:143`); bootstrap (UDF `:91`); project build script `.build/project.build.ps1` (IBT `:101`, `:141`); dependency manifest (Paket `:70-93`, UDF `:255-256`); `nuget.config` (UDF `:98`).
+References: shared tasks and base scripts (IBT `:85`, `:111-115`); stock and project tests (UDF `:92`, IBT `:143`); bootstrap (UDF `:91`); build script (IBT `:101`, `:141`, 3.18); project tasks file `.build/project.tasks.ps1`, name not final (3.18); dependency manifest (Paket `:70-93`, UDF `:255-256`); `nuget.config` (UDF `:98`).
 
 Versions and the lock file each have two routes, but at different times: the Copier task runs once at set-up, and Dependabot acts after that. Local builds aren't a third route, because `dotnet restore --locked-mode` fails rather than rewriting the lock (Paket `:93`, `:98`; confirmed, E7), as long as `_init.ps1` always passes `--locked-mode`: a plain restore rewrites the lock without warning. The Dependabot route needs a `nuget` entry in `dependabot.yml`, covered under Dependency tooling.
 
@@ -1352,6 +1354,67 @@ The input is interpolated straight into `pwsh` (GHA `:32`). Since 3.16, one list
 - Proposed map: the `⚠ A5` stub row goes, and the project config is the only home for publish targets. Clears T2 for `publish_to`. Traces are left for the final pass.
 - No sync requirement or E entry.
 
+### 3.18 A2: the `Extends` list
+
+**Question.** Who writes the build script's `Extends` list, the third place the capabilities are named after the answers and the project config?
+
+**Today.** No repo has one; each has its own `build_tasks.ps1`. The proposal puts the list and project-only tasks in one repo file, `.build/project.build.ps1` (IBT `:147-160`). E8 showed the list can be worked out at run time from the project config, and with project-only tasks in their own file the build script holds nothing specific to the repo.
+
+**Options.**
+
+| Option | What it does | Result |
+| --- | --- | --- |
+| A | Template renders the list, project-only tasks below a marker | A third home for the capabilities. Every capability change edits a file the maintainer also writes |
+| B | Maintainer writes the list | Drifts from the config. A capability left in the list keeps building silently (C1) |
+| C | Worked out at run time (E8). The template renders the build script whole and resets it on every sync (3.4). Project-only tasks in a repo-owned file | One home. The template must know the task package's base script names, and the two are versioned separately |
+| D | As C, but the build script ships in the task package beside the base scripts, and the bootstrap runs it from there | One home. The capability to base script mapping ships with the scripts it maps. No file for the sync |
+
+**Decision.** D. Confidence: high (E8, E33).
+
+**Knock-on.**
+
+- Task package: ships the build script. Base script tasks use the repo root from the bootstrap, never `$BuildRoot`, which stays the package folder for them (E33). This is a shared task design rule.
+- Repo: `.build/project.build.ps1` goes. Project-only tasks go in an optional, maintainer-owned `.build/project.tasks.ps1` (name not final); `bsdev` has none. A project-only task hooked onto a removed task still fails with "Missing task" (`Invoke-Build.ps1:489`).
+- A capability with no base script, or a missing config, fails before any task runs (E8). This fits 3.10 and isn't a drift check.
+- C1 is cleared: a removed capability drops out with the config.
+- A1: A2 no longer depends on it. The list only needs the config to hold the capabilities, whoever writes it.
+- IBT D6 is half answered: the build script ships in the package; the bootstrap (`build.ps1`, `_init.ps1`) stays in the template.
+- Working on the task package: an env var points the bootstrap at a working copy (E8).
+- Proposed map: the `⚠ A2` row becomes the build script from the task package, and the project-only tasks row names the project tasks file. Traces are left for the final pass.
+- No sync requirement: the build script is no longer a repo file.
+
+### 3.20 C6: removal order
+
+**Question.** Set-up runs Terraform first, then the repo change. Removing a capability needs the reverse, and nothing says so. Should anything state or enforce the order?
+
+**Today.** What a gap does after 3.16 and 3.17:
+
+| Capability | Terraform side | Terraform first | Repo first |
+| --- | --- | --- | --- |
+| `container` | Docker Hub secrets | `publish-image` runs with an empty secret and fails the parameter check. `release` `needs` it, so nothing is released. Loud | Secrets sit unused until the apply |
+| `docs-astro` | `pages` block | With `gh-pages` the push succeeds and the site never serves. Silent. `actions/deploy-pages` should fail with Pages off (not verified) | Pages serves the last site until the apply |
+
+Set-up in the wrong order also fails loudly, and a new repo can't take it: the sync needs the CI App first. `bsdev` has no Terraform side for `container`: its Docker Hub secrets are gone and GHCR uses `GITHUB_TOKEN` (3.17).
+
+**Options.**
+
+| Option | What it does | Result |
+| --- | --- | --- |
+| A | State the order with the capability change route: Terraform first to add, the repo first to remove | Not enforced. The wrong order on `container` fails loudly, and idempotent publishing (3.17) means finishing the other side and releasing again recovers |
+| B | Shared tasks skip a target whose credentials are missing | Either order works, but a misconfigured repo stops publishing silently, against 3.10 |
+| C | Terraform reads the repo's capabilities (A12) | Parked. The apply follows the merge: right for removal, wrong for adding |
+| D | State nothing | The order is learned from a failed release |
+
+**Decision.** A. Nothing enforces it: a mistake shows up quickly, and the order is easy to work out (maintainer). Confidence: high.
+
+**Knock-on.**
+
+- Docs: the order goes with the capability change route (B1, parked). Until then it's this rule.
+- `docs-astro`: `gh-pages` makes Terraform first silent, `actions/deploy-pages` should make it loud and needs `pages: write` and `id-token: write` rather than `contents: write` (3.16). A lean towards `deploy-pages`; the choice stays open (GHA `:132`).
+- Removal leaves the Docker Hub secrets in the repo, unused, until the apply. Accepted.
+- C6 no longer depends on A12. If A12 has Terraform read the repo, this is revisited.
+- No sync requirement or E entry.
+
 ## Sync mechanism requirements
 
 Copier was ruled out after 3.4 (Q12). This section separates what 3.2 to 3.4 decided from how Copier would have done it, and turns the Copier findings into requirements for the replacement. The E entries still describe Copier, so any requirement can be checked against them.
@@ -1406,8 +1469,8 @@ Step is the Phase 3 step that settles the entry; F means the final pass.
 | T5 | `docs-astro` site URL never re-rendered | E15 | 3.13 | Parked: depends on whether `astro.config.mjs` is a scaffold or rendered (M1) |
 | T6 | `docs-astro` site built two ways | | 3.14 | Decided (3.14) |
 | T7 | `docs-astro` can't be added on its own | | | Cleared (Trace B) |
-| A1 | How the project config gets written | A2, A5, A12, B1 | 3.22 | Parked: sync mechanism |
-| A2 | Who writes the `Extends` list | E8 | 3.18 | Open |
+| A1 | How the project config gets written | A5, A12, B1 | 3.22 | Parked: sync mechanism |
+| A2 | Who writes the `Extends` list | E8, E33 | 3.18 | Decided (3.18) |
 | A3 | Packages into the dependency manifest at set-up | T3, E6 | 3.9 | Parked: M11 |
 | A4 | Template and Dependabot write the same line | E1, E12, E19 to E22 | 3.2 | Decided (3.2) |
 | A5 | Publish targets have two homes | C2 | 3.17 | Decided (3.17) |
@@ -1426,12 +1489,12 @@ Step is the Phase 3 step that settles the entry; F means the final pass.
 | B5 | Template holds the Astro version | | 3.9 | Parked: paired with A3 |
 | B6 | Image route: adding conflicts with Dependabot | | | Merged into A4 |
 | B7 | Adding conflicts with repo additions | | | Merged into A8 |
-| C1 | Hand-written `Extends` fails silently | | | Merged into A2 |
+| C1 | Hand-written `Extends` fails silently | | | Merged into A2, cleared (3.18) |
 | C2 | Permission ceiling can't follow capabilities | E11 | 3.16 | Decided (3.16) |
 | C3 | Removal conflicts with local edits | | | Merged into A8 |
 | C4 | A section covers files that outlive its capability | A8 | 3.5 | Decided (3.5) |
 | C5 | Features route: removal conflicts with Dependabot | | | Merged into A4 |
-| C6 | Removal order not stated | A12 | 3.20 | Open |
+| C6 | Removal order not stated | | 3.20 | Decided (3.20) |
 | X1 | Copier doesn't report a conflict | | | Copier only; requirement M4 |
 | X2 | New template questions need a default | | | Copier only; requirement M10 |
 | X3 | Stub shape tied to its pin | E19 | 3.2 | Decided (3.2) |
@@ -1448,7 +1511,7 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 - **T6. The `docs-astro` site is built two ways.** PR checks build it through `BuildDocs` (`skillsrepo_build_tasks.ps1.template:373-385`); `deploy-docs` runs its own npm steps (`skillsrepo_github_release.yaml.template:84-85`). A change to one doesn't reach the other. Decided in 3.14: the deploy publishes the task package's site build.
 - **T7. `docs-astro` can't be added on its own.** A repo has one project type (`Module/Private/Classes.ps1:564-573`), and only `SkillsRepo` turns Astro on (`Compare-BrownserveRepository.ps1:810`), with its parts written into the skills templates. Giving `bsdev` Astro means either switching it to `SkillsRepo` with `-Force` (`:236-239`), which drops the Rust and container files, or changing the `bsdev` branch of the generator (`:690-783`) and releasing it.
 - **A1. How the project config gets written isn't settled.** It could be the answers file itself, rendered from it, or written by hand (UDF `:264`, `:285`). If it's written by hand, the capabilities and settings such as the Docker context would be stated in two files: Copier needs the Docker context to render `dependabot.yml` and the CI stub's path filter (UDF `:134`), and the build tasks read it from the project config (IBT `:142`). The `docs-astro` docs path has the same shape: Copier needs it to render the `npm` Dependabot entry, the CI path filter and the `.gitignore` lines, and the build tasks read it from the project config.
-- **A2. Nothing settles who writes the `Extends` list.** The project build script's `Extends` list names the capabilities (IBT `:147-155`), a third place they're stated after the answers file and the project config. If the template renders it, the maintainer's project-only tasks sit in a template-owned file. If the maintainer writes it, it can drift from the answers (removing `container` wouldn't touch it). It might instead be worked out at run time from the project config (IBT V4, `:231`), which could make the build script identical everywhere and shippable in the package (IBT `:162`, D6 `:220`). Run time works (E8). With the list read from the project config and project-only tasks in their own file, the build script is the same in every repo, so A2 now depends on A1.
+- **A2. Nothing settles who writes the `Extends` list.** The project build script's `Extends` list names the capabilities (IBT `:147-155`), a third place they're stated after the answers file and the project config. If the template renders it, the maintainer's project-only tasks sit in a template-owned file. If the maintainer writes it, it can drift from the answers (removing `container` wouldn't touch it). It might instead be worked out at run time from the project config (IBT V4, `:231`), which could make the build script identical everywhere and shippable in the package (IBT `:162`, D6 `:220`). Run time works (E8). With the list read from the project config and project-only tasks in their own file, the build script is the same in every repo, so A2 now depends on A1. Decided in 3.18: the task package ships the build script, which works the list out from the project config, and project-only tasks go in a repo-owned file. A2 no longer depends on A1.
 - **A3. Nothing settles how packages get into the dependency manifest at set-up.** The template never holds versions, so even shared packages need `dotnet add package`. UDF suggests a Copier migration or task (`:256`); only a task fits at set-up, because migrations run when an update crosses a version (UDF `:136`). A Copier task works at set-up (E6), but not for a capability added later: tasks run three times on every update and can't tell a capability was just added. Paket D7 (`:182`) is still open. For `bsdev` every package is shared by all capabilities, so a capability bringing its own package comes up in later traces.
 - **A4. Nothing settles where the template's pin comes from, or whether it ever moves.** Dependabot owns the pin (UDF `:262`), but the stub is rendered from the template, so the first pin has to come from it. Copier's 3-way merge keeps Dependabot's bump only if the template leaves that line alone, or moves it to the same value; any other move conflicts (E1). If the template pins `ci` at `v1.0.0`, Dependabot bumps `bsdev` to `v1.2.0`, and the next template release moves its pin to `v1.1.0` so new repos start more current, `copier update` sees both sides change the same line and commits a conflict (UDF `:147`). The manifest versions had the same shape and were answered by the template never holding versions (UDF `:254`); the research has no equivalent for pins. The dev container stub's image or Feature reference has the same shape (see Dev environment). Decided in 3.2: the template owns the line (D2).
 - **A5. Publish targets have two proposed homes.** The project config holds publish targets (IBT `:142`), and dispatch inputs live in the stub (GHA `:85`). Today's `publish_to` is a per-run choice with a default (`release.yaml:5-10`). Nothing says whether the stub still offers that choice, or how its default relates to the config's list. Both follow the capabilities (`container` brings GHCR and DockerHub), so removing `container` would need both changed. Decided in 3.17: targets live only in the project config, the stub has no input, and publishing is idempotent so a retry is a re-run.
@@ -1472,7 +1535,7 @@ Merged entries share a mechanism with the entry they're merged into; only the tr
 - **C3. Removing a capability conflicts with local edits inside or next to its sections.** When the template deletes a capability's block and the repo has edited lines inside it, or added lines straight after it, both sides change the same or adjacent lines and `copier update` commits a conflict (UDF `:147`). If the maintainer adds an `ignore` rule to the `docker` entry in `dependabot.yml` (`:18-23`), removing `container` conflicts on that block, and the maintainer resolves it by deleting the block by hand. If `container`'s `.gitignore` section is the last template section, `bsdev`'s `image/proto/node_modules/` sits straight after `.docker/` (`.gitignore:28-31`), and the removal conflicts there too. B7 is the adding counterpart. Confirmed for `extensions.json` (E4). In JSON the line before the removed block loses its comma, so it's pulled into the conflict too.
 - **C4. A capability's section can cover files that outlive the capability.** `container` brings the `.editorconfig` section for Dockerfiles and shell scripts (`:39-44`), but `*.sh` (`:40`) also matches `scripts/install.sh`, which stays with the maintainer (Trace A). Removing `container` drops the rule, so `install.sh`, indented with 4 spaces (`:12`), falls back to the default section's 2 spaces with no charset (`:12-16`), and editors indent new lines differently from the rest of the file. Nothing fails or flags it. `image/Dockerfile` and `image/bsdev-entrypoint.sh` lose their rule too, until the maintainer deletes them. Decided in 3.5: one `.editorconfig` for every repo, so no section follows a capability.
 - **C5. On the Features route, removing a capability conflicts with Dependabot.** B6's escape holds only for adding. Removing `container` deletes the Docker Feature line from the dev container stub; if Dependabot has bumped that Feature's version since `copier copy`, both sides change the line and `copier update` commits a conflict (UDF `:147`). On the image route, removal swaps the reference instead, which is B6. So on either route a capability change can conflict once Dependabot has moved the line it touches. Not verified (UDF V1, `:293`). It weighs on the images-or-Features choice (A7, UDF D4 `:283`).
-- **C6. Removal has to run in the opposite order to set-up, and nothing states it.** Set-up is Terraform first, then `copier copy` (UDF `:266`), so Terraform's settings are in place before the workflows use them. Removal reverses that: if Terraform deletes the Docker Hub secrets while the `release` stub still publishes to DockerHub, a release in between fails at `CheckPublishingParameters` (IBT `:37`); Copier first leaves the secrets unused until Terraform catches up. `docs-astro` has the same shape: if Terraform drops the `pages` block first, the deploy keeps pushing `gh-pages` to a repo that doesn't serve it. No research doc states the removal order, and nothing enforces either order.
+- **C6. Removal has to run in the opposite order to set-up, and nothing states it.** Set-up is Terraform first, then `copier copy` (UDF `:266`), so Terraform's settings are in place before the workflows use them. Removal reverses that: if Terraform deletes the Docker Hub secrets while the `release` stub still publishes to DockerHub, a release in between fails at `CheckPublishingParameters` (IBT `:37`); Copier first leaves the secrets unused until Terraform catches up. `docs-astro` has the same shape: if Terraform drops the `pages` block first, the deploy keeps pushing `gh-pages` to a repo that doesn't serve it. No research doc states the removal order, and nothing enforces either order. Decided in 3.20: the order is stated with the capability change route (Terraform first to add, the repo first to remove) and not enforced.
 - **X1. `copier update` exits 0 when it writes a conflict.** The markers are left inline and the file shows as unmerged (`UU`), but the exit code is the same as a clean update (E1). The template sync (UDF `:141`, `:235`) has to check for conflicts itself, e.g. with `git diff --check`, or it opens PRs with markers in them.
 - **X2. A template release that adds a required question with no default stops the template sync.** `copier update --defaults` fails and writes nothing (E5), so every repo stays on the old release until someone passes the answer by hand. Any question added after the first release needs a default, or one worked out from other answers.
 - **X3. A stub's shape is tied to the version its pin names.** GitHub checks the stub's `with:` and `secrets:` against the pinned workflow. A run fails at startup, with no jobs, if the stub passes an input or secret the workflow doesn't declare, or leaves out a required input (E19). If the pin and the rest of the stub move separately, every run in between can fail. The 3-way merge succeeds either way, so nothing flags it before the run.
@@ -1547,6 +1610,7 @@ Checked in 3.1; E19 to E22 in 3.2; E23 to E27 in 3.3; E28 in 3.4. E29 and E30 ar
 | E30 | Node version checks for `docs-astro` | Docs, then Local | B3 | Not checked |
 | E31 | Lock file commands for Cargo and npm | Local; Docs | T3, B4 | Confirmed, except Dependabot `npm` (not checked) |
 | E32 | `cargo metadata` reporting versions and bin targets | Local | A6 | Confirmed |
+| E33 | Build script shipped in the task package | Local | A2 | Confirmed |
 
 - **E1. Copier keeps a Dependabot bump the template didn't touch.** Copier's 3-way merge should keep a line Dependabot changed when the template leaves it alone, and commit a conflict when both change it (UDF `:135`, `:147`, V1 `:293`). Finding: confirmed with Copier 9.18.2. A Dependabot bump to `@v1.2.0` survived a template release that added a line two lines above it. When the next release moved the template's pin from `v1.0.0` to `v1.1.0`, `copier update` wrote inline conflict markers on that line. Moving it to `v1.2.0`, the value Dependabot had already set, merged cleanly. Copier exits 0 either way (X1).
 - **E2. Copier merge of appends at the same point in a list.** When the template and the repo both add to the end of a list, including JSON's comma on the previous last line, `copier update` is expected to conflict (A8, B7, C3). Finding: confirmed. When the repo and template both appended to the end of the cSpell words, the extensions list and a `.gitignore` section, all three conflicted. The comma both sides added to the previous last line merged; only the appended lines conflicted. Template edits with at least one unchanged line between them and the repo's edit merged cleanly: a word inserted mid-list, an extension with one line between, a line in another `.gitignore` section.
@@ -1652,3 +1716,4 @@ Checked in 3.1; E19 to E22 in 3.2; E23 to E27 in 3.3; E28 in 3.4. E29 and E30 ar
 - **E30. Node version checks for `docs-astro`.** Whether Astro refuses to start on a Node outside its supported range, whether Dependabot `npm` leaves `engines.node` alone, and whether the Node Feature accepts a major such as `"22"` (B3, 3.7). Not checked.
 - **E31. Lock file commands for Cargo and npm.** On a copy of `bsdev` bumped from 0.10.0 to 0.11.0: `cargo generate-lockfile` moved 20 third-party crates; `cargo update --workspace` moved only `bsdev` and `bsdev-core`; Cargo with `--locked` exits 101 against the stale lock. `npm ci` fails with no lock, and with a lock missing a dependency in `package.json` (T3, B4, 3.8). Confirmed. Whether Dependabot `npm` updates `package-lock.json` in the same PR as `package.json`: not checked.
 - **E32. `cargo metadata` reporting versions and bin targets.** Whether the task package can read the binary name and member versions without parsing TOML (A6, 3.10). Finding: `cargo metadata --no-deps --offline` on `bsdev` lists `bsdev` 0.10.0 with bin `bsdev`, and `bsdev-core` 0.10.0 with none. It doesn't say whether a version came from `[workspace.package]`, so `UpdateCargoVersion` keeps its regex. Confirmed.
+- **E33. Build script shipped in the task package.** Whether E8's build script still works from inside the package rather than the repo (A2, 3.18). Finding: yes. Run from a package folder, it read the capabilities from the repo's config through an env var, loaded the base scripts beside it, and dot-sourced `.build/project.tasks.ps1` from the repo; a project-only task hooked onto `core::Check` ran. The same package against a repo without `container` and without a tasks file dropped `container`'s tasks. Setting `$BuildRoot` to the repo root in the build script reaches only its own and the dot-sourced tasks; base script tasks keep the package folder. Confirmed, on Linux.
